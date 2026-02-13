@@ -28,18 +28,25 @@ export async function fetchPage(url) {
   const raw = await callAPI([{
     role: "user",
     content: `Search for and visit this URL: ${url}
+
+CRITICAL RULES:
+- Only include text that ACTUALLY appears on the page. Do not invent, paraphrase, or imagine content.
+- For body_text: Copy the actual visible text content verbatim. Do not summarize or rephrase.
+- For unique_claims and stock_phrases: Only include phrases that literally appear on the page.
+- If you cannot access the page or certain fields are empty, use empty strings/arrays. Do NOT fabricate placeholder content.
+
 Return ONLY a JSON object (no markdown, no backticks, no preamble) with these fields:
-- "title": the page title
-- "meta_description": the meta description
-- "h1": array of all H1 text
-- "h2s": array of first 12 H2 texts
-- "nav_items": array of main navigation labels
-- "body_text": main body text content (first 2500 chars, skip nav/footer)
-- "ctas": array of CTA button/link text
+- "title": the exact page title
+- "meta_description": the exact meta description tag content
+- "h1": array of all H1 text exactly as written
+- "h2s": array of first 12 H2 texts exactly as written
+- "nav_items": array of main navigation labels exactly as written
+- "body_text": verbatim main body text content (first 2500 chars, skip nav/footer). Copy the EXACT words from the page.
+- "ctas": array of CTA button/link text exactly as written
 - "page_type": "homepage"|"admissions"|"about"|"academics"|"student-life"|"other"
 - "linked_pages": array of up to 6 internal section URLs
-- "unique_claims": array of specific concrete claims only this school could make
-- "stock_phrases": array of phrases that could appear on any college website`
+- "unique_claims": array of specific concrete claims that literally appear on the page
+- "stock_phrases": array of generic phrases that literally appear on the page`
   }], true);
   return parseJSON(raw);
 }
@@ -53,21 +60,28 @@ URL: ${url}
 Page content: ${text.substring(0, 2800)}
 Cross-page context: ${allText.substring(0, 1200)}
 
+CRITICAL ANTI-HALLUCINATION RULES — READ THESE CAREFULLY:
+1. For "weak_sentence": You MUST quote a sentence that LITERALLY appears in the Page Content above. Copy-paste it exactly. If you cannot find a sufficiently generic sentence in the provided text, write "No clear example found in scraped content."
+2. For "biggest_sin" and "best_moment": Only reference things that are actually present in the provided content. Do not describe content that doesn't appear above.
+3. Do NOT invent examples, repeated paragraphs, duplicate content, or fabricated quotes. If something isn't in the text, don't claim it is.
+4. For "differentiation_killer" and "missed_opportunity": Base your analysis ONLY on what you can see in the provided text. Do not speculate about pages or content you haven't seen.
+5. If the provided content is limited or you can't make a strong judgment, say so honestly rather than fabricating a confident-sounding observation.
+
 Return ONLY a JSON object (no markdown, no backticks):
 {
-  "voice_score": 1-10 (1=any school, 10=unmistakable),
+  "voice_score": 1-10 (1=any school could say this, 10=unmistakably this institution),
   "specificity_score": 1-10,
   "ia_score": 1-10,
   "cta_score": 1-10,
   "consistency_score": 1-10,
   "tone_diagnosis": "describe their brand as a person at a dinner party, 2 sentences, be funny and cutting",
-  "biggest_sin": "worst branding offense, 1 cutting sentence",
-  "best_moment": "one thing that stands out (if nothing, say so with humor)",
-  "weak_sentence": "quote the most generic sentence exactly",
-  "rewrite": "rewrite that sentence with personality and specificity",
+  "biggest_sin": "worst branding offense THAT YOU CAN ACTUALLY SEE IN THE TEXT ABOVE, 1 cutting sentence",
+  "best_moment": "one thing that actually stands out IN THE PROVIDED TEXT (if nothing does, say so with humor)",
+  "weak_sentence": "EXACT VERBATIM QUOTE of the most generic sentence from the Page Content above. Must be copy-pasted, not paraphrased.",
+  "rewrite": "rewrite that exact sentence with personality and specificity",
   "nav_critique": "1-2 sentences on navigation label distinctiveness",
-  "differentiation_killer": "the #1 reason this page fails to stand out",
-  "missed_opportunity": "what COULD be distinctive but they buried it",
+  "differentiation_killer": "the #1 reason this page fails to stand out, based on the actual content provided",
+  "missed_opportunity": "what COULD be distinctive based on what you see in the actual content",
   "rx_language": "specific prescription to fix voice/copy, 2 concrete sentences",
   "rx_structure": "specific prescription to fix IA/navigation, 2 sentences",
   "rx_strategy": "specific prescription to fix content strategy, 2 sentences",
