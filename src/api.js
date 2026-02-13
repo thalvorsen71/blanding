@@ -68,13 +68,13 @@ export async function deepAnalysis(url, text, allText) {
   const combinedText = (text + " " + allText).trim();
   const wordCount = combinedText.split(/\s+/).length;
   
-  // If almost no content was scraped, diagnose the ABSENCE of copy
-  const isEmptyContent = wordCount < 80;
+  // Truly empty — scraper got nothing
+  const isEmptyContent = wordCount < 30;
   
   const prompt = isEmptyContent
-    ? `Higher ed brand critic. This institution's homepage at ${url} has almost NO visitor-facing copy. The scraper found only: "${text.substring(0, 300)}"
+    ? `Higher ed brand critic. The homepage at ${url} returned almost no scrapable text. The scraper found only: "${text.substring(0, 300)}"
 
-This is a strategy failure — the most valuable real estate the institution owns is doing zero brand work. Diagnose this absence.
+Diagnose what this means for the brand. A homepage that yields no text to a scraper is invisible to search engines and AI tools.
 
 Return JSON only:
 {
@@ -82,16 +82,20 @@ Return JSON only:
   "specificity_score": 1,
   "consistency_score": 3,
   "tone_diagnosis": "describe this empty homepage as a person at a dinner party, 2 sentences, funny",
-  "biggest_sin": "diagnose why having no copy on your homepage is a branding failure, 1 sentence",
-  "best_moment": "find anything remotely distinctive in the scraped text, or roast the emptiness",
+  "biggest_sin": "diagnose what it means when your homepage has no readable text, 1 sentence",
+  "best_moment": "find anything remotely distinctive, or roast the emptiness with wit",
   "weak_sentence": "NO_CONTENT",
   "rewrite": "NO_CONTENT",
-  "differentiation_killer": "explain how absence of copy makes differentiation impossible",
-  "missed_opportunity": "what should this homepage be doing instead",
-  "rx_language": "what words should actually be on this homepage, 2 sentences",
-  "rx_strategy": "how to fix a homepage that does no brand work, 2 sentences"
+  "differentiation_killer": "explain how absence of text makes differentiation impossible",
+  "missed_opportunity": "what should this homepage be communicating",
+  "rx_language": "what words should be on this homepage, 2 sentences",
+  "rx_strategy": "how to fix a homepage invisible to search and AI, 2 sentences"
 }`
-    : `Brutally honest higher ed brand copy critic. Judge ONLY the words visitors actually see on homepages and landing pages.
+    : `Brutally honest higher ed brand critic. Evaluate the BRAND STRATEGY this homepage is executing — not just whether it has a mission statement.
+
+Homepages use different strategies. Some lead with institutional copy ("world-class faculty, commitment to excellence"). Some lead with news/stories/spotlights. Some are purely functional (search box, directory). Each is a brand choice worth evaluating.
+
+Your job: What strategy is this page using? How well does it execute? Does a first-time visitor leave knowing what makes this institution DIFFERENT?
 
 URL: ${url}
 --- SCRAPED TEXT ---
@@ -101,24 +105,24 @@ Other pages: ${allText.substring(0, 500)}
 
 RULES:
 - Only reference text that appears in the SCRAPED TEXT above.
-- No claims about layout/design.
-- For weak_sentence: Find the most generic sentence in the scraped text and copy it EXACTLY, character for character. It must appear verbatim above. If you cannot find a complete sentence, write "NO_CONTENT".
-- For rewrite: Rewrite that exact sentence with personality. If weak_sentence is "NO_CONTENT", write "NO_CONTENT".
-- Do NOT paraphrase or combine multiple sentences. Pick ONE real sentence.
+- No claims about visual layout or design. You can only see words.
+- Evaluate whatever IS on the page — news headlines, student quotes, research spotlights, institutional copy, ALL of it is brand communication.
+- For weak_sentence: Find the most generic or strategically weakest sentence and copy it EXACTLY from the text above. If no complete sentence exists, write "NO_CONTENT".
+- For rewrite: Rewrite that sentence with more personality and specificity. If weak_sentence is "NO_CONTENT", write "NO_CONTENT".
 
 Return JSON only:
 {
-  "voice_score": 1-10,
-  "specificity_score": 1-10,
-  "consistency_score": 1-10,
-  "tone_diagnosis": "brand as dinner party person, 2 sentences, funny",
-  "biggest_sin": "worst language problem in text above, 1 sentence",
-  "best_moment": "most distinctive language above (or say nothing stands out)",
-  "weak_sentence": "EXACT verbatim sentence copied from scraped text, or NO_CONTENT",
-  "rewrite": "rewrite with personality for this school, or NO_CONTENT",
-  "differentiation_killer": "why this copy fails to stand out",
-  "missed_opportunity": "what detail could be distinctive but is buried",
-  "rx_language": "fix the voice, 2 sentences",
+  "voice_score": 1-10 (1=no distinct voice, 10=unmistakably this institution),
+  "specificity_score": 1-10 (1=vague/generic, 10=concrete details only this school could claim),
+  "consistency_score": 1-10 (1=scattered identity, 10=every word reinforces who they are),
+  "tone_diagnosis": "describe the brand personality based on ALL the content — copy, headlines, stories, whatever is there. As a person at a dinner party, 2 sentences, funny and specific",
+  "biggest_sin": "the biggest brand strategy failure on this page — could be generic copy, missed storytelling, wasted real estate, or letting content exist without a throughline. 1-2 sentences referencing actual text",
+  "best_moment": "the most distinctive or specific content, whether it's institutional copy, a student quote, a research headline, or a concrete detail. Reference the actual words",
+  "weak_sentence": "EXACT verbatim sentence from the scraped text, or NO_CONTENT",
+  "rewrite": "rewrite with personality and strategic intent, or NO_CONTENT",
+  "differentiation_killer": "why a first-time visitor still wouldn't know what makes this school different after reading this page",
+  "missed_opportunity": "what specific content on this page COULD be a differentiator but isn't being used that way",
+  "rx_language": "fix the voice/language, 2 sentences",
   "rx_strategy": "fix the content strategy, 2 sentences"
 }`;
 
