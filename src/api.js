@@ -54,38 +54,38 @@ Return ONLY a JSON object (no markdown, no backticks, no preamble) with these fi
 export async function deepAnalysis(url, text, allText) {
   const raw = await callAPI([{
     role: "user",
-    content: `You are a brutally honest higher ed brand strategist. Analyze this website copy.
+    content: `You are a brutally honest higher ed brand copy critic. Your ONLY job is to judge the WORDS — the language, the clichés, the genericness of the copy.
 
-URL: ${url}
-Page content: ${text.substring(0, 2800)}
-Cross-page context: ${allText.substring(0, 1200)}
+Here is the scraped text from ${url}:
 
-CRITICAL ANTI-HALLUCINATION RULES — READ THESE CAREFULLY:
-1. For "weak_sentence": You MUST quote a sentence that LITERALLY appears in the Page Content above. Copy-paste it exactly. If you cannot find a sufficiently generic sentence in the provided text, write "No clear example found in scraped content."
-2. For "biggest_sin" and "best_moment": Only reference things that are actually present in the provided content. Do not describe content that doesn't appear above.
-3. Do NOT invent examples, repeated paragraphs, duplicate content, or fabricated quotes. If something isn't in the text, don't claim it is.
-4. For "differentiation_killer" and "missed_opportunity": Base your analysis ONLY on what you can see in the provided text. Do not speculate about pages or content you haven't seen.
-5. If the provided content is limited or you can't make a strong judgment, say so honestly rather than fabricating a confident-sounding observation.
+--- BEGIN SCRAPED TEXT ---
+${text.substring(0, 3000)}
+--- END SCRAPED TEXT ---
+
+Additional pages scraped: ${allText.substring(0, 800)}
+
+CRITICAL RULES — YOU MUST FOLLOW THESE:
+1. You can ONLY reference text that appears between the BEGIN/END markers above.
+2. Do NOT make claims about page layout, visual design, navigation structure, or what "leads" the page. You cannot see the page — you only have the text.
+3. For "weak_sentence": Copy-paste an EXACT sentence from the scraped text. If you can't find one, write "No clear example in scraped text."
+4. For "biggest_sin" and "best_moment": Only reference language/phrases that actually appear in the scraped text above. Do NOT invent content.
+5. Do NOT claim text is "repeated" or "duplicated" unless you can see it appear twice in the scraped text above.
+6. Focus entirely on: Is this copy generic? Could any school say this? Or is it specific, distinctive, and ownable?
 
 Return ONLY a JSON object (no markdown, no backticks):
 {
-  "voice_score": 1-10 (1=any school could say this, 10=unmistakably this institution),
-  "specificity_score": 1-10,
-  "ia_score": 1-10,
-  "cta_score": 1-10,
-  "consistency_score": 1-10,
-  "tone_diagnosis": "describe their brand as a person at a dinner party, 2 sentences, be funny and cutting",
-  "biggest_sin": "worst branding offense THAT YOU CAN ACTUALLY SEE IN THE TEXT ABOVE, 1 cutting sentence",
-  "best_moment": "one thing that actually stands out IN THE PROVIDED TEXT (if nothing does, say so with humor)",
-  "weak_sentence": "EXACT VERBATIM QUOTE of the most generic sentence from the Page Content above. Must be copy-pasted, not paraphrased.",
-  "rewrite": "rewrite that exact sentence with personality and specificity",
-  "nav_critique": "1-2 sentences on navigation label distinctiveness",
-  "differentiation_killer": "the #1 reason this page fails to stand out, based on the actual content provided",
-  "missed_opportunity": "what COULD be distinctive based on what you see in the actual content",
-  "rx_language": "specific prescription to fix voice/copy, 2 concrete sentences",
-  "rx_structure": "specific prescription to fix IA/navigation, 2 sentences",
-  "rx_strategy": "specific prescription to fix content strategy, 2 sentences",
-  "rx_experience": "specific prescription to fix UX/CTAs, 2 sentences"
+  "voice_score": 1-10 (1=any school could say every word of this, 10=unmistakably this institution),
+  "specificity_score": 1-10 (1=all abstract claims, 10=concrete specific details throughout),
+  "consistency_score": 1-10 (1=identity shifts constantly, 10=clear consistent voice),
+  "tone_diagnosis": "describe their brand voice as a person at a dinner party, 2 sentences, be funny and specific",
+  "biggest_sin": "the worst LANGUAGE problem you can see IN THE ACTUAL TEXT ABOVE, 1 sentence",
+  "best_moment": "the most distinctive/specific LANGUAGE in the text above (if nothing, say so with humor)",
+  "weak_sentence": "EXACT VERBATIM sentence from the scraped text above that is most generic. Copy-paste it character for character.",
+  "rewrite": "rewrite that exact sentence with personality and specificity for this particular school",
+  "differentiation_killer": "the #1 reason this copy fails to stand out, based on the actual words",
+  "missed_opportunity": "what specific detail in the text COULD be distinctive but gets buried in generic language",
+  "rx_language": "specific prescription to fix the copy/voice, 2 concrete sentences",
+  "rx_strategy": "specific prescription for what content to lead with instead, 2 sentences"
 }`
   }]);
   try { return parseJSON(raw); } catch { return null; }

@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { T, scoreColor, scoreLabel, scoreVerdict, countCliches, highlightCliches, calcNavScore, NAV_CLICHES } from './constants';
+import { T, scoreColor, scoreLabel, scoreVerdict, countCliches, highlightCliches } from './constants';
 import { fetchPage, deepAnalysis, captureLead } from './api';
 import { exportPDF } from './pdf';
 
@@ -83,41 +83,31 @@ export default function App() {
 
     const allH1 = pages.flatMap(p => p.data.h1 || []);
     const allH2 = pages.flatMap(p => p.data.h2s || []);
-    const allCTAs = pages.flatMap(p => p.data.ctas || []);
-    const navItems = hp.nav_items || [];
     const uniq = pages.flatMap(p => p.data.unique_claims || []);
     const stock = pages.flatMap(p => p.data.stock_phrases || []);
     const cliches = countCliches(allBody + " " + allH1.join(" ") + " " + allH2.join(" "));
     const totalC = cliches.reduce((s, c) => s + c.count, 0);
-    const ns = calcNavScore(navItems);
     const wc = allBody.split(/\s+/).length;
 
-    // Score calculations
+    // LANGUAGE SCORE: cliché density + AI voice assessment
     let lang = 100 - Math.min(cliches.length * 3.5, 45) - Math.min((totalC / Math.max(wc / 100, 1)) * 7, 30) - (uniq.length < 2 ? 15 : 0);
     if (ai?.voice_score) lang = (lang + ai.voice_score * 10) / 2;
     lang = Math.max(0, Math.min(100, Math.round(lang)));
 
-    let ia = ns.score; if (ai?.ia_score) ia = Math.round((ia + ai.ia_score * 10) / 2);
-    ia = Math.max(0, Math.min(100, ia));
-
+    // STRATEGY SCORE: unique claims vs stock phrases + AI specificity
     let strat = 50 + uniq.length * 5 - stock.length * 3;
     if (ai?.specificity_score) strat = (strat + ai.specificity_score * 10) / 2;
     if (ai?.consistency_score) strat = (strat + ai.consistency_score * 10) / 2;
     strat = Math.max(0, Math.min(100, Math.round(strat)));
 
-    let ux = 50;
-    const genCTAs = allCTAs.filter(c => /^(apply|learn more|read more|visit|explore|discover|request info|get started|submit|view|see more|find out)/i.test(c.trim()));
-    ux -= genCTAs.length * 5; ux += (allCTAs.length - genCTAs.length) * 3;
-    if (ai?.cta_score) ux = (ux + ai.cta_score * 10) / 2;
-    ux = Math.max(0, Math.min(100, Math.round(ux)));
-
-    const overall = Math.round(lang * 0.35 + ia * 0.15 + strat * 0.3 + ux * 0.2);
+    // OVERALL: weighted blend — language matters most
+    const overall = Math.round(lang * 0.6 + strat * 0.4);
 
     return {
       url, schoolName: hp.title || url, pagesAnalyzed: pages, overall,
-      scores: { language: lang, architecture: ia, strategy: strat, experience: ux },
-      cliches, totalCliches: totalC, navItems, navScore: ns, allCTAs,
-      genericCTAs: genCTAs.map(c => c.trim()), uniqueClaims: uniq, stockPhrases: stock,
+      scores: { language: lang, strategy: strat },
+      cliches, totalCliches: totalC,
+      uniqueClaims: uniq, stockPhrases: stock,
       allH1, allH2, metaDesc: hp.meta_description || "", bodyText: allBody, ai,
     };
   }
@@ -136,7 +126,7 @@ export default function App() {
     let lang = 100 - Math.min(cl.length * 3.5, 45) - Math.min((tc / Math.max(inputText.split(/\s+/).length / 100, 1)) * 7, 30);
     if (ai?.voice_score) lang = Math.round((lang + ai.voice_score * 10) / 2);
     lang = Math.max(0, Math.min(100, lang));
-    setResult({ url: null, schoolName: "Your Copy", pagesAnalyzed: [{ type: "text" }], overall: lang, scores: { language: lang, architecture: null, strategy: null, experience: null }, cliches: cl, totalCliches: tc, navItems: [], navScore: null, allCTAs: [], genericCTAs: [], uniqueClaims: [], stockPhrases: [], allH1: [], allH2: [], metaDesc: "", bodyText: inputText, ai });
+    setResult({ url: null, schoolName: "Your Copy", pagesAnalyzed: [{ type: "text" }], overall: lang, scores: { language: lang, strategy: null }, cliches: cl, totalCliches: tc, uniqueClaims: [], stockPhrases: [], allH1: [], allH2: [], metaDesc: "", bodyText: inputText, ai });
     setProgress(p => p.map(i => ({ ...i, status: "done" }))); setAnalyzing(false); scrollToResult();
   };
 
@@ -158,7 +148,7 @@ export default function App() {
   /* ═══ RESULT BLOCK ═══ */
   function ResultBlock({ res, compact }) {
     if (!res) return null;
-    const dims = [{ key: "language", label: "Language" }, { key: "architecture", label: "IA" }, { key: "strategy", label: "Strategy" }, { key: "experience", label: "UX" }].filter(d => res.scores[d.key] != null);
+    const dims = [{ key: "language", label: "Language & Voice" }, { key: "strategy", label: "Content Strategy" }].filter(d => res.scores[d.key] != null);
     return (
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ background: T.card, border: "1px solid " + T.border, borderRadius: 14, padding: compact ? "24px 16px" : "36px 28px", textAlign: "center", position: "relative", overflow: "hidden" }}>
@@ -193,10 +183,10 @@ export default function App() {
 
   /* ═══ TAB CONTENT ═══ */
   function TabContent({ res }) {
-    const tabs = ["overview", "language", "highlighted", "architecture", "strategy", "experience", "prescriptions"];
-    const labels = { overview: "Overview", language: "Clichés", highlighted: "Highlighted Text", architecture: "IA", strategy: "Strategy", experience: "UX", prescriptions: "Rx: Fix It" };
+    const tabs = ["overview", "language", "highlighted", "strategy", "prescriptions"];
+    const labels = { overview: "Overview", language: "Clichés", highlighted: "Highlighted Text", strategy: "Strategy", prescriptions: "Rx: Fix It" };
     const avail = tabs.filter(t => {
-      if (["architecture", "strategy", "experience"].includes(t)) return res.scores[t] != null;
+      if (t === "strategy") return res.scores.strategy != null;
       if (t === "highlighted") return !!res.bodyText;
       if (t === "prescriptions") return !!res.ai?.rx_language;
       return true;
@@ -257,20 +247,6 @@ export default function App() {
             </div>
           )}
 
-          {/* ARCHITECTURE */}
-          {activeTab === "architecture" && res.navScore && (
-            <div style={{ display: "grid", gap: 12 }}>
-              <div style={{ background: T.card, border: "1px solid " + T.border, borderRadius: 10, padding: 20 }}>
-                <div style={{ fontSize: 10, fontFamily: T.mono, color: T.accent, textTransform: "uppercase", marginBottom: 12 }}>Navigation Labels</div>
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 10 }}>
-                  {res.navItems.map((n, i) => { const gen = NAV_CLICHES.some(c => n.toLowerCase().includes(c) || c.includes(n.toLowerCase())); return <Pill key={i} color={gen ? "#ef4444" : "#22c55e"}>{n} {gen && <span style={{ fontSize: 9, opacity: 0.7 }}>⟵ generic</span>}</Pill>; })}
-                </div>
-                <p style={{ fontSize: 12, color: T.dim, margin: 0, fontFamily: T.mono }}>{res.navScore.generic}/{res.navScore.total} labels identical to every other school</p>
-              </div>
-              {res.ai?.nav_critique && <div style={{ background: T.card, border: "1px solid " + T.border, borderRadius: 10, padding: "16px 20px" }}><div style={{ fontSize: 10, fontFamily: T.mono, color: T.dim, textTransform: "uppercase", marginBottom: 6 }}>Critique</div><p style={{ fontSize: 14, color: T.text, lineHeight: 1.6, margin: 0 }}>{res.ai.nav_critique}</p></div>}
-            </div>
-          )}
-
           {/* STRATEGY */}
           {activeTab === "strategy" && (
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
@@ -285,22 +261,12 @@ export default function App() {
             </div>
           )}
 
-          {/* EXPERIENCE */}
-          {activeTab === "experience" && (
-            <div style={{ background: T.card, border: "1px solid " + T.border, borderRadius: 10, padding: 20 }}>
-              <div style={{ fontSize: 10, fontFamily: T.mono, color: T.accent, textTransform: "uppercase", marginBottom: 12 }}>Calls-to-Action Audit</div>
-              {res.allCTAs.length > 0 ? <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>{res.allCTAs.map((c, i) => { const gen = /^(apply|learn more|read more|visit|explore|discover|request info|get started|submit|view|see more|find out)/i.test(c.trim()); return <Pill key={i} color={gen ? "#ef4444" : "#22c55e"}>{c.trim()} {gen && <span style={{ fontSize: 9, opacity: 0.7 }}>generic</span>}</Pill>; })}</div> : <p style={{ color: T.dim, fontSize: 13 }}>No CTAs captured.</p>}
-            </div>
-          )}
-
           {/* PRESCRIPTIONS */}
           {activeTab === "prescriptions" && res.ai && (
             <div style={{ display: "grid", gap: 10 }}>
               {[
                 { l: "Language & Voice", t: res.ai.rx_language, c: T.accent },
-                { l: "Information Architecture", t: res.ai.rx_structure, c: "#eab308" },
                 { l: "Content Strategy", t: res.ai.rx_strategy, c: "#22c55e" },
-                { l: "Digital Experience", t: res.ai.rx_experience, c: "#84cc16" },
               ].filter(r => r.t).map((r, i) => (
                 <div key={i} style={{ background: T.card, border: "1px solid " + T.border, borderRadius: 10, padding: "18px 20px", borderLeft: "3px solid " + r.c }}>
                   <div style={{ fontSize: 10, fontFamily: T.mono, color: r.c, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6 }}>Rx: {r.l}</div>
@@ -340,7 +306,7 @@ export default function App() {
             The Blanding<br /><span style={{ fontStyle: "italic", color: T.accent }}>Detector</span>
           </h1>
           <p style={{ fontSize: 15, lineHeight: 1.65, color: "#999", maxWidth: 540, marginTop: 16, fontWeight: 300 }}>
-            Audit your website for generic language, cookie-cutter navigation, and institutional sameness. Compare yourself against a competitor. Get specific prescriptions to fix it.
+            How generic is your institution's website copy? Paste a URL and find out. We scan your homepage and landing pages for clichés, stock phrases, and the kind of language that makes every school sound the same.
           </p>
         </header>
 
@@ -452,22 +418,21 @@ export default function App() {
                   )}
                 </div>
                 {/* Dimension bars */}
-                {result.scores.architecture != null && result2.scores.architecture != null && (
-                  <div style={{ marginTop: 14, display: "grid", gap: 6 }}>
-                    {[{ key: "language", label: "Language" }, { key: "architecture", label: "IA" }, { key: "strategy", label: "Strategy" }, { key: "experience", label: "UX" }].map(d => {
-                      const s1 = result.scores[d.key], s2 = result2.scores[d.key];
-                      return (
-                        <div key={d.key} style={{ background: T.card, border: "1px solid " + T.border, borderRadius: 8, padding: "12px 16px", display: "grid", gridTemplateColumns: "70px 1fr auto 1fr 70px", alignItems: "center", gap: 10 }}>
-                          <span style={{ fontSize: 20, fontFamily: T.serif, color: scoreColor(s1), textAlign: "right" }}>{s1}</span>
-                          <div style={{ height: 6, borderRadius: 3, background: T.border, overflow: "hidden", direction: "rtl" }}><div style={{ height: "100%", width: `${s1}%`, background: scoreColor(s1), borderRadius: 3, transition: "width 1s ease" }} /></div>
-                          <span style={{ fontSize: 9, fontFamily: T.mono, color: T.dim, textTransform: "uppercase", textAlign: "center", minWidth: 55 }}>{d.label}</span>
-                          <div style={{ height: 6, borderRadius: 3, background: T.border, overflow: "hidden" }}><div style={{ height: "100%", width: `${s2}%`, background: scoreColor(s2), borderRadius: 3, transition: "width 1s ease" }} /></div>
-                          <span style={{ fontSize: 20, fontFamily: T.serif, color: scoreColor(s2) }}>{s2}</span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
+                <div style={{ marginTop: 14, display: "grid", gap: 6 }}>
+                  {[{ key: "language", label: "Language & Voice" }, { key: "strategy", label: "Content Strategy" }].map(d => {
+                    const s1 = result.scores[d.key], s2 = result2.scores[d.key];
+                    if (s1 == null || s2 == null) return null;
+                    return (
+                      <div key={d.key} style={{ background: T.card, border: "1px solid " + T.border, borderRadius: 8, padding: "12px 16px", display: "grid", gridTemplateColumns: "70px 1fr auto 1fr 70px", alignItems: "center", gap: 10 }}>
+                        <span style={{ fontSize: 20, fontFamily: T.serif, color: scoreColor(s1), textAlign: "right" }}>{s1}</span>
+                        <div style={{ height: 6, borderRadius: 3, background: T.border, overflow: "hidden", direction: "rtl" }}><div style={{ height: "100%", width: `${s1}%`, background: scoreColor(s1), borderRadius: 3, transition: "width 1s ease" }} /></div>
+                        <span style={{ fontSize: 9, fontFamily: T.mono, color: T.dim, textTransform: "uppercase", textAlign: "center", minWidth: 55 }}>{d.label}</span>
+                        <div style={{ height: 6, borderRadius: 3, background: T.border, overflow: "hidden" }}><div style={{ height: "100%", width: `${s2}%`, background: scoreColor(s2), borderRadius: 3, transition: "width 1s ease" }} /></div>
+                        <span style={{ fontSize: 20, fontFamily: T.serif, color: scoreColor(s2) }}>{s2}</span>
+                      </div>
+                    );
+                  })}
+                </div>
               </>
             ) : (
               <>

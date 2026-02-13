@@ -3,9 +3,7 @@ import { scoreColor, scoreLabel, scoreVerdict } from './constants';
 export function exportPDF(res) {
   const dims = [
     { key: "language", label: "Language & Voice" },
-    { key: "architecture", label: "Info Architecture" },
     { key: "strategy", label: "Content Strategy" },
-    { key: "experience", label: "Digital Experience" },
   ].filter(d => res.scores[d.key] != null);
 
   const dimRows = dims.map(d =>
@@ -21,9 +19,7 @@ export function exportPDF(res) {
 
   const rx = [
     res.ai?.rx_language && { l: "Language & Voice", t: res.ai.rx_language },
-    res.ai?.rx_structure && { l: "Information Architecture", t: res.ai.rx_structure },
     res.ai?.rx_strategy && { l: "Content Strategy", t: res.ai.rx_strategy },
-    res.ai?.rx_experience && { l: "Digital Experience", t: res.ai.rx_experience },
   ].filter(Boolean).map(r =>
     `<div style="margin-bottom:14px;padding:12px 16px;background:#f8f6f3;border-radius:6px;border-left:3px solid #c87840">
       <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.1em;color:#c87840;margin-bottom:6px;font-family:monospace">${r.l}</div>
