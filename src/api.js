@@ -15,7 +15,8 @@ async function callAPI(messages, useSearch = false, model = "claude-sonnet-4-202
   if (useSearch) body.tools = [{ type: "web_search_20250305", name: "web_search" }];
 
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 25000);
+  const timeoutMs = useSearch ? 45000 : 25000;
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
     const resp = await fetch(API_ENDPOINT, {

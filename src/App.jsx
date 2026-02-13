@@ -64,7 +64,10 @@ export default function App() {
     const url = norm(inputUrl);
     addProg(prefix + "Fetching: " + url);
     let hp;
-    try { hp = await fetchPage(url); } catch { addProg(prefix + "Failed to fetch", "error"); return null; }
+    try { hp = await fetchPage(url); } catch { 
+      addProg(prefix + "Retrying...");
+      try { hp = await fetchPage(url); } catch { addProg(prefix + "Failed to fetch", "error"); return null; }
+    }
     addProg(prefix + 'Loaded: "' + (hp.title || "Untitled") + '"');
 
     const pages = [{ url, data: hp, type: "homepage" }];
