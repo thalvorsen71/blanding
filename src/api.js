@@ -10,8 +10,8 @@ function parseJSON(raw) {
   }
 }
 
-async function callAPI(messages, useSearch = false) {
-  const body = { model: "claude-sonnet-4-20250514", max_tokens: 1500, messages };
+async function callAPI(messages, useSearch = false, model = "claude-sonnet-4-20250514") {
+  const body = { model, max_tokens: 1500, messages };
   if (useSearch) body.tools = [{ type: "web_search_20250305", name: "web_search" }];
 
   const controller = new AbortController();
@@ -91,7 +91,7 @@ Return JSON only:
   "rx_language": "fix the voice, 2 sentences",
   "rx_strategy": "fix the content strategy, 2 sentences"
 }`
-  }]);
+  }], false, "claude-haiku-4-5-20251001");
   try { return parseJSON(raw); } catch { return null; }
 }
 
