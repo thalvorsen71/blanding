@@ -14,14 +14,25 @@ async function callAPI(messages, useSearch = false) {
   const body = { model: "claude-sonnet-4-20250514", max_tokens: 1500, messages };
   if (useSearch) body.tools = [{ type: "web_search_20250305", name: "web_search" }];
 
-  const resp = await fetch(API_ENDPOINT, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
-  const data = await resp.json();
-  if (data.error) throw new Error(data.error);
-  return data.content?.map(b => b.text || "").filter(Boolean).join("\n") || "";
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 25000);
+
+  try {
+    const resp = await fetch(API_ENDPOINT, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+      signal: controller.signal,
+    });
+    clearTimeout(timeout);
+    const data = await resp.json();
+    if (data.error) throw new Error(data.error);
+    return data.content?.map(b => b.text || "").filter(Boolean).join("\n") || "";
+  } catch (err) {
+    clearTimeout(timeout);
+    if (err.name === "AbortError") throw new Error("Request timed out — try again");
+    throw err;
+  }
 }
 
 export async function fetchPage(url) {
@@ -55,38 +66,30 @@ Return ONLY a JSON object (no markdown, no backticks, no preamble) with these fi
 export async function deepAnalysis(url, text, allText) {
   const raw = await callAPI([{
     role: "user",
-    content: `You are a brutally honest higher ed brand copy critic. Your ONLY job is to judge the WORDS on the pages that prospective students and visitors actually see — homepages and primary landing pages. Do NOT reference mission statements, internal policies, or content buried deep in the site.
+    content: `Brutally honest higher ed brand copy critic. Judge ONLY the words visitors actually see on homepages and landing pages.
 
-This is the visitor-facing copy scraped from ${url}:
+URL: ${url}
+--- SCRAPED TEXT ---
+${text.substring(0, 2000)}
+--- END ---
+Other pages: ${allText.substring(0, 500)}
 
---- BEGIN SCRAPED TEXT ---
-${text.substring(0, 3000)}
---- END SCRAPED TEXT ---
+RULES: Only reference text above. No claims about layout/design. For weak_sentence: exact verbatim quote from above or "No clear example." No invented content.
 
-Additional landing pages scraped (About, Admissions, Academics — NOT deep sub-pages): ${allText.substring(0, 800)}
-
-CRITICAL RULES — YOU MUST FOLLOW THESE:
-1. You can ONLY reference text that appears between the BEGIN/END markers above.
-2. Do NOT make claims about page layout, visual design, navigation structure, or what "leads" the page. You cannot see the page — you only have the text.
-3. For "weak_sentence": Copy-paste an EXACT sentence from the scraped text. If you can't find one, write "No clear example in scraped text."
-4. For "biggest_sin" and "best_moment": Only reference language/phrases that actually appear in the scraped text above. Do NOT invent content.
-5. Do NOT claim text is "repeated" or "duplicated" unless you can see it appear twice in the scraped text above.
-6. Focus entirely on: Is this copy generic? Could any school say this? Or is it specific, distinctive, and ownable?
-
-Return ONLY a JSON object (no markdown, no backticks):
+Return JSON only:
 {
-  "voice_score": 1-10 (1=any school could say every word of this, 10=unmistakably this institution),
-  "specificity_score": 1-10 (1=all abstract claims, 10=concrete specific details throughout),
-  "consistency_score": 1-10 (1=identity shifts constantly, 10=clear consistent voice),
-  "tone_diagnosis": "describe their brand voice as a person at a dinner party, 2 sentences, be funny and specific",
-  "biggest_sin": "the worst LANGUAGE problem you can see IN THE ACTUAL TEXT ABOVE, 1 sentence",
-  "best_moment": "the most distinctive/specific LANGUAGE in the text above (if nothing, say so with humor)",
-  "weak_sentence": "EXACT VERBATIM sentence from the scraped text above that is most generic. Copy-paste it character for character.",
-  "rewrite": "rewrite that exact sentence with personality and specificity for this particular school",
-  "differentiation_killer": "the #1 reason this copy fails to stand out, based on the actual words",
-  "missed_opportunity": "what specific detail in the text COULD be distinctive but gets buried in generic language",
-  "rx_language": "specific prescription to fix the copy/voice, 2 concrete sentences",
-  "rx_strategy": "specific prescription for what content to lead with instead, 2 sentences"
+  "voice_score": 1-10,
+  "specificity_score": 1-10,
+  "consistency_score": 1-10,
+  "tone_diagnosis": "brand as dinner party person, 2 sentences, funny",
+  "biggest_sin": "worst language problem in text above, 1 sentence",
+  "best_moment": "most distinctive language above (or say nothing stands out)",
+  "weak_sentence": "EXACT verbatim generic sentence from text above",
+  "rewrite": "rewrite with personality for this school",
+  "differentiation_killer": "why this copy fails to stand out",
+  "missed_opportunity": "what detail could be distinctive but is buried",
+  "rx_language": "fix the voice, 2 sentences",
+  "rx_strategy": "fix the content strategy, 2 sentences"
 }`
   }]);
   try { return parseJSON(raw); } catch { return null; }

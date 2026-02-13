@@ -79,7 +79,8 @@ export default function App() {
 
     addProg(prefix + "Running AI brand analysis...");
     const allBody = pages.map(p => p.data.body_text || "").join(" ");
-    const ai = await deepAnalysis(url, hp.body_text || JSON.stringify(hp), allBody);
+    let ai;
+    try { ai = await deepAnalysis(url, hp.body_text || JSON.stringify(hp), allBody); } catch (e) { addProg(prefix + "AI analysis timed out — using cliché data only", "error"); ai = null; }
 
     const allH1 = pages.flatMap(p => p.data.h1 || []);
     const allH2 = pages.flatMap(p => p.data.h2s || []);
