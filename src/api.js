@@ -64,9 +64,33 @@ Return ONLY a JSON object (no markdown, no backticks, no preamble) with these fi
 }
 
 export async function deepAnalysis(url, text, allText) {
-  const raw = await callAPI([{
-    role: "user",
-    content: `Brutally honest higher ed brand copy critic. Judge ONLY the words visitors actually see on homepages and landing pages.
+  const combinedText = (text + " " + allText).trim();
+  const wordCount = combinedText.split(/\s+/).length;
+  
+  // If almost no content was scraped, diagnose the ABSENCE of copy
+  const isEmptyContent = wordCount < 80;
+  
+  const prompt = isEmptyContent
+    ? `Higher ed brand critic. This institution's homepage at ${url} has almost NO visitor-facing copy. The scraper found only: "${text.substring(0, 300)}"
+
+This is a strategy failure — the most valuable real estate the institution owns is doing zero brand work. Diagnose this absence.
+
+Return JSON only:
+{
+  "voice_score": 2,
+  "specificity_score": 1,
+  "consistency_score": 3,
+  "tone_diagnosis": "describe this empty homepage as a person at a dinner party, 2 sentences, funny",
+  "biggest_sin": "diagnose why having no copy on your homepage is a branding failure, 1 sentence",
+  "best_moment": "find anything remotely distinctive in the scraped text, or roast the emptiness",
+  "weak_sentence": "NO_CONTENT",
+  "rewrite": "NO_CONTENT",
+  "differentiation_killer": "explain how absence of copy makes differentiation impossible",
+  "missed_opportunity": "what should this homepage be doing instead",
+  "rx_language": "what words should actually be on this homepage, 2 sentences",
+  "rx_strategy": "how to fix a homepage that does no brand work, 2 sentences"
+}`
+    : `Brutally honest higher ed brand copy critic. Judge ONLY the words visitors actually see on homepages and landing pages.
 
 URL: ${url}
 --- SCRAPED TEXT ---
@@ -74,7 +98,12 @@ ${text.substring(0, 2000)}
 --- END ---
 Other pages: ${allText.substring(0, 500)}
 
-RULES: Only reference text above. No claims about layout/design. For weak_sentence: exact verbatim quote from above or "No clear example." No invented content.
+RULES:
+- Only reference text that appears in the SCRAPED TEXT above.
+- No claims about layout/design.
+- For weak_sentence: Find the most generic sentence in the scraped text and copy it EXACTLY, character for character. It must appear verbatim above. If you cannot find a complete sentence, write "NO_CONTENT".
+- For rewrite: Rewrite that exact sentence with personality. If weak_sentence is "NO_CONTENT", write "NO_CONTENT".
+- Do NOT paraphrase or combine multiple sentences. Pick ONE real sentence.
 
 Return JSON only:
 {
@@ -84,14 +113,15 @@ Return JSON only:
   "tone_diagnosis": "brand as dinner party person, 2 sentences, funny",
   "biggest_sin": "worst language problem in text above, 1 sentence",
   "best_moment": "most distinctive language above (or say nothing stands out)",
-  "weak_sentence": "EXACT verbatim generic sentence from text above",
-  "rewrite": "rewrite with personality for this school",
+  "weak_sentence": "EXACT verbatim sentence copied from scraped text, or NO_CONTENT",
+  "rewrite": "rewrite with personality for this school, or NO_CONTENT",
   "differentiation_killer": "why this copy fails to stand out",
   "missed_opportunity": "what detail could be distinctive but is buried",
   "rx_language": "fix the voice, 2 sentences",
   "rx_strategy": "fix the content strategy, 2 sentences"
-}`
-  }], false, "claude-haiku-4-5-20251001");
+}`;
+
+  const raw = await callAPI([{ role: "user", content: prompt }], false, "claude-haiku-4-5-20251001");
   try { return parseJSON(raw); } catch { return null; }
 }
 
