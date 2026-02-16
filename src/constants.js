@@ -141,6 +141,52 @@ export function calcPercentile(score) {
   return { percentile, belowCount: below, totalCount: SCHOOL_BENCHMARKS.length };
 }
 
+/**
+ * Measures how specific/distinctive the content is — rewarding what makes
+ * a site interesting rather than just penalizing what makes it generic.
+ *
+ * Returns a score 0-30 representing content richness bonus points.
+ */
+export function contentRichnessBonus(bodyText, h1s = [], h2s = [], uniqueClaims = []) {
+  if (!bodyText || bodyText.length < 100) return 0;
+  const text = bodyText.toLowerCase();
+  let bonus = 0;
+
+  // 1. Specific numbers and data points (enrollment, rankings, funding, dates)
+  //    e.g. "14,000 students", "#19 most innovative", "$2.3 billion"
+  const numberMatches = text.match(/\b\d[\d,.]*([\s-]*(million|billion|percent|%|students|faculty|acres|years|programs|degrees|alumni|countries))\b/gi) || [];
+  bonus += Math.min(numberMatches.length * 2, 8);
+
+  // 2. Named entities: proper nouns that signal specific people, places, programs, events
+  //    Count capitalized multi-word phrases in the original (non-lowered) text
+  const properNouns = bodyText.match(/[A-Z][a-z]+(?:\s+[A-Z][a-z]+)+/g) || [];
+  // Filter out common generic phrases
+  const genericProperNouns = /^(The University|Our Students|Student Life|Campus Life|Academic Programs|Learn More|Read More|Find Out|Get Started|Apply Now)/;
+  const specificProperNouns = properNouns.filter(p => !genericProperNouns.test(p));
+  bonus += Math.min(specificProperNouns.length * 0.5, 6);
+
+  // 3. Temporal specificity: dates, event names, "2025", "2026", specific semesters
+  const dateMatches = text.match(/\b(january|february|march|april|may|june|july|august|september|october|november|december|spring|fall|winter|summer)\s+\d{4}\b/gi) || [];
+  const yearMatches = text.match(/\b20[2-3]\d\b/g) || [];
+  bonus += Math.min((dateMatches.length + yearMatches.length * 0.3) * 1.5, 5);
+
+  // 4. Quotation marks suggest real quotes from real people
+  const quoteMatches = bodyText.match(/[""][^""]{20,}[""\u201D]/g) || [];
+  bonus += Math.min(quoteMatches.length * 2, 4);
+
+  // 5. Unique claims credit (already extracted by scraper)
+  bonus += Math.min(uniqueClaims.length * 1.5, 6);
+
+  // 6. H2 diversity — lots of different section headings suggest rich content
+  const nonGenericH2s = h2s.filter(h => {
+    const low = h.toLowerCase();
+    return !/(about|academics|admissions|campus|student|life|why|visit|apply|explore|discover|experience|welcome|learn more|get started)/.test(low);
+  });
+  bonus += Math.min(nonGenericH2s.length * 1, 5);
+
+  return Math.min(Math.round(bonus), 30);
+}
+
 export function calcNavScore(items) {
   const lower = items.map(n => n.toLowerCase().trim());
   let generic = 0;

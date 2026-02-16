@@ -43,7 +43,7 @@ exports.handler = async (event) => {
 
     const body = {
       model: req.model || "claude-sonnet-4-20250514",
-      max_tokens: Math.min(req.max_tokens || 1500, 2000),
+      max_tokens: Math.min(req.max_tokens || 2000, 3000),
       messages: req.messages,
     };
     if (req.tools) body.tools = req.tools;

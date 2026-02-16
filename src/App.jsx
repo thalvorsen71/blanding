@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { T, scoreColor, scoreLabel, scoreVerdict, countCliches, highlightCliches, SCHOOL_BENCHMARKS, calcPercentile } from './constants';
+import { T, scoreColor, scoreLabel, scoreVerdict, countCliches, highlightCliches, SCHOOL_BENCHMARKS, calcPercentile, contentRichnessBonus } from './constants';
 import { fetchPage, fetchSubPage, deepAnalysis, captureLead } from './api';
 import { exportPDF } from './pdf';
 import { generateScorecard } from './scorecard';
@@ -131,16 +131,21 @@ export default function App() {
     const totalC = cliches.reduce((s, c) => s + c.count, 0);
     const wc = allBody.split(/\s+/).length;
 
-    let lang = 100 - Math.min(cliches.length * 3.5, 45) - Math.min((totalC / Math.max(wc / 100, 1)) * 7, 30) - (uniq.length < 2 ? 15 : 0);
+    // Content richness bonus: rewards specific, distinctive content (0-30 pts)
+    const richness = contentRichnessBonus(allBody, allH1, allH2, uniq);
+
+    // Language score: penalties for clichés + bonus for richness
+    let lang = 100 - Math.min(cliches.length * 3, 40) - Math.min((totalC / Math.max(wc / 100, 1)) * 6, 25) - (uniq.length < 2 ? 10 : 0) + Math.min(richness * 0.5, 12);
     if (ai?.voice_score) lang = (lang + ai.voice_score * 10) / 2;
     lang = Math.max(0, Math.min(100, Math.round(lang)));
 
-    let strat = 50 + uniq.length * 5 - stock.length * 3;
+    // Strategy score: unique claims, stock phrases, content richness
+    let strat = 45 + uniq.length * 5 - stock.length * 3 + Math.min(richness * 0.6, 15);
     if (ai?.specificity_score) strat = (strat + ai.specificity_score * 10) / 2;
     if (ai?.consistency_score) strat = (strat + ai.consistency_score * 10) / 2;
     strat = Math.max(0, Math.min(100, Math.round(strat)));
 
-    const overall = Math.round(lang * 0.6 + strat * 0.4);
+    const overall = Math.round(lang * 0.55 + strat * 0.45);
     const percentile = calcPercentile(overall);
 
     return {

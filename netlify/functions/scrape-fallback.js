@@ -69,7 +69,7 @@ exports.handler = async (event) => {
     // Remove nav/header/footer from body copy
     const bodyClone = bodyEl.clone();
     bodyClone.find("nav, header, footer, aside, [role='navigation'], [role='banner'], [role='contentinfo']").remove();
-    let bodyText = bodyClone.text().replace(/\s+/g, " ").trim().substring(0, 2500);
+    let bodyText = bodyClone.text().replace(/\s+/g, " ").trim().substring(0, 6000);
 
     // CTAs
     const ctas = [];

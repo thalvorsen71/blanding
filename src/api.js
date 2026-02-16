@@ -12,7 +12,7 @@ function parseJSON(raw) {
 }
 
 async function callAPI(messages, useSearch = false, model = "claude-sonnet-4-20250514") {
-  const body = { model, max_tokens: 1500, messages };
+  const body = { model, max_tokens: 2000, messages };
   if (useSearch) body.tools = [{ type: "web_search_20250305", name: "web_search" }];
 
   const controller = new AbortController();
@@ -92,7 +92,7 @@ Return ONLY a JSON object (no markdown, no backticks, no preamble):
   "h1": ["exact H1 texts"],
   "h2s": ["first 12 H2 texts exactly as written"],
   "nav_items": ["main navigation labels"],
-  "body_text": "verbatim main content text from THIS URL only, max 2500 chars, skip nav/footer",
+  "body_text": "verbatim main content text from THIS URL only, max 5000 chars, skip nav/footer",
   "ctas": ["CTA button/link texts exactly as written"],
   "page_type": "homepage|admissions|about|academics|student-life|other",
   "linked_pages": ["up to 6 internal section URLs found on this page"],
@@ -188,15 +188,17 @@ Return JSON only:
 }`
     : `You are a brutally honest higher ed brand critic. Evaluate the BRAND STRATEGY this homepage is executing.
 
-Homepages use different strategies. Some lead with institutional copy ("world-class faculty, commitment to excellence"). Some lead with news/stories/spotlights. Some are purely functional (search box, directory). Each is a brand choice worth evaluating.
+Homepages use different strategies. Some lead with institutional copy ("world-class faculty, commitment to excellence"). Some lead with news/stories/spotlights featuring real research, events, or people. Some are purely functional (search box, directory). Each is a brand choice worth evaluating.
 
-Your job: What strategy is this page using? How well does it execute? Does a first-time visitor leave knowing what makes this institution DIFFERENT?
+IMPORTANT: A homepage full of specific stories, named events, real research highlights, current news, and concrete details is VERY DIFFERENT from a homepage full of generic platitudes — even if both contain a few stock phrases. Evaluate the OVERALL IMPRESSION, not just the worst moments. A site that leads with "LunarFest 2026" and "free tuition for families earning under $100K" is making a fundamentally different brand choice than one that leads with "transformative experience."
+
+Your job: What strategy is this page using? How well does it execute? Does a first-time visitor leave knowing what makes this institution DIFFERENT? Give credit where credit is due for specific, vivid, timely content.
 
 URL: ${url}
 === SCRAPED TEXT (THIS IS THE ONLY CONTENT ON THE PAGE) ===
-${text.substring(0, 2000)}
+${text.substring(0, 4000)}
 === END OF SCRAPED TEXT ===
-Other pages sampled: ${allText.substring(0, 500)}
+Other pages sampled: ${allText.substring(0, 800)}
 
 CRITICAL GROUNDING RULES — READ CAREFULLY:
 1. You may ONLY reference text that literally appears in the SCRAPED TEXT above. If a phrase isn't in the text above, you CANNOT mention it.
@@ -209,9 +211,9 @@ CRITICAL GROUNDING RULES — READ CAREFULLY:
 
 Return JSON only:
 {
-  "voice_score": 1-10 (1=no distinct voice, 10=unmistakably this institution),
-  "specificity_score": 1-10 (1=vague/generic, 10=concrete details only this school could claim),
-  "consistency_score": 1-10 (1=scattered identity, 10=every word reinforces who they are),
+  "voice_score": 1-10 (1=no distinct voice, 10=unmistakably this institution. NOTE: specific stories, named events, and real news contribute to voice even if some generic language also exists),
+  "specificity_score": 1-10 (1=all vague platitudes, 10=concrete details, named people/events/programs, specific numbers. Give HIGH scores to pages with real news stories, named events, specific research, concrete facts — even if they also have some generic CTAs),
+  "consistency_score": 1-10 (1=scattered identity, 10=every element reinforces who they are),
   "tone_diagnosis": "describe the brand personality based on ALL the content in the scraped text. As a person at a dinner party, 2 sentences, funny and specific. Reference actual phrases from the text.",
   "biggest_sin": "the biggest brand strategy failure — reference QUOTED phrases from the scraped text. 1-2 sentences.",
   "best_moment": "the most distinctive content, QUOTING actual phrases from the scraped text. If nothing distinctive, say so.",
