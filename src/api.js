@@ -11,6 +11,14 @@ function parseJSON(raw) {
   }
 }
 
+class RateLimitError extends Error {
+  constructor(retryAfter = 60) {
+    super("Rate limited — waiting before retry");
+    this.name = "RateLimitError";
+    this.retryAfter = retryAfter; // seconds
+  }
+}
+
 async function callAPI(messages, useSearch = false, model = "claude-sonnet-4-20250514") {
   const body = { model, max_tokens: 2000, messages };
   if (useSearch) body.tools = [{ type: "web_search_20250305", name: "web_search" }];
@@ -27,11 +35,32 @@ async function callAPI(messages, useSearch = false, model = "claude-sonnet-4-202
       signal: controller.signal,
     });
     clearTimeout(timeout);
+
+    // Check HTTP 429 from our proxy before parsing body
+    if (resp.status === 429) {
+      throw new RateLimitError(60);
+    }
+
     const data = await resp.json();
-    if (data.error) throw new Error(data.error);
+
+    // Detect rate limits from Anthropic API (proxied through our function)
+    if (data.error) {
+      const errMsg = typeof data.error === "string" ? data.error : data.error.message || "";
+      if (errMsg.includes("rate limit") || errMsg.includes("429") || errMsg.includes("too many requests")) {
+        const retryMatch = errMsg.match(/try again in (\d+)/);
+        throw new RateLimitError(retryMatch ? parseInt(retryMatch[1]) : 60);
+      }
+      throw new Error(errMsg);
+    }
+    // Also check for 429 status from our proxy
+    if (data.type === "error" && data.error?.type === "rate_limit_error") {
+      throw new RateLimitError(60);
+    }
+
     return data.content?.map(b => b.text || "").filter(Boolean).join("\n") || "";
   } catch (err) {
     clearTimeout(timeout);
+    if (err.name === "RateLimitError") throw err;
     if (err.name === "AbortError") throw new Error("Request timed out — try again");
     throw err;
   }
@@ -99,7 +128,7 @@ Return ONLY a JSON object (no markdown, no backticks, no preamble):
   "unique_claims": ["specific concrete claims literally on the page with numbers or facts"],
   "stock_phrases": ["generic marketing phrases literally on the page"]
 }`
-  }], true, "claude-haiku-4-5-20251001"); // Haiku: faster, cheaper, higher rate limits
+  }], true); // Sonnet: only model that actually executes web_search tool
   const result = parseJSON(raw);
   result._source = "claude_websearch"; // tag source
   return result;
@@ -131,33 +160,42 @@ export async function fetchPage(url, onProgress) {
     if (onProgress) onProgress("Retrying with AI scraper...");
   }
 
-  // Step 2: Fall back to Claude web_search (with retries)
-  const delays = [0, 1000, 2500];
-  for (let i = 0; i < delays.length; i++) {
-    if (delays[i] > 0) await sleep(delays[i]);
+  // Step 2: Fall back to Claude web_search (max 2 attempts, rate-limit-aware)
+  for (let i = 0; i < 2; i++) {
     try {
-      if (onProgress && i > 0) onProgress(`AI scraper retry ${i + 1}...`);
+      if (onProgress && i > 0) onProgress("AI scraper retry...");
       return await fetchPageViaClaude(url);
-    } catch {
-      if (i === delays.length - 1) return null;
+    } catch (err) {
+      if (err.name === "RateLimitError") {
+        if (i === 0) {
+          // Wait out the rate limit window (default 60s) then retry once
+          const waitSec = Math.min(err.retryAfter || 60, 90);
+          if (onProgress) onProgress(`Rate limited — waiting ${waitSec}s before retry...`);
+          await sleep(waitSec * 1000);
+          continue;
+        }
+        // Already retried once after rate limit — give up
+        if (onProgress) onProgress("AI scraper unavailable (rate limited). Using available content.");
+        return null;
+      }
+      // Non-rate-limit error: retry once after brief pause
+      if (i === 0) { await sleep(2000); continue; }
+      return null;
     }
   }
   return null;
 }
 
 /**
- * Fetch a sub-page: cheerio first, Claude fallback
+ * Fetch a sub-page: cheerio ONLY (no Claude fallback).
+ * This conserves Sonnet rate limits for the homepage scrape + analysis.
  */
 export async function fetchSubPage(url) {
   try {
     const data = await fetchPageViaCheerio(url);
     if ((data.body_text || "").trim().length >= MIN_BODY_CHARS) return data;
   } catch {}
-  try {
-    return await fetchPageViaClaude(url);
-  } catch {
-    return null;
-  }
+  return null; // Skip Claude for sub-pages to stay within rate limits
 }
 
 export async function deepAnalysis(url, text, allText) {
