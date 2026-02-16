@@ -146,6 +146,8 @@ const MIN_BODY_CHARS = 200; // if cheerio gets less than this, try Claude
  * @returns {object|null}
  */
 export async function fetchPage(url, onProgress) {
+  let cheerioData = null; // Keep cheerio result as fallback even if below threshold
+
   // Step 1: Try cheerio (deterministic, fast, zero hallucination)
   try {
     const data = await fetchPageViaCheerio(url);
@@ -155,7 +157,10 @@ export async function fetchPage(url, onProgress) {
       return data; // Cheerio got enough content — use it
     }
 
-    // Cheerio got too little content (likely JS-heavy page) — try Claude
+    // Cheerio got SOME content but below threshold — save as fallback
+    cheerioData = data;
+
+    // Try Claude for richer extraction
     if (onProgress) onProgress("Page uses dynamic content, trying AI scraper...");
   } catch (err) {
     // Cheerio failed entirely — try Claude
@@ -176,16 +181,16 @@ export async function fetchPage(url, onProgress) {
           await sleep(waitSec * 1000);
           continue;
         }
-        // Already retried once after rate limit — give up
+        // Already retried once after rate limit — use whatever cheerio got
         if (onProgress) onProgress("AI scraper unavailable (rate limited). Using available content.");
-        return null;
+        return cheerioData; // May be partial content, but better than nothing
       }
       // Non-rate-limit error: retry once after brief pause
       if (i === 0) { await sleep(2000); continue; }
-      return null;
+      return cheerioData; // Fall back to partial cheerio content
     }
   }
-  return null;
+  return cheerioData; // Return whatever we have, even if sparse
 }
 
 /**
