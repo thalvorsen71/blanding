@@ -37,38 +37,14 @@ async function callAPI(messages, useSearch = false, model = "claude-sonnet-4-202
   }
 }
 
-/* ─── RETRY WITH EXPONENTIAL BACKOFF ─── */
+/* ─── SCRAPING: CHEERIO-FIRST, CLAUDE-FALLBACK ─── */
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
-async function fetchPageViaClaude(url) {
-  const raw = await callAPI([{
-    role: "user",
-    content: `Search for and visit this URL: ${url}
-
-CRITICAL RULES:
-- Return ONLY content that appears on THIS specific URL. Do NOT include text from other pages on the same website (e.g. don't pull in mission statement pages, policy pages, or deep sub-pages).
-- This is a homepage or primary landing page audit. Only capture what a visitor to THIS URL would actually see.
-- For body_text: Copy the actual visible text content from THIS page verbatim. Do not pull in content from sub-pages or other URLs on the same domain.
-- For unique_claims and stock_phrases: Only include phrases that literally appear on THIS page.
-- If you cannot access the page or certain fields are empty, use empty strings/arrays. Do NOT fabricate placeholder content.
-
-Return ONLY a JSON object (no markdown, no backticks, no preamble) with these fields:
-- "title": the exact page title
-- "meta_description": the exact meta description tag content
-- "h1": array of all H1 text exactly as written
-- "h2s": array of first 12 H2 texts exactly as written
-- "nav_items": array of main navigation labels exactly as written
-- "body_text": verbatim main body text content from THIS URL ONLY (first 2500 chars, skip nav/footer). Do NOT include text from linked pages or sub-pages.
-- "ctas": array of CTA button/link text exactly as written
-- "page_type": "homepage"|"admissions"|"about"|"academics"|"student-life"|"other"
-- "linked_pages": array of up to 6 internal section URLs
-- "unique_claims": array of specific concrete claims that literally appear on the page
-- "stock_phrases": array of generic phrases that literally appear on the page`
-  }], true);
-  return parseJSON(raw);
-}
-
-async function fetchPageViaFallback(url) {
+/**
+ * Primary scraper: Cheerio (deterministic, zero hallucination).
+ * Falls back to Claude web_search only when cheerio gets too little content.
+ */
+async function fetchPageViaCheerio(url) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 20000);
   try {
@@ -81,6 +57,7 @@ async function fetchPageViaFallback(url) {
     clearTimeout(timeout);
     const data = await resp.json();
     if (data.error) throw new Error(data.error);
+    data._source = "cheerio"; // tag source for transparency
     return data;
   } catch (err) {
     clearTimeout(timeout);
@@ -89,50 +66,97 @@ async function fetchPageViaFallback(url) {
 }
 
 /**
- * Fetch a page with retry + fallback strategy.
- * Primary: Claude web_search (up to 3 attempts with exponential backoff)
- * Fallback: Cheerio-based lightweight scraper
+ * Secondary scraper: Claude web_search. Used ONLY when cheerio
+ * returns very little content (JS-heavy pages).
+ * Tightly constrained to prevent hallucination.
+ */
+async function fetchPageViaClaude(url) {
+  const raw = await callAPI([{
+    role: "user",
+    content: `Search for and visit this EXACT URL: ${url}
+
+YOUR ONLY JOB: Extract the literal text content visible on THIS page. You are a copy machine, not an analyst.
+
+ABSOLUTE RULES — VIOLATIONS WILL CAUSE ERRORS:
+1. ONLY return text that literally, verbatim appears on THIS specific URL at this moment.
+2. Do NOT include any text from sub-pages, linked pages, or other URLs on the same domain.
+3. Do NOT include any information you "know" about this institution from training data.
+4. If a field has no content on this page, return an empty string or empty array. NEVER guess.
+5. For body_text: Copy-paste the visible text. If you're not 100% sure a sentence is on this page, OMIT it.
+6. For unique_claims and stock_phrases: ONLY phrases you can see verbatim on THIS page right now.
+
+Return ONLY a JSON object (no markdown, no backticks, no preamble):
+{
+  "title": "exact page <title> tag",
+  "meta_description": "exact meta description content or empty string",
+  "h1": ["exact H1 texts"],
+  "h2s": ["first 12 H2 texts exactly as written"],
+  "nav_items": ["main navigation labels"],
+  "body_text": "verbatim main content text from THIS URL only, max 2500 chars, skip nav/footer",
+  "ctas": ["CTA button/link texts exactly as written"],
+  "page_type": "homepage|admissions|about|academics|student-life|other",
+  "linked_pages": ["up to 6 internal section URLs found on this page"],
+  "unique_claims": ["specific concrete claims literally on the page with numbers or facts"],
+  "stock_phrases": ["generic marketing phrases literally on the page"]
+}`
+  }], true);
+  const result = parseJSON(raw);
+  result._source = "claude_websearch"; // tag source
+  return result;
+}
+
+const MIN_BODY_CHARS = 200; // if cheerio gets less than this, try Claude
+
+/**
+ * Fetch a page: cheerio first (reliable, no hallucinations), then Claude if needed.
  *
- * @param {string} url - URL to fetch
- * @param {function} onProgress - callback for progress updates: (msg, attempt) => void
- * @returns {object|null} - parsed page data or null on total failure
+ * @param {string} url
+ * @param {function} onProgress - (msg) => void
+ * @returns {object|null}
  */
 export async function fetchPage(url, onProgress) {
-  const delays = [0, 800, 2000]; // exponential-ish backoff
-  const maxAttempts = 3;
+  // Step 1: Try cheerio (deterministic, fast, zero hallucination)
+  try {
+    const data = await fetchPageViaCheerio(url);
+    const bodyLen = (data.body_text || "").trim().length;
 
-  for (let i = 0; i < maxAttempts; i++) {
+    if (bodyLen >= MIN_BODY_CHARS) {
+      return data; // Cheerio got enough content — use it
+    }
+
+    // Cheerio got too little content (likely JS-heavy page) — try Claude
+    if (onProgress) onProgress("Page uses dynamic content, trying AI scraper...");
+  } catch (err) {
+    // Cheerio failed entirely — try Claude
+    if (onProgress) onProgress("Retrying with AI scraper...");
+  }
+
+  // Step 2: Fall back to Claude web_search (with retries)
+  const delays = [0, 1000, 2500];
+  for (let i = 0; i < delays.length; i++) {
     if (delays[i] > 0) await sleep(delays[i]);
     try {
-      if (onProgress && i > 0) onProgress(`Retry ${i + 1}/${maxAttempts}...`, i);
+      if (onProgress && i > 0) onProgress(`AI scraper retry ${i + 1}...`);
       return await fetchPageViaClaude(url);
-    } catch (err) {
-      if (i === maxAttempts - 1) {
-        // All Claude attempts exhausted — try fallback
-        if (onProgress) onProgress("Trying lightweight scraper...", -1);
-        try {
-          return await fetchPageViaFallback(url);
-        } catch {
-          return null;
-        }
-      }
+    } catch {
+      if (i === delays.length - 1) return null;
     }
   }
   return null;
 }
 
 /**
- * Fetch a sub-page (shorter timeout, single Claude attempt + fallback)
+ * Fetch a sub-page: cheerio first, Claude fallback
  */
 export async function fetchSubPage(url) {
   try {
+    const data = await fetchPageViaCheerio(url);
+    if ((data.body_text || "").trim().length >= MIN_BODY_CHARS) return data;
+  } catch {}
+  try {
     return await fetchPageViaClaude(url);
   } catch {
-    try {
-      return await fetchPageViaFallback(url);
-    } catch {
-      return null;
-    }
+    return null;
   }
 }
 
@@ -162,37 +186,39 @@ Return JSON only:
   "rx_language": "what words should be on this homepage, 2 sentences",
   "rx_strategy": "how to fix a homepage invisible to search and AI, 2 sentences"
 }`
-    : `Brutally honest higher ed brand critic. Evaluate the BRAND STRATEGY this homepage is executing — not just whether it has a mission statement.
+    : `You are a brutally honest higher ed brand critic. Evaluate the BRAND STRATEGY this homepage is executing.
 
 Homepages use different strategies. Some lead with institutional copy ("world-class faculty, commitment to excellence"). Some lead with news/stories/spotlights. Some are purely functional (search box, directory). Each is a brand choice worth evaluating.
 
 Your job: What strategy is this page using? How well does it execute? Does a first-time visitor leave knowing what makes this institution DIFFERENT?
 
 URL: ${url}
---- SCRAPED TEXT ---
+=== SCRAPED TEXT (THIS IS THE ONLY CONTENT ON THE PAGE) ===
 ${text.substring(0, 2000)}
---- END ---
-Other pages: ${allText.substring(0, 500)}
+=== END OF SCRAPED TEXT ===
+Other pages sampled: ${allText.substring(0, 500)}
 
-RULES:
-- Only reference text that appears in the SCRAPED TEXT above.
-- No claims about visual layout or design. You can only see words.
-- Evaluate whatever IS on the page — news headlines, student quotes, research spotlights, institutional copy, ALL of it is brand communication.
-- For weak_sentence: Find the most generic or strategically weakest sentence and copy it EXACTLY from the text above. If no complete sentence exists, write "NO_CONTENT".
-- For rewrite: Rewrite that sentence with more personality and specificity. If weak_sentence is "NO_CONTENT", write "NO_CONTENT".
+CRITICAL GROUNDING RULES — READ CAREFULLY:
+1. You may ONLY reference text that literally appears in the SCRAPED TEXT above. If a phrase isn't in the text above, you CANNOT mention it.
+2. Do NOT bring in any outside knowledge about this institution. You know NOTHING about this school except what is in the text above.
+3. When you reference content, use the actual words from the scraped text. If you can't find supporting text above, say "the page lacks..." rather than inventing something.
+4. No claims about visual layout, design, images, or video. You can only see words.
+5. For weak_sentence: COPY-PASTE an exact sentence from the scraped text above. It must appear verbatim in the text. If no suitable sentence exists, write "NO_CONTENT".
+6. For rewrite: Rewrite that exact sentence with more personality and specificity. If weak_sentence is "NO_CONTENT", write "NO_CONTENT".
+7. For biggest_sin, best_moment, differentiation_killer, missed_opportunity: QUOTE specific phrases from the scraped text to support your claims. Use quotation marks around phrases you are citing.
 
 Return JSON only:
 {
   "voice_score": 1-10 (1=no distinct voice, 10=unmistakably this institution),
   "specificity_score": 1-10 (1=vague/generic, 10=concrete details only this school could claim),
   "consistency_score": 1-10 (1=scattered identity, 10=every word reinforces who they are),
-  "tone_diagnosis": "describe the brand personality based on ALL the content — copy, headlines, stories, whatever is there. As a person at a dinner party, 2 sentences, funny and specific",
-  "biggest_sin": "the biggest brand strategy failure on this page — could be generic copy, missed storytelling, wasted real estate, or letting content exist without a throughline. 1-2 sentences referencing actual text",
-  "best_moment": "the most distinctive or specific content, whether it's institutional copy, a student quote, a research headline, or a concrete detail. Reference the actual words",
-  "weak_sentence": "EXACT verbatim sentence from the scraped text, or NO_CONTENT",
+  "tone_diagnosis": "describe the brand personality based on ALL the content in the scraped text. As a person at a dinner party, 2 sentences, funny and specific. Reference actual phrases from the text.",
+  "biggest_sin": "the biggest brand strategy failure — reference QUOTED phrases from the scraped text. 1-2 sentences.",
+  "best_moment": "the most distinctive content, QUOTING actual phrases from the scraped text. If nothing distinctive, say so.",
+  "weak_sentence": "EXACT verbatim sentence copied from the scraped text, or NO_CONTENT",
   "rewrite": "rewrite with personality and strategic intent, or NO_CONTENT",
-  "differentiation_killer": "why a first-time visitor still wouldn't know what makes this school different after reading this page",
-  "missed_opportunity": "what specific content on this page COULD be a differentiator but isn't being used that way",
+  "differentiation_killer": "why a visitor wouldn't know what makes this school different, referencing QUOTED text from above",
+  "missed_opportunity": "what content in the scraped text COULD be a differentiator but isn't used that way. QUOTE the specific text.",
   "rx_language": "fix the voice/language, 2 sentences",
   "rx_strategy": "fix the content strategy, 2 sentences"
 }`;

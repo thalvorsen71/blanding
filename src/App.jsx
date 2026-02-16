@@ -100,6 +100,7 @@ export default function App() {
     }
     addProg(prefix + 'Loaded: "' + (hp.title || "Untitled") + '"');
 
+    const scrapeSource = hp._source || "unknown"; // "cheerio" or "claude_websearch"
     const pages = [{ url, data: hp, type: "homepage" }];
     const linked = (hp.linked_pages || []).slice(0, 3);
 
@@ -148,7 +149,7 @@ export default function App() {
       cliches, totalCliches: totalC,
       uniqueClaims: uniq, stockPhrases: stock,
       allH1, allH2, metaDesc: hp.meta_description || "", bodyText: allBody, ai,
-      percentile,
+      percentile, scrapeSource,
     };
   }
 
@@ -304,8 +305,20 @@ export default function App() {
           {/* HIGHLIGHTED TEXT */}
           {activeTab === "highlighted" && res.bodyText && (
             <div style={{ background: T.card, border: "1px solid " + T.border, borderRadius: 10, padding: 20 }}>
-              <div style={{ fontSize: 10, fontFamily: T.mono, color: T.accent, textTransform: "uppercase", marginBottom: 4 }}>Your Copy — Clichés Highlighted</div>
-              <p style={{ fontSize: 11, fontFamily: T.mono, color: T.dim, marginBottom: 14 }}>Every <span style={{ background: "#ef444425", color: "#ef4444", padding: "1px 4px", borderRadius: 3 }}>highlighted phrase</span> could appear on any college website.</p>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+                <div style={{ fontSize: 10, fontFamily: T.mono, color: T.accent, textTransform: "uppercase" }}>Your Copy — Clichés Highlighted</div>
+                {res.scrapeSource && (
+                  <span style={{ fontSize: 9, fontFamily: T.mono, color: res.scrapeSource === "cheerio" ? "#22c55e" : "#eab308", background: res.scrapeSource === "cheerio" ? "#22c55e12" : "#eab30812", border: `1px solid ${res.scrapeSource === "cheerio" ? "#22c55e30" : "#eab30830"}`, borderRadius: 4, padding: "2px 8px" }}>
+                    {res.scrapeSource === "cheerio" ? "✓ Direct HTML extract" : "⚠ AI-assisted scrape"}
+                  </span>
+                )}
+              </div>
+              <p style={{ fontSize: 11, fontFamily: T.mono, color: T.dim, marginBottom: 14 }}>
+                {res.scrapeSource === "cheerio"
+                  ? <>This is the <strong style={{ color: "#22c55e" }}>exact text</strong> extracted from the page HTML. Every <span style={{ background: "#ef444425", color: "#ef4444", padding: "1px 4px", borderRadius: 3 }}>highlighted phrase</span> could appear on any college website.</>
+                  : <>This text was extracted using AI web search (the site may use heavy JavaScript). Every <span style={{ background: "#ef444425", color: "#ef4444", padding: "1px 4px", borderRadius: 3 }}>highlighted phrase</span> could appear on any college website.</>
+                }
+              </p>
               <div style={{ fontSize: 14, lineHeight: 1.8, color: "#bbb", whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
                 {highlightCliches(res.bodyText.substring(0, 4000)).map((seg, i) =>
                   seg.hl ? <span key={i} style={{ background: "#ef444420", color: "#ef4444", padding: "1px 3px", borderRadius: 3, borderBottom: "2px solid #ef444460", fontWeight: 500 }}>{seg.text}</span> : <span key={i}>{seg.text}</span>
