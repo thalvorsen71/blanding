@@ -1,5 +1,18 @@
 // Proxies requests to Claude API. Your ANTHROPIC_API_KEY stays server-side.
 // Add it in Netlify Dashboard → Site Settings → Environment Variables
+
+// Simple in-memory rate limiter (resets when function cold-starts)
+const rateLimits = {};
+function checkRate(ip) {
+  const now = Date.now();
+  if (!rateLimits[ip] || now > rateLimits[ip].reset) {
+    rateLimits[ip] = { count: 1, reset: now + 60000 };
+    return true;
+  }
+  rateLimits[ip].count++;
+  return rateLimits[ip].count <= 12; // 12 requests per minute per IP
+}
+
 exports.handler = async (event) => {
   const headers = {
     "Access-Control-Allow-Origin": "*",
@@ -10,6 +23,12 @@ exports.handler = async (event) => {
 
   if (event.httpMethod === "OPTIONS") return { statusCode: 200, headers, body: "" };
   if (event.httpMethod !== "POST") return { statusCode: 405, headers, body: JSON.stringify({ error: "Method not allowed" }) };
+
+  // Rate limiting
+  const ip = event.headers["client-ip"] || event.headers["x-forwarded-for"] || "unknown";
+  if (!checkRate(ip)) {
+    return { statusCode: 429, headers, body: JSON.stringify({ error: "Rate limit exceeded — please wait a moment" }) };
+  }
 
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {

@@ -1,5 +1,6 @@
 const API_ENDPOINT = "/.netlify/functions/analyze";
 const LEAD_ENDPOINT = "/.netlify/functions/capture-lead";
+const SCRAPE_ENDPOINT = "/.netlify/functions/scrape-fallback";
 
 function parseJSON(raw) {
   const cleaned = raw.replace(/```json|```/g, "").trim();
@@ -15,7 +16,7 @@ async function callAPI(messages, useSearch = false, model = "claude-sonnet-4-202
   if (useSearch) body.tools = [{ type: "web_search_20250305", name: "web_search" }];
 
   const controller = new AbortController();
-  const timeoutMs = useSearch ? 45000 : 25000;
+  const timeoutMs = useSearch ? 55000 : 30000;
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
@@ -36,7 +37,10 @@ async function callAPI(messages, useSearch = false, model = "claude-sonnet-4-202
   }
 }
 
-export async function fetchPage(url) {
+/* ─── RETRY WITH EXPONENTIAL BACKOFF ─── */
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+async function fetchPageViaClaude(url) {
   const raw = await callAPI([{
     role: "user",
     content: `Search for and visit this URL: ${url}
@@ -64,13 +68,80 @@ Return ONLY a JSON object (no markdown, no backticks, no preamble) with these fi
   return parseJSON(raw);
 }
 
+async function fetchPageViaFallback(url) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 20000);
+  try {
+    const resp = await fetch(SCRAPE_ENDPOINT, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ url }),
+      signal: controller.signal,
+    });
+    clearTimeout(timeout);
+    const data = await resp.json();
+    if (data.error) throw new Error(data.error);
+    return data;
+  } catch (err) {
+    clearTimeout(timeout);
+    throw err;
+  }
+}
+
+/**
+ * Fetch a page with retry + fallback strategy.
+ * Primary: Claude web_search (up to 3 attempts with exponential backoff)
+ * Fallback: Cheerio-based lightweight scraper
+ *
+ * @param {string} url - URL to fetch
+ * @param {function} onProgress - callback for progress updates: (msg, attempt) => void
+ * @returns {object|null} - parsed page data or null on total failure
+ */
+export async function fetchPage(url, onProgress) {
+  const delays = [0, 800, 2000]; // exponential-ish backoff
+  const maxAttempts = 3;
+
+  for (let i = 0; i < maxAttempts; i++) {
+    if (delays[i] > 0) await sleep(delays[i]);
+    try {
+      if (onProgress && i > 0) onProgress(`Retry ${i + 1}/${maxAttempts}...`, i);
+      return await fetchPageViaClaude(url);
+    } catch (err) {
+      if (i === maxAttempts - 1) {
+        // All Claude attempts exhausted — try fallback
+        if (onProgress) onProgress("Trying lightweight scraper...", -1);
+        try {
+          return await fetchPageViaFallback(url);
+        } catch {
+          return null;
+        }
+      }
+    }
+  }
+  return null;
+}
+
+/**
+ * Fetch a sub-page (shorter timeout, single Claude attempt + fallback)
+ */
+export async function fetchSubPage(url) {
+  try {
+    return await fetchPageViaClaude(url);
+  } catch {
+    try {
+      return await fetchPageViaFallback(url);
+    } catch {
+      return null;
+    }
+  }
+}
+
 export async function deepAnalysis(url, text, allText) {
   const combinedText = (text + " " + allText).trim();
   const wordCount = combinedText.split(/\s+/).length;
-  
-  // Truly empty — scraper got nothing
+
   const isEmptyContent = wordCount < 30;
-  
+
   const prompt = isEmptyContent
     ? `Higher ed brand critic. The homepage at ${url} returned almost no scrapable text. The scraper found only: "${text.substring(0, 300)}"
 

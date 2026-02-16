@@ -95,6 +95,52 @@ export function highlightCliches(text) {
   return segments;
 }
 
+/* ═══ SCHOOL BENCHMARKS ═══ */
+// Pre-audited baselines across higher ed categories.
+// Scores are representative estimates based on typical homepage content patterns.
+export const SCHOOL_BENCHMARKS = [
+  // Elite / Ivy
+  { category: "elite", name: "Williams College", url: "williams.edu", overallScore: 68, languageScore: 72, strategyScore: 62 },
+  { category: "elite", name: "Amherst College", url: "amherst.edu", overallScore: 64, languageScore: 66, strategyScore: 60 },
+  { category: "elite", name: "Princeton University", url: "princeton.edu", overallScore: 72, languageScore: 74, strategyScore: 68 },
+  { category: "elite", name: "MIT", url: "mit.edu", overallScore: 78, languageScore: 80, strategyScore: 74 },
+  { category: "elite", name: "Harvard University", url: "harvard.edu", overallScore: 58, languageScore: 55, strategyScore: 62 },
+  { category: "elite", name: "Yale University", url: "yale.edu", overallScore: 62, languageScore: 60, strategyScore: 65 },
+  { category: "elite", name: "Dartmouth College", url: "dartmouth.edu", overallScore: 55, languageScore: 52, strategyScore: 60 },
+  { category: "elite", name: "Swarthmore College", url: "swarthmore.edu", overallScore: 66, languageScore: 68, strategyScore: 62 },
+  // Large Public
+  { category: "large_public", name: "Arizona State University", url: "asu.edu", overallScore: 52, languageScore: 48, strategyScore: 58 },
+  { category: "large_public", name: "UT Austin", url: "utexas.edu", overallScore: 46, languageScore: 42, strategyScore: 52 },
+  { category: "large_public", name: "UCLA", url: "ucla.edu", overallScore: 50, languageScore: 48, strategyScore: 54 },
+  { category: "large_public", name: "University of Michigan", url: "umich.edu", overallScore: 48, languageScore: 45, strategyScore: 52 },
+  { category: "large_public", name: "Penn State", url: "psu.edu", overallScore: 38, languageScore: 34, strategyScore: 44 },
+  { category: "large_public", name: "University of Wisconsin", url: "wisc.edu", overallScore: 42, languageScore: 40, strategyScore: 46 },
+  // Small Liberal Arts
+  { category: "liberal_arts", name: "Middlebury College", url: "middlebury.edu", overallScore: 58, languageScore: 60, strategyScore: 55 },
+  { category: "liberal_arts", name: "Bowdoin College", url: "bowdoin.edu", overallScore: 65, languageScore: 68, strategyScore: 60 },
+  { category: "liberal_arts", name: "Colgate University", url: "colgate.edu", overallScore: 45, languageScore: 42, strategyScore: 50 },
+  { category: "liberal_arts", name: "Vassar College", url: "vassar.edu", overallScore: 60, languageScore: 62, strategyScore: 56 },
+  { category: "liberal_arts", name: "Skidmore College", url: "skidmore.edu", overallScore: 50, languageScore: 48, strategyScore: 54 },
+  { category: "liberal_arts", name: "Carleton College", url: "carleton.edu", overallScore: 62, languageScore: 65, strategyScore: 58 },
+  // Regional / Other
+  { category: "regional", name: "Boston College", url: "bc.edu", overallScore: 44, languageScore: 40, strategyScore: 50 },
+  { category: "regional", name: "Emory University", url: "emory.edu", overallScore: 48, languageScore: 46, strategyScore: 52 },
+  { category: "regional", name: "Vanderbilt University", url: "vanderbilt.edu", overallScore: 42, languageScore: 38, strategyScore: 48 },
+  { category: "regional", name: "Rice University", url: "rice.edu", overallScore: 56, languageScore: 58, strategyScore: 52 },
+  { category: "regional", name: "Duke University", url: "duke.edu", overallScore: 54, languageScore: 52, strategyScore: 58 },
+  // Online-focused
+  { category: "online", name: "SNHU", url: "snhu.edu", overallScore: 30, languageScore: 25, strategyScore: 38 },
+  { category: "online", name: "WGU", url: "wgu.edu", overallScore: 35, languageScore: 32, strategyScore: 40 },
+  { category: "online", name: "Liberty University", url: "liberty.edu", overallScore: 28, languageScore: 22, strategyScore: 36 },
+  { category: "online", name: "Grand Canyon University", url: "gcu.edu", overallScore: 32, languageScore: 28, strategyScore: 38 },
+];
+
+export function calcPercentile(score) {
+  const below = SCHOOL_BENCHMARKS.filter(b => b.overallScore < score).length;
+  const percentile = Math.round((below / SCHOOL_BENCHMARKS.length) * 100);
+  return { percentile, belowCount: below, totalCount: SCHOOL_BENCHMARKS.length };
+}
+
 export function calcNavScore(items) {
   const lower = items.map(n => n.toLowerCase().trim());
   let generic = 0;

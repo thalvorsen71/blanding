@@ -1,7 +1,9 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { T, scoreColor, scoreLabel, scoreVerdict, countCliches, highlightCliches } from './constants';
-import { fetchPage, deepAnalysis, captureLead } from './api';
+import { T, scoreColor, scoreLabel, scoreVerdict, countCliches, highlightCliches, SCHOOL_BENCHMARKS, calcPercentile } from './constants';
+import { fetchPage, fetchSubPage, deepAnalysis, captureLead } from './api';
 import { exportPDF } from './pdf';
+import { generateScorecard } from './scorecard';
+import { generateBingoCard } from './bingo';
 
 /* ═══ SMALL COMPONENTS ═══ */
 function AnimNum({ value, dur = 1400 }) {
@@ -36,6 +38,29 @@ function Spinner({ size = 14 }) {
   return <span style={{ width: size, height: size, border: "2px solid #222", borderTopColor: T.accent, borderRadius: "50%", display: "inline-block", animation: "spin 0.8s linear infinite", flexShrink: 0 }} />;
 }
 
+/* ═══ SHARE HELPERS ═══ */
+const SITE_URL = "https://blandingaudit.netlify.app";
+
+function getShareText(res) {
+  return `Our higher ed website just scored ${res.overall}/100 on the Blanding Detector.\n\n"${scoreLabel(res.overall)}" — ${scoreVerdict(res.overall)}\n\n${res.totalCliches} clichés across ${res.pagesAnalyzed.length} page${res.pagesAnalyzed.length > 1 ? "s" : ""}.\n\nHow generic is YOUR institution? Try it free:\n${SITE_URL}\n\n#HigherEd #Branding #BlandingDetector`;
+}
+
+function shareTwitter(res) {
+  const text = `Our higher ed site scored ${res.overall}/100 on the Blanding Detector — "${scoreLabel(res.overall)}"\n\n${res.totalCliches} clichés found. How generic is YOUR institution?\n\n${SITE_URL}\n\n#HigherEd #BlandingDetector`;
+  window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, "_blank", "width=550,height=420");
+}
+
+function shareLinkedIn(res) {
+  window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(SITE_URL)}`, "_blank", "width=550,height=420");
+}
+
+function downloadCanvas(canvas, filename) {
+  const link = document.createElement("a");
+  link.download = filename;
+  link.href = canvas.toDataURL("image/png");
+  link.click();
+}
+
 /* ═══ MAIN APP ═══ */
 export default function App() {
   const [mode, setMode] = useState("single");
@@ -49,8 +74,10 @@ export default function App() {
   const [activeTab, setActiveTab] = useState("overview");
   const [copyFB, setCopyFB] = useState(false);
   const [emailModal, setEmailModal] = useState(false);
+  const [shareModal, setShareModal] = useState(false);
   const [email, setEmail] = useState("");
   const [emailSent, setEmailSent] = useState(false);
+  const [challengeUrl, setChallengeUrl] = useState("");
   const resultRef = useRef(null);
 
   const addProg = useCallback((msg, status = "loading") => {
@@ -59,25 +86,35 @@ export default function App() {
 
   const norm = u => { let x = u.trim(); if (!x.match(/^https?:\/\//)) x = "https://" + x; return x; };
 
-  /* ─── AUDIT ENGINE ─── */
+  /* ─── AUDIT ENGINE (with retry + parallel sub-pages) ─── */
   async function runAudit(inputUrl, prefix = "") {
     const url = norm(inputUrl);
     addProg(prefix + "Fetching: " + url);
-    let hp;
-    try { hp = await fetchPage(url); } catch { 
-      addProg(prefix + "Retrying...");
-      try { hp = await fetchPage(url); } catch { addProg(prefix + "Failed to fetch", "error"); return null; }
+
+    // fetchPage now handles retries + fallback internally
+    const hp = await fetchPage(url, (msg) => addProg(prefix + msg));
+
+    if (!hp) {
+      addProg(prefix + "Could not reach this site", "error");
+      return null;
     }
     addProg(prefix + 'Loaded: "' + (hp.title || "Untitled") + '"');
 
     const pages = [{ url, data: hp, type: "homepage" }];
     const linked = (hp.linked_pages || []).slice(0, 3);
+
+    // Fetch sub-pages in parallel
     if (linked.length) {
-      addProg(prefix + "Found " + linked.length + " sub-pages");
-      for (const pu of linked) {
-        addProg(prefix + "Scanning: " + pu);
-        try { const pd = await fetchPage(pu); if (pd) pages.push({ url: pu, data: pd, type: pd.page_type || "other" }); } catch { }
-      }
+      addProg(prefix + "Scanning " + linked.length + " sub-pages...");
+      const subResults = await Promise.allSettled(
+        linked.map(pu => fetchSubPage(pu))
+      );
+      subResults.forEach((sr, i) => {
+        if (sr.status === "fulfilled" && sr.value) {
+          pages.push({ url: linked[i], data: sr.value, type: sr.value.page_type || "other" });
+        }
+      });
+      addProg(prefix + `Loaded ${pages.length - 1} sub-page${pages.length - 1 !== 1 ? "s" : ""}`);
     }
 
     addProg(prefix + "Running AI brand analysis...");
@@ -93,19 +130,17 @@ export default function App() {
     const totalC = cliches.reduce((s, c) => s + c.count, 0);
     const wc = allBody.split(/\s+/).length;
 
-    // LANGUAGE SCORE: cliché density + AI voice assessment
     let lang = 100 - Math.min(cliches.length * 3.5, 45) - Math.min((totalC / Math.max(wc / 100, 1)) * 7, 30) - (uniq.length < 2 ? 15 : 0);
     if (ai?.voice_score) lang = (lang + ai.voice_score * 10) / 2;
     lang = Math.max(0, Math.min(100, Math.round(lang)));
 
-    // STRATEGY SCORE: unique claims vs stock phrases + AI specificity
     let strat = 50 + uniq.length * 5 - stock.length * 3;
     if (ai?.specificity_score) strat = (strat + ai.specificity_score * 10) / 2;
     if (ai?.consistency_score) strat = (strat + ai.consistency_score * 10) / 2;
     strat = Math.max(0, Math.min(100, Math.round(strat)));
 
-    // OVERALL: weighted blend — language matters most
     const overall = Math.round(lang * 0.6 + strat * 0.4);
+    const percentile = calcPercentile(overall);
 
     return {
       url, schoolName: hp.title || url, pagesAnalyzed: pages, overall,
@@ -113,6 +148,7 @@ export default function App() {
       cliches, totalCliches: totalC,
       uniqueClaims: uniq, stockPhrases: stock,
       allH1, allH2, metaDesc: hp.meta_description || "", bodyText: allBody, ai,
+      percentile,
     };
   }
 
@@ -130,13 +166,13 @@ export default function App() {
     let lang = 100 - Math.min(cl.length * 3.5, 45) - Math.min((tc / Math.max(inputText.split(/\s+/).length / 100, 1)) * 7, 30);
     if (ai?.voice_score) lang = Math.round((lang + ai.voice_score * 10) / 2);
     lang = Math.max(0, Math.min(100, lang));
-    setResult({ url: null, schoolName: "Your Copy", pagesAnalyzed: [{ type: "text" }], overall: lang, scores: { language: lang, strategy: null }, cliches: cl, totalCliches: tc, uniqueClaims: [], stockPhrases: [], allH1: [], allH2: [], metaDesc: "", bodyText: inputText, ai });
+    setResult({ url: null, schoolName: "Your Copy", pagesAnalyzed: [{ type: "text" }], overall: lang, scores: { language: lang, strategy: null }, cliches: cl, totalCliches: tc, uniqueClaims: [], stockPhrases: [], allH1: [], allH2: [], metaDesc: "", bodyText: inputText, ai, percentile: calcPercentile(lang) });
     setProgress(p => p.map(i => ({ ...i, status: "done" }))); setAnalyzing(false); scrollToResult();
   };
 
   const handleCopy = () => {
     if (!result) return;
-    navigator.clipboard.writeText(`Our higher ed website just scored ${result.overall}/100 on the Blanding Detector 😬\n\n"${scoreLabel(result.overall)}" — ${scoreVerdict(result.overall)}\n\n${result.totalCliches} clichés across ${result.pagesAnalyzed.length} page${result.pagesAnalyzed.length > 1 ? "s" : ""}.\n\nHow generic is YOUR institution? Try it free →\n\n#HigherEd #Branding #HigherEdMarketing`);
+    navigator.clipboard.writeText(getShareText(result));
     setCopyFB(true); setTimeout(() => setCopyFB(false), 2500);
   };
 
@@ -147,6 +183,27 @@ export default function App() {
     await captureLead(email, result?.schoolName, result?.overall);
     setEmailSent(true);
     setTimeout(() => { setEmailModal(false); setEmailSent(false); exportPDF(result); }, 1000);
+  };
+
+  const handleScorecard = async () => {
+    if (!result) return;
+    const canvas = await generateScorecard(result);
+    downloadCanvas(canvas, `blanding-${result.schoolName.replace(/\s+/g, "-").toLowerCase()}.png`);
+  };
+
+  const handleBingo = async () => {
+    if (!result) return;
+    const canvas = await generateBingoCard(result);
+    downloadCanvas(canvas, `bingo-${result.schoolName.replace(/\s+/g, "-").toLowerCase()}.png`);
+  };
+
+  const handleChallenge = () => {
+    if (!challengeUrl.trim() || !result) return;
+    setMode("compare");
+    setUrl1(result.url || "");
+    setUrl2(challengeUrl);
+    setResult(null); setResult2(null); setProgress([]);
+    setTimeout(() => runCompare(), 100);
   };
 
   /* ═══ RESULT BLOCK ═══ */
@@ -168,6 +225,12 @@ export default function App() {
           </div>
           <div style={{ fontSize: compact ? 16 : 20, fontFamily: T.serif, fontStyle: "italic", color: scoreColor(res.overall), marginTop: 8, position: "relative" }}>{scoreLabel(res.overall)}</div>
           {!compact && <p style={{ fontSize: 13, color: T.muted, lineHeight: 1.6, maxWidth: 480, margin: "12px auto 0", position: "relative" }}>{scoreVerdict(res.overall)}</p>}
+          {/* Percentile badge */}
+          {!compact && res.percentile && (
+            <div style={{ marginTop: 14, position: "relative" }}>
+              <Pill color={scoreColor(res.overall)}>Better than {res.percentile.percentile}% of {res.percentile.totalCount} audited institutions</Pill>
+            </div>
+          )}
           {dims.length > 1 && (
             <div style={{ display: "grid", gridTemplateColumns: `repeat(${dims.length}, 1fr)`, gap: 1, marginTop: 20, background: T.border, borderRadius: 8, overflow: "hidden", position: "relative" }}>
               {dims.map(d => <div key={d.key} style={{ background: "#121212", padding: compact ? "10px 4px" : "14px 6px" }}><div style={{ fontSize: compact ? 20 : 26, fontFamily: T.serif, color: scoreColor(res.scores[d.key]) }}>{res.scores[d.key]}</div><div style={{ fontSize: 9, fontFamily: T.mono, color: T.dim, marginTop: 2, textTransform: "uppercase" }}>{d.label}</div></div>)}
@@ -187,8 +250,8 @@ export default function App() {
 
   /* ═══ TAB CONTENT ═══ */
   function TabContent({ res }) {
-    const tabs = ["overview", "language", "highlighted", "strategy", "prescriptions"];
-    const labels = { overview: "Overview", language: "Clichés", highlighted: "Highlighted Text", strategy: "Strategy", prescriptions: "Rx: Fix It" };
+    const tabs = ["overview", "language", "highlighted", "strategy", "benchmarks", "prescriptions"];
+    const labels = { overview: "Overview", language: "Clichés", highlighted: "Highlighted Text", strategy: "Strategy", benchmarks: "Benchmarks", prescriptions: "Rx: Fix It" };
     const avail = tabs.filter(t => {
       if (t === "strategy") return res.scores.strategy != null;
       if (t === "highlighted") return !!res.bodyText;
@@ -261,6 +324,51 @@ export default function App() {
               <div style={{ background: T.card, border: "1px solid " + T.border, borderRadius: 10, padding: 18 }}>
                 <div style={{ fontSize: 10, fontFamily: T.mono, color: "#ef4444", textTransform: "uppercase", marginBottom: 8 }}>Stock Phrases ({res.stockPhrases.length})</div>
                 {res.stockPhrases.length ? res.stockPhrases.map((c, i) => <p key={i} style={{ fontSize: 13, color: T.muted, lineHeight: 1.5, margin: "0 0 6px", fontStyle: "italic" }}>"{c}"</p>) : <p style={{ fontSize: 13, color: "#22c55e" }}>Clean.</p>}
+              </div>
+            </div>
+          )}
+
+          {/* BENCHMARKS */}
+          {activeTab === "benchmarks" && (
+            <div style={{ display: "grid", gap: 12 }}>
+              {/* Percentile card */}
+              <div style={{ background: T.card, border: "1px solid " + T.border, borderRadius: 10, padding: "24px", textAlign: "center" }}>
+                <div style={{ fontSize: 10, fontFamily: T.mono, color: T.accent, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 12 }}>Your Percentile Ranking</div>
+                <div style={{ fontSize: 48, fontFamily: T.serif, color: scoreColor(res.overall), lineHeight: 1 }}>{res.percentile?.percentile || 50}<span style={{ fontSize: 18, color: T.dim }}>th</span></div>
+                <p style={{ fontSize: 13, color: T.muted, marginTop: 8, marginBottom: 0 }}>You scored better than {res.percentile?.percentile || 50}% of {res.percentile?.totalCount || SCHOOL_BENCHMARKS.length} audited institutions</p>
+              </div>
+              {/* Category averages */}
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 6 }}>
+                {[
+                  { cat: "elite", label: "Elite / Ivy" },
+                  { cat: "large_public", label: "Large Public" },
+                  { cat: "liberal_arts", label: "Liberal Arts" },
+                  { cat: "regional", label: "Regional" },
+                  { cat: "online", label: "Online" },
+                ].map(({ cat, label }) => {
+                  const schools = SCHOOL_BENCHMARKS.filter(b => b.category === cat);
+                  const avg = schools.length ? Math.round(schools.reduce((s, b) => s + b.overallScore, 0) / schools.length) : 0;
+                  return (
+                    <div key={cat} style={{ background: T.card, border: "1px solid " + T.border, borderRadius: 8, padding: "12px 6px", textAlign: "center" }}>
+                      <div style={{ fontSize: 22, fontFamily: T.serif, color: scoreColor(avg) }}>{avg}</div>
+                      <div style={{ fontSize: 8, fontFamily: T.mono, color: T.dim, textTransform: "uppercase", marginTop: 4, lineHeight: 1.2 }}>{label}</div>
+                    </div>
+                  );
+                })}
+              </div>
+              {/* Similar schools */}
+              <div style={{ background: T.card, border: "1px solid " + T.border, borderRadius: 10, padding: 18 }}>
+                <div style={{ fontSize: 10, fontFamily: T.mono, color: T.accent, textTransform: "uppercase", marginBottom: 10 }}>Schools With Similar Scores</div>
+                {SCHOOL_BENCHMARKS
+                  .filter(b => Math.abs(b.overallScore - res.overall) <= 12)
+                  .sort((a, b) => Math.abs(a.overallScore - res.overall) - Math.abs(b.overallScore - res.overall))
+                  .slice(0, 6)
+                  .map((b, i) => (
+                    <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 0", borderBottom: i < 5 ? "1px solid " + T.border : "none" }}>
+                      <span style={{ fontSize: 13, color: T.text }}>{b.name}</span>
+                      <span style={{ fontSize: 14, fontFamily: T.serif, color: scoreColor(b.overallScore) }}>{b.overallScore}</span>
+                    </div>
+                  ))}
               </div>
             </div>
           )}
@@ -395,6 +503,16 @@ export default function App() {
                 </div>
               ))}
             </div>
+            {/* If failed, offer paste fallback */}
+            {progress.some(p => p.status === "error" && p.msg.includes("Could not reach")) && !analyzing && (
+              <div style={{ marginTop: 10, background: T.cardAlt, border: "1px solid " + T.border, borderRadius: 8, padding: "14px 18px", textAlign: "center" }}>
+                <p style={{ fontSize: 13, color: T.muted, margin: "0 0 8px" }}>Can't reach this site? Try pasting your homepage copy instead.</p>
+                <button onClick={() => { setMode("text"); setProgress([]); }}
+                  style={{ padding: "8px 18px", background: T.accent + "20", border: "1px solid " + T.accent + "40", borderRadius: 6, color: T.accent, fontSize: 12, fontFamily: T.mono }}>
+                  Switch to Paste Text
+                </button>
+              </div>
+            )}
           </section>
         )}
 
@@ -421,7 +539,6 @@ export default function App() {
                     </>
                   )}
                 </div>
-                {/* Dimension bars */}
                 <div style={{ marginTop: 14, display: "grid", gap: 6 }}>
                   {[{ key: "language", label: "Language & Voice" }, { key: "strategy", label: "Content Strategy" }].map(d => {
                     const s1 = result.scores[d.key], s2 = result2.scores[d.key];
@@ -445,25 +562,51 @@ export default function App() {
               </>
             )}
 
-            {/* ACTIONS */}
-            <div style={{ marginTop: 24, display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
-              <button onClick={handleCopy}
-                style={{ background: T.card, border: "1px solid " + T.borderLight, borderRadius: 9, padding: "14px 16px", color: copyFB ? "#22c55e" : T.muted, fontSize: 12, fontWeight: 500 }}
-                onMouseEnter={e => { if (!copyFB) { e.target.style.borderColor = T.accent; e.target.style.color = T.accent; } }}
-                onMouseLeave={e => { if (!copyFB) { e.target.style.borderColor = T.borderLight; e.target.style.color = T.muted; } }}>
-                {copyFB ? "✓ Copied" : "📋 Copy for LinkedIn"}
-              </button>
-              <button onClick={handleExport}
-                style={{ background: T.card, border: "1px solid " + T.borderLight, borderRadius: 9, padding: "14px 16px", color: T.muted, fontSize: 12, fontWeight: 500 }}
+            {/* SHARE + ACTIONS */}
+            <div style={{ marginTop: 24, display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 8 }}>
+              <button onClick={() => setShareModal(true)}
+                style={{ background: T.card, border: "1px solid " + T.borderLight, borderRadius: 9, padding: "14px 12px", color: T.muted, fontSize: 11, fontWeight: 500 }}
                 onMouseEnter={e => { e.target.style.borderColor = T.accent; e.target.style.color = T.accent; }}
                 onMouseLeave={e => { e.target.style.borderColor = T.borderLight; e.target.style.color = T.muted; }}>
-                📄 Export Report
+                Share Results
+              </button>
+              <button onClick={handleScorecard}
+                style={{ background: T.card, border: "1px solid " + T.borderLight, borderRadius: 9, padding: "14px 12px", color: T.muted, fontSize: 11, fontWeight: 500 }}
+                onMouseEnter={e => { e.target.style.borderColor = T.accent; e.target.style.color = T.accent; }}
+                onMouseLeave={e => { e.target.style.borderColor = T.borderLight; e.target.style.color = T.muted; }}>
+                Download Scorecard
+              </button>
+              <button onClick={handleExport}
+                style={{ background: T.card, border: "1px solid " + T.borderLight, borderRadius: 9, padding: "14px 12px", color: T.muted, fontSize: 11, fontWeight: 500 }}
+                onMouseEnter={e => { e.target.style.borderColor = T.accent; e.target.style.color = T.accent; }}
+                onMouseLeave={e => { e.target.style.borderColor = T.borderLight; e.target.style.color = T.muted; }}>
+                Export PDF
               </button>
               <a href="https://helloadeo.com" target="_blank" rel="noopener noreferrer"
-                style={{ background: `linear-gradient(135deg, ${T.accent}, #b06830)`, borderRadius: 9, padding: "14px 16px", color: "#fff", fontSize: 12, fontWeight: 600, textAlign: "center", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                style={{ background: `linear-gradient(135deg, ${T.accent}, #b06830)`, borderRadius: 9, padding: "14px 12px", color: "#fff", fontSize: 11, fontWeight: 600, textAlign: "center", display: "flex", alignItems: "center", justifyContent: "center", textDecoration: "none" }}>
                 Fix Your Brand →
               </a>
             </div>
+
+            {/* CHALLENGE MODE */}
+            {result && !result2 && result.url && (
+              <div style={{ marginTop: 16, background: T.card, border: "1px solid " + T.border, borderRadius: 10, padding: "20px 24px" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
+                  <span style={{ fontSize: 10, fontFamily: T.mono, color: T.accent, textTransform: "uppercase", letterSpacing: "0.1em" }}>Challenge Mode</span>
+                  <span style={{ fontSize: 12, color: T.dim }}>Think a rival school can beat this score?</span>
+                </div>
+                <div style={{ display: "flex", gap: 8 }}>
+                  <input value={challengeUrl} onChange={e => setChallengeUrl(e.target.value)}
+                    placeholder="Enter rival school URL..." onKeyDown={e => e.key === "Enter" && handleChallenge()}
+                    style={{ flex: 1, background: T.bg, border: "1px solid " + T.borderLight, borderRadius: 8, padding: "10px 14px", color: T.text, fontSize: 13, fontFamily: T.sans, outline: "none" }}
+                    onFocus={e => e.target.style.borderColor = T.accent} onBlur={e => e.target.style.borderColor = T.borderLight} />
+                  <button onClick={handleChallenge} disabled={!challengeUrl.trim()}
+                    style={{ padding: "10px 18px", background: challengeUrl.trim() ? T.accent : "#1a1a1a", border: "none", borderRadius: 8, color: challengeUrl.trim() ? "#fff" : "#444", fontSize: 12, fontWeight: 600, fontFamily: T.mono, whiteSpace: "nowrap" }}>
+                    Head-to-Head →
+                  </button>
+                </div>
+              </div>
+            )}
 
             <div style={{ marginTop: 32, padding: "22px 24px", background: T.cardAlt, borderRadius: 10, border: "1px solid #161616", textAlign: "center" }}>
               <p style={{ fontSize: 13, color: T.muted, lineHeight: 1.65, margin: 0, maxWidth: 540, marginLeft: "auto", marginRight: "auto" }}>
@@ -479,6 +622,41 @@ export default function App() {
           <span style={{ fontSize: 10, color: T.faint, fontFamily: T.mono }}>helloadeo.com</span>
         </footer>
       </div>
+
+      {/* SHARE MODAL */}
+      {shareModal && result && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }} onClick={() => setShareModal(false)}>
+          <div style={{ background: "#151515", border: "1px solid " + T.borderLight, borderRadius: 16, padding: "32px 28px", maxWidth: 420, width: "100%", textAlign: "center" }} onClick={e => e.stopPropagation()}>
+            <h3 style={{ fontFamily: T.serif, fontSize: 22, fontWeight: 400, margin: "0 0 6px" }}>Share Your <span style={{ fontStyle: "italic", color: T.accent }}>Score</span></h3>
+            <p style={{ fontSize: 13, color: T.muted, margin: "0 0 20px" }}>{result.schoolName}: {result.overall}/100</p>
+            <div style={{ display: "grid", gap: 8 }}>
+              <button onClick={() => { shareTwitter(result); setShareModal(false); }}
+                style={{ width: "100%", padding: "12px", background: "#1a1a1a", border: "1px solid " + T.borderLight, borderRadius: 8, color: T.text, fontSize: 13, fontWeight: 500 }}>
+                Share on X / Twitter
+              </button>
+              <button onClick={() => { shareLinkedIn(result); setShareModal(false); }}
+                style={{ width: "100%", padding: "12px", background: "#1a1a1a", border: "1px solid " + T.borderLight, borderRadius: 8, color: T.text, fontSize: 13, fontWeight: 500 }}>
+                Share on LinkedIn
+              </button>
+              <button onClick={() => { handleCopy(); setShareModal(false); }}
+                style={{ width: "100%", padding: "12px", background: "#1a1a1a", border: "1px solid " + T.borderLight, borderRadius: 8, color: T.text, fontSize: 13, fontWeight: 500 }}>
+                Copy Share Text
+              </button>
+              <button onClick={() => { handleScorecard(); setShareModal(false); }}
+                style={{ width: "100%", padding: "12px", background: "#1a1a1a", border: "1px solid " + T.borderLight, borderRadius: 8, color: T.text, fontSize: 13, fontWeight: 500 }}>
+                Download Scorecard PNG
+              </button>
+              {result.cliches.length >= 5 && (
+                <button onClick={() => { handleBingo(); setShareModal(false); }}
+                  style={{ width: "100%", padding: "12px", background: "#1a1a1a", border: "1px solid " + T.borderLight, borderRadius: 8, color: T.text, fontSize: 13, fontWeight: 500 }}>
+                  Download Cliché Bingo Card
+                </button>
+              )}
+            </div>
+            <button onClick={() => setShareModal(false)} style={{ background: "none", border: "none", color: T.dim, fontSize: 12, marginTop: 14, fontFamily: T.mono }}>Close</button>
+          </div>
+        </div>
+      )}
 
       {/* EMAIL MODAL */}
       {emailModal && (
