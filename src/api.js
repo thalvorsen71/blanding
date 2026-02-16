@@ -20,7 +20,7 @@ class RateLimitError extends Error {
 }
 
 async function callAPI(messages, useSearch = false, model = "claude-sonnet-4-20250514") {
-  const body = { model, max_tokens: 2000, messages };
+  const body = { model, max_tokens: useSearch ? 3000 : 2000, messages };
   if (useSearch) body.tools = [{ type: "web_search_20250305", name: "web_search" }];
 
   const controller = new AbortController();
@@ -104,28 +104,30 @@ async function fetchPageViaClaude(url) {
     role: "user",
     content: `Search for and visit this EXACT URL: ${url}
 
-YOUR ONLY JOB: Extract the literal text content visible on THIS page. You are a copy machine, not an analyst.
+YOUR ONLY JOB: Extract ALL the literal text content visible on THIS page. You are a copy machine — be EXHAUSTIVE.
 
-ABSOLUTE RULES — VIOLATIONS WILL CAUSE ERRORS:
-1. ONLY return text that literally, verbatim appears on THIS specific URL at this moment.
-2. Do NOT include any text from sub-pages, linked pages, or other URLs on the same domain.
-3. Do NOT include any information you "know" about this institution from training data.
-4. If a field has no content on this page, return an empty string or empty array. NEVER guess.
-5. For body_text: Copy-paste the visible text. If you're not 100% sure a sentence is on this page, OMIT it.
-6. For unique_claims and stock_phrases: ONLY phrases you can see verbatim on THIS page right now.
+CRITICAL: Many university homepages have MULTIPLE content sections: hero text, featured stories, news items, event highlights, research spotlights, statistics, and institutional copy. You MUST capture text from ALL sections — not just the first paragraph. Scroll through the entire page.
+
+ABSOLUTE RULES:
+1. ONLY return text that literally appears on THIS specific URL right now.
+2. Do NOT include text from sub-pages or other URLs.
+3. Do NOT include information from your training data.
+4. If a field has no content on this page, return empty string or empty array.
+5. For body_text: Be EXHAUSTIVE. Include the hero/banner text, ALL featured story headlines and descriptions, ALL news headlines, event names, research highlights, statistics, pull quotes, and any institutional copy. Copy the text from EVERY section of the page. Aim for 3000-5000 characters. The MORE text you capture, the better.
+6. For unique_claims and stock_phrases: ONLY phrases verbatim on THIS page.
 
 Return ONLY a JSON object (no markdown, no backticks, no preamble):
 {
   "title": "exact page <title> tag",
   "meta_description": "exact meta description content or empty string",
   "h1": ["exact H1 texts"],
-  "h2s": ["first 12 H2 texts exactly as written"],
+  "h2s": ["first 12 H2 texts exactly as written — include featured story headlines"],
   "nav_items": ["main navigation labels"],
-  "body_text": "verbatim main content text from THIS URL only, max 5000 chars, skip nav/footer",
+  "body_text": "ALL text from EVERY section of the page: hero, features, news, events, stats, research, quotes, institutional copy. Max 5000 chars. Skip only nav links and footer legal text.",
   "ctas": ["CTA button/link texts exactly as written"],
   "page_type": "homepage|admissions|about|academics|student-life|other",
   "linked_pages": ["up to 6 internal section URLs found on this page"],
-  "unique_claims": ["specific concrete claims literally on the page with numbers or facts"],
+  "unique_claims": ["specific concrete claims with numbers, dates, names, or facts from the page"],
   "stock_phrases": ["generic marketing phrases literally on the page"]
 }`
   }], true); // Sonnet: only model that actually executes web_search tool
