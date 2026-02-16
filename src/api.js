@@ -99,7 +99,7 @@ Return ONLY a JSON object (no markdown, no backticks, no preamble):
   "unique_claims": ["specific concrete claims literally on the page with numbers or facts"],
   "stock_phrases": ["generic marketing phrases literally on the page"]
 }`
-  }], true);
+  }], true, "claude-haiku-4-5-20251001"); // Haiku: faster, cheaper, higher rate limits
   const result = parseJSON(raw);
   result._source = "claude_websearch"; // tag source
   return result;
