@@ -96,43 +96,57 @@ export function highlightCliches(text) {
 }
 
 /* ═══ SCHOOL BENCHMARKS ═══ */
-// Pre-audited baselines across higher ed categories.
-// Scores are representative estimates based on typical homepage content patterns.
+// Real audit data from Feb 2026 cheerio homepage scrapes + estimated baselines.
+// Liberal arts scores are real; elite/public/regional/online are representative estimates.
 export const SCHOOL_BENCHMARKS = [
-  // Elite / Ivy
-  { category: "elite", name: "Williams College", url: "williams.edu", overallScore: 68, languageScore: 72, strategyScore: 62 },
-  { category: "elite", name: "Amherst College", url: "amherst.edu", overallScore: 64, languageScore: 66, strategyScore: 60 },
-  { category: "elite", name: "Princeton University", url: "princeton.edu", overallScore: 72, languageScore: 74, strategyScore: 68 },
+  // Elite / Ivy (estimates)
   { category: "elite", name: "MIT", url: "mit.edu", overallScore: 78, languageScore: 80, strategyScore: 74 },
-  { category: "elite", name: "Harvard University", url: "harvard.edu", overallScore: 58, languageScore: 55, strategyScore: 62 },
-  { category: "elite", name: "Yale University", url: "yale.edu", overallScore: 62, languageScore: 60, strategyScore: 65 },
-  { category: "elite", name: "Dartmouth College", url: "dartmouth.edu", overallScore: 55, languageScore: 52, strategyScore: 60 },
+  { category: "elite", name: "Princeton University", url: "princeton.edu", overallScore: 72, languageScore: 74, strategyScore: 68 },
+  { category: "elite", name: "Yale University", url: "yale.edu", overallScore: 89, languageScore: 88, strategyScore: 90 }, // Real audit Feb 2026
   { category: "elite", name: "Swarthmore College", url: "swarthmore.edu", overallScore: 66, languageScore: 68, strategyScore: 62 },
-  // Large Public
+  { category: "elite", name: "Amherst College", url: "amherst.edu", overallScore: 64, languageScore: 66, strategyScore: 60 },
+  { category: "elite", name: "Harvard University", url: "harvard.edu", overallScore: 58, languageScore: 55, strategyScore: 62 },
+  { category: "elite", name: "Dartmouth College", url: "dartmouth.edu", overallScore: 55, languageScore: 52, strategyScore: 60 },
+  // Large Public (estimates)
   { category: "large_public", name: "Arizona State University", url: "asu.edu", overallScore: 52, languageScore: 48, strategyScore: 58 },
-  { category: "large_public", name: "UT Austin", url: "utexas.edu", overallScore: 46, languageScore: 42, strategyScore: 52 },
   { category: "large_public", name: "UCLA", url: "ucla.edu", overallScore: 50, languageScore: 48, strategyScore: 54 },
   { category: "large_public", name: "University of Michigan", url: "umich.edu", overallScore: 48, languageScore: 45, strategyScore: 52 },
-  { category: "large_public", name: "Penn State", url: "psu.edu", overallScore: 38, languageScore: 34, strategyScore: 44 },
+  { category: "large_public", name: "UT Austin", url: "utexas.edu", overallScore: 46, languageScore: 42, strategyScore: 52 },
   { category: "large_public", name: "University of Wisconsin", url: "wisc.edu", overallScore: 42, languageScore: 40, strategyScore: 46 },
-  // Small Liberal Arts
-  { category: "liberal_arts", name: "Middlebury College", url: "middlebury.edu", overallScore: 58, languageScore: 60, strategyScore: 55 },
-  { category: "liberal_arts", name: "Bowdoin College", url: "bowdoin.edu", overallScore: 65, languageScore: 68, strategyScore: 60 },
-  { category: "liberal_arts", name: "Colgate University", url: "colgate.edu", overallScore: 45, languageScore: 42, strategyScore: 50 },
-  { category: "liberal_arts", name: "Vassar College", url: "vassar.edu", overallScore: 60, languageScore: 62, strategyScore: 56 },
-  { category: "liberal_arts", name: "Skidmore College", url: "skidmore.edu", overallScore: 50, languageScore: 48, strategyScore: 54 },
-  { category: "liberal_arts", name: "Carleton College", url: "carleton.edu", overallScore: 62, languageScore: 65, strategyScore: 58 },
-  // Regional / Other
-  { category: "regional", name: "Boston College", url: "bc.edu", overallScore: 44, languageScore: 40, strategyScore: 50 },
-  { category: "regional", name: "Emory University", url: "emory.edu", overallScore: 48, languageScore: 46, strategyScore: 52 },
-  { category: "regional", name: "Vanderbilt University", url: "vanderbilt.edu", overallScore: 42, languageScore: 38, strategyScore: 48 },
+  { category: "large_public", name: "Penn State", url: "psu.edu", overallScore: 38, languageScore: 34, strategyScore: 44 },
+  // Liberal Arts — REAL AUDIT DATA (Feb 2026 cheerio scrapes)
+  { category: "liberal_arts", name: "Muhlenberg College", url: "muhlenberg.edu", overallScore: 92, languageScore: 96, strategyScore: 86 },
+  { category: "liberal_arts", name: "Trinity College", url: "trinity.edu", overallScore: 88, languageScore: 99, strategyScore: 75 },
+  { category: "liberal_arts", name: "Bowdoin College", url: "bowdoin.edu", overallScore: 86, languageScore: 98, strategyScore: 71 },
+  { category: "liberal_arts", name: "Vassar College", url: "vassar.edu", overallScore: 86, languageScore: 92, strategyScore: 78 },
+  { category: "liberal_arts", name: "Reed College", url: "reed.edu", overallScore: 86, languageScore: 95, strategyScore: 75 },
+  { category: "liberal_arts", name: "Wesleyan University", url: "wesleyan.edu", overallScore: 85, languageScore: 92, strategyScore: 77 },
+  { category: "liberal_arts", name: "Goucher College", url: "goucher.edu", overallScore: 85, languageScore: 92, strategyScore: 77 },
+  { category: "liberal_arts", name: "Oberlin College", url: "oberlin.edu", overallScore: 83, languageScore: 89, strategyScore: 76 },
+  { category: "liberal_arts", name: "Kenyon College", url: "kenyon.edu", overallScore: 82, languageScore: 91, strategyScore: 71 },
+  { category: "liberal_arts", name: "Gettysburg College", url: "gettysburg.edu", overallScore: 82, languageScore: 91, strategyScore: 70 },
+  { category: "liberal_arts", name: "Ithaca College", url: "ithaca.edu", overallScore: 82, languageScore: 91, strategyScore: 72 },
+  { category: "liberal_arts", name: "Bucknell University", url: "bucknell.edu", overallScore: 82, languageScore: 86, strategyScore: 76 },
+  { category: "liberal_arts", name: "Hamilton College", url: "hamilton.edu", overallScore: 78, languageScore: 86, strategyScore: 69 },
+  { category: "liberal_arts", name: "St. Lawrence University", url: "stlawu.edu", overallScore: 78, languageScore: 87, strategyScore: 68 },
+  { category: "liberal_arts", name: "Bates College", url: "bates.edu", overallScore: 76, languageScore: 83, strategyScore: 67 },
+  { category: "liberal_arts", name: "Lafayette College", url: "lafayette.edu", overallScore: 74, languageScore: 78, strategyScore: 68 },
+  { category: "liberal_arts", name: "Grinnell College", url: "grinnell.edu", overallScore: 74, languageScore: 83, strategyScore: 63 },
+  { category: "liberal_arts", name: "Elon University", url: "elon.edu", overallScore: 73, languageScore: 80, strategyScore: 65 },
+  { category: "liberal_arts", name: "Macalester College", url: "macalester.edu", overallScore: 72, languageScore: 77, strategyScore: 65 },
+  { category: "liberal_arts", name: "Middlebury College", url: "middlebury.edu", overallScore: 68, languageScore: 74, strategyScore: 61 },
+  // Regional / Other (estimates)
   { category: "regional", name: "Rice University", url: "rice.edu", overallScore: 56, languageScore: 58, strategyScore: 52 },
   { category: "regional", name: "Duke University", url: "duke.edu", overallScore: 54, languageScore: 52, strategyScore: 58 },
-  // Online-focused
-  { category: "online", name: "SNHU", url: "snhu.edu", overallScore: 30, languageScore: 25, strategyScore: 38 },
+  { category: "regional", name: "Emory University", url: "emory.edu", overallScore: 48, languageScore: 46, strategyScore: 52 },
+  { category: "regional", name: "Colgate University", url: "colgate.edu", overallScore: 45, languageScore: 42, strategyScore: 50 },
+  { category: "regional", name: "Boston College", url: "bc.edu", overallScore: 44, languageScore: 40, strategyScore: 50 },
+  { category: "regional", name: "Vanderbilt University", url: "vanderbilt.edu", overallScore: 42, languageScore: 38, strategyScore: 48 },
+  // Online-focused (estimates)
   { category: "online", name: "WGU", url: "wgu.edu", overallScore: 35, languageScore: 32, strategyScore: 40 },
-  { category: "online", name: "Liberty University", url: "liberty.edu", overallScore: 28, languageScore: 22, strategyScore: 36 },
   { category: "online", name: "Grand Canyon University", url: "gcu.edu", overallScore: 32, languageScore: 28, strategyScore: 38 },
+  { category: "online", name: "SNHU", url: "snhu.edu", overallScore: 30, languageScore: 25, strategyScore: 38 },
+  { category: "online", name: "Liberty University", url: "liberty.edu", overallScore: 28, languageScore: 22, strategyScore: 36 },
 ];
 
 export function calcPercentile(score) {
