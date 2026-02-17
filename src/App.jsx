@@ -445,7 +445,7 @@ export default function App() {
                   </button>
                 </div>
                 {leaderboard.length === 0 && !lbLoading && (
-                  <p style={{ color: T.dim, fontSize: 13, textAlign: "center", padding: 20 }}>No leaderboard data yet. Scores are added as schools are audited.</p>
+                  <p style={{ color: T.dim, fontSize: 13, textAlign: "center", padding: "30px 20px", fontFamily: T.serif, fontStyle: "italic" }}>No schools ranked yet. Every audit automatically adds to the leaderboard — yours could be first.</p>
                 )}
                 {leaderboard.map((s, i) => {
                   const isYou = res.url && s.url && res.url.includes(s.url);

@@ -7,34 +7,6 @@ const headers = {
   "Content-Type": "application/json",
 };
 
-// Seed data: real audit scores from Feb 2026 (liberal arts only — no estimates)
-const SEED_DATA = {
-  "bowdoin.edu": { name: "Bowdoin College", url: "bowdoin.edu", overall: 90, language: 93, strategy: 87, cliches: 3, pagesAudited: 4, lastAudited: "2026-02-15T00:00:00Z" },
-  "williams.edu": { name: "Williams College", url: "williams.edu", overall: 88, language: 87, strategy: 89, cliches: 2, pagesAudited: 3, lastAudited: "2026-02-15T00:00:00Z" },
-  "oberlin.edu": { name: "Oberlin College", url: "oberlin.edu", overall: 88, language: 93, strategy: 81, cliches: 2, pagesAudited: 3, lastAudited: "2026-02-15T00:00:00Z" },
-  "trinity.edu": { name: "Trinity College", url: "trinity.edu", overall: 80, language: 86, strategy: 73, cliches: 4, pagesAudited: 3, lastAudited: "2026-02-15T00:00:00Z" },
-  "reed.edu": { name: "Reed College", url: "reed.edu", overall: 80, language: 93, strategy: 65, cliches: 2, pagesAudited: 3, lastAudited: "2026-02-15T00:00:00Z" },
-  "vassar.edu": { name: "Vassar College", url: "vassar.edu", overall: 79, language: 87, strategy: 70, cliches: 3, pagesAudited: 3, lastAudited: "2026-02-15T00:00:00Z" },
-  "kenyon.edu": { name: "Kenyon College", url: "kenyon.edu", overall: 77, language: 95, strategy: 55, cliches: 1, pagesAudited: 3, lastAudited: "2026-02-15T00:00:00Z" },
-  "muhlenberg.edu": { name: "Muhlenberg College", url: "muhlenberg.edu", overall: 76, language: 80, strategy: 71, cliches: 3, pagesAudited: 3, lastAudited: "2026-02-15T00:00:00Z" },
-  "colby.edu": { name: "Colby College", url: "colby.edu", overall: 76, language: 80, strategy: 70, cliches: 3, pagesAudited: 3, lastAudited: "2026-02-15T00:00:00Z" },
-  "gettysburg.edu": { name: "Gettysburg College", url: "gettysburg.edu", overall: 76, language: 96, strategy: 51, cliches: 1, pagesAudited: 3, lastAudited: "2026-02-15T00:00:00Z" },
-  "hamilton.edu": { name: "Hamilton College", url: "hamilton.edu", overall: 76, language: 90, strategy: 59, cliches: 2, pagesAudited: 3, lastAudited: "2026-02-15T00:00:00Z" },
-  "elon.edu": { name: "Elon University", url: "elon.edu", overall: 76, language: 97, strategy: 50, cliches: 1, pagesAudited: 3, lastAudited: "2026-02-15T00:00:00Z" },
-  "wesleyan.edu": { name: "Wesleyan University", url: "wesleyan.edu", overall: 75, language: 86, strategy: 62, cliches: 3, pagesAudited: 3, lastAudited: "2026-02-15T00:00:00Z" },
-  "bucknell.edu": { name: "Bucknell University", url: "bucknell.edu", overall: 74, language: 94, strategy: 50, cliches: 1, pagesAudited: 3, lastAudited: "2026-02-15T00:00:00Z" },
-  "ithaca.edu": { name: "Ithaca College", url: "ithaca.edu", overall: 71, language: 80, strategy: 59, cliches: 4, pagesAudited: 3, lastAudited: "2026-02-15T00:00:00Z" },
-  "goucher.edu": { name: "Goucher College", url: "goucher.edu", overall: 70, language: 73, strategy: 66, cliches: 5, pagesAudited: 3, lastAudited: "2026-02-15T00:00:00Z" },
-  "stlawu.edu": { name: "St. Lawrence University", url: "stlawu.edu", overall: 70, language: 86, strategy: 51, cliches: 3, pagesAudited: 3, lastAudited: "2026-02-15T00:00:00Z" },
-  "grinnell.edu": { name: "Grinnell College", url: "grinnell.edu", overall: 67, language: 84, strategy: 47, cliches: 3, pagesAudited: 3, lastAudited: "2026-02-15T00:00:00Z" },
-  "macalester.edu": { name: "Macalester College", url: "macalester.edu", overall: 66, language: 85, strategy: 42, cliches: 3, pagesAudited: 3, lastAudited: "2026-02-15T00:00:00Z" },
-  "skidmore.edu": { name: "Skidmore College", url: "skidmore.edu", overall: 64, language: 73, strategy: 54, cliches: 4, pagesAudited: 3, lastAudited: "2026-02-15T00:00:00Z" },
-  "bates.edu": { name: "Bates College", url: "bates.edu", overall: 64, language: 77, strategy: 48, cliches: 4, pagesAudited: 3, lastAudited: "2026-02-15T00:00:00Z" },
-  "lafayette.edu": { name: "Lafayette College", url: "lafayette.edu", overall: 60, language: 75, strategy: 41, cliches: 5, pagesAudited: 3, lastAudited: "2026-02-15T00:00:00Z" },
-  "middlebury.edu": { name: "Middlebury College", url: "middlebury.edu", overall: 58, language: 77, strategy: 35, cliches: 5, pagesAudited: 3, lastAudited: "2026-02-15T00:00:00Z" },
-  "dickinson.edu": { name: "Dickinson College", url: "dickinson.edu", overall: 56, language: 64, strategy: 46, cliches: 5, pagesAudited: 3, lastAudited: "2026-02-15T00:00:00Z" },
-};
-
 function initStore() {
   try {
     return getStore("leaderboard");
@@ -78,13 +50,15 @@ export async function handler(event) {
 
   // GET — return full leaderboard
   if (event.httpMethod === "GET") {
-    const { data: rawData } = await readData(store);
-    let data = rawData;
+    const { data } = await readData(store);
 
-    // If empty, use seed data (and try to persist if store is available)
+    // Only return schools that were actually audited — no seed data
     if (!data || Object.keys(data).length === 0) {
-      data = SEED_DATA;
-      if (store) await writeData(store, data);
+      return {
+        statusCode: 200,
+        headers,
+        body: JSON.stringify({ schools: [], count: 0 }),
+      };
     }
 
     const sorted = Object.values(data).sort((a, b) => b.overall - a.overall);
@@ -115,9 +89,9 @@ export async function handler(event) {
         return { statusCode: 403, headers, body: JSON.stringify({ error: "Only .edu domains" }) };
       }
 
-      // Load current data from store or seed
+      // Load current data from store (starts empty — no seed data)
       const { data: rawData } = await readData(store);
-      let data = rawData || { ...SEED_DATA };
+      let data = rawData || {};
 
       // Upsert
       data[hostname] = {
@@ -132,7 +106,7 @@ export async function handler(event) {
       };
 
       // Persist
-      const writeResult = await writeData(store, data);
+      await writeData(store, data);
 
       return {
         statusCode: 200,
@@ -143,6 +117,14 @@ export async function handler(event) {
       console.error("POST error:", err);
       return { statusCode: 500, headers, body: JSON.stringify({ error: "Failed to save score" }) };
     }
+  }
+
+  // DELETE — clear the store (admin only, used to reset stale seed data)
+  if (event.httpMethod === "DELETE") {
+    if (store) {
+      try { await store.delete("schools"); } catch (e) { console.warn("Delete failed:", e.message); }
+    }
+    return { statusCode: 200, headers, body: JSON.stringify({ cleared: true }) };
   }
 
   return { statusCode: 405, headers, body: JSON.stringify({ error: "Method not allowed" }) };
