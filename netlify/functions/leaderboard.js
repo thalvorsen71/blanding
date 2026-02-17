@@ -45,23 +45,22 @@ function initStore() {
 }
 
 async function readData(store) {
-  if (!store) return null;
+  if (!store) return { data: null, err: "no store" };
   try {
-    return await store.get("schools", { type: "json" });
+    const d = await store.get("schools", { type: "json" });
+    return { data: d, err: null };
   } catch (e) {
-    console.warn("Blobs read failed:", e.message);
-    return null;
+    return { data: null, err: e.message };
   }
 }
 
 async function writeData(store, data) {
-  if (!store) return false;
+  if (!store) return { ok: false, err: "no store" };
   try {
     await store.setJSON("schools", data);
-    return true;
+    return { ok: true, err: null };
   } catch (e) {
-    console.warn("Blobs write failed:", e.message);
-    return false;
+    return { ok: false, err: e.message };
   }
 }
 
@@ -78,11 +77,14 @@ export async function handler(event) {
 
   // GET — return full leaderboard
   if (event.httpMethod === "GET") {
-    let data = await readData(store);
+    const { data: rawData, err: readErr } = await readData(store);
+    let data = rawData;
+    let seeded = false;
 
     // If empty, use seed data (and try to persist if store is available)
     if (!data || Object.keys(data).length === 0) {
       data = SEED_DATA;
+      seeded = true;
       if (store) await writeData(store, data);
     }
 
@@ -90,7 +92,7 @@ export async function handler(event) {
     return {
       statusCode: 200,
       headers,
-      body: JSON.stringify({ schools: sorted, count: sorted.length, persisted: storeAvailable }),
+      body: JSON.stringify({ schools: sorted, count: sorted.length, store: storeAvailable, readErr, seeded }),
     };
   }
 
@@ -115,8 +117,8 @@ export async function handler(event) {
       }
 
       // Load current data from store or seed
-      let data = await readData(store);
-      if (!data) data = { ...SEED_DATA };
+      const { data: rawData, err: readErr } = await readData(store);
+      let data = rawData || { ...SEED_DATA };
 
       // Upsert
       data[hostname] = {
@@ -131,12 +133,12 @@ export async function handler(event) {
       };
 
       // Persist
-      const wrote = await writeData(store, data);
+      const writeResult = await writeData(store, data);
 
       return {
         statusCode: 200,
         headers,
-        body: JSON.stringify({ success: true, count: Object.keys(data).length, persisted: wrote }),
+        body: JSON.stringify({ success: true, count: Object.keys(data).length, store: storeAvailable, readErr, writeErr: writeResult.err, wrote: writeResult.ok }),
       };
     } catch (err) {
       console.error("POST error:", err);
