@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { T, scoreColor, scoreLabel, scoreVerdict, countCliches, highlightCliches, SCHOOL_BENCHMARKS, calcPercentile, contentRichnessBonus } from './constants';
+import { T, scoreColor, scoreLabel, scoreVerdict, countCliches, highlightCliches, contentRichnessBonus } from './constants';
 import { fetchPage, fetchSubPage, deepAnalysis, captureLead } from './api';
 import { exportPDF } from './pdf';
 import { generateScorecard } from './scorecard';
@@ -186,15 +186,13 @@ export default function App() {
     strat = Math.max(0, Math.min(100, Math.round(strat)));
 
     const overall = Math.round(lang * 0.55 + strat * 0.45);
-    const percentile = calcPercentile(overall);
-
     return {
       url, schoolName: hp.title || url, pagesAnalyzed: pages, overall,
       scores: { language: lang, strategy: strat },
       cliches, totalCliches: totalC,
       uniqueClaims: uniq, stockPhrases: stock,
       allH1, allH2, metaDesc: hp.meta_description || "", bodyText: allBody, ai,
-      percentile, scrapeSource,
+      scrapeSource,
     };
   }
 
@@ -212,7 +210,7 @@ export default function App() {
     let lang = 100 - Math.min(cl.length * 4, 45) - Math.min((tc / Math.max(inputText.split(/\s+/).length / 100, 1)) * 7, 30);
     if (ai?.voice_score) lang = Math.round((lang + ai.voice_score * 10) / 2);
     lang = Math.max(0, Math.min(100, lang));
-    setResult({ url: null, schoolName: "Your Copy", pagesAnalyzed: [{ type: "text" }], overall: lang, scores: { language: lang, strategy: null }, cliches: cl, totalCliches: tc, uniqueClaims: [], stockPhrases: [], allH1: [], allH2: [], metaDesc: "", bodyText: inputText, ai, percentile: calcPercentile(lang) });
+    setResult({ url: null, schoolName: "Your Copy", pagesAnalyzed: [{ type: "text" }], overall: lang, scores: { language: lang, strategy: null }, cliches: cl, totalCliches: tc, uniqueClaims: [], stockPhrases: [], allH1: [], allH2: [], metaDesc: "", bodyText: inputText, ai });
     setProgress(p => p.map(i => ({ ...i, status: "done" }))); setAnalyzing(false); scrollToResult();
   };
 
@@ -271,12 +269,6 @@ export default function App() {
           </div>
           <div style={{ fontSize: compact ? 16 : 20, fontFamily: T.serif, fontStyle: "italic", color: scoreColor(res.overall), marginTop: 8, position: "relative" }}>{scoreLabel(res.overall)}</div>
           {!compact && <p style={{ fontSize: 13, color: T.muted, lineHeight: 1.6, maxWidth: 480, margin: "12px auto 0", position: "relative" }}>{scoreVerdict(res.overall)}</p>}
-          {/* Percentile badge */}
-          {!compact && res.percentile && (
-            <div style={{ marginTop: 14, position: "relative" }}>
-              <Pill color={scoreColor(res.overall)}>Better than {res.percentile.percentile}% of {res.percentile.totalCount} audited institutions</Pill>
-            </div>
-          )}
           {dims.length > 1 && (
             <div style={{ display: "grid", gridTemplateColumns: `repeat(${dims.length}, 1fr)`, gap: 1, marginTop: 20, background: T.border, borderRadius: 8, overflow: "hidden", position: "relative" }}>
               {dims.map(d => <div key={d.key} style={{ background: "#121212", padding: compact ? "10px 4px" : "14px 6px" }}><div style={{ fontSize: compact ? 20 : 26, fontFamily: T.serif, color: scoreColor(res.scores[d.key]) }}>{res.scores[d.key]}</div><div style={{ fontSize: 9, fontFamily: T.mono, color: T.dim, marginTop: 2, textTransform: "uppercase" }}>{d.label}</div></div>)}
@@ -296,8 +288,8 @@ export default function App() {
 
   /* ═══ TAB CONTENT ═══ */
   function TabContent({ res }) {
-    const tabs = ["overview", "language", "highlighted", "strategy", "benchmarks", "leaderboard", "prescriptions"];
-    const labels = { overview: "Overview", language: "Clichés", highlighted: "Highlighted Text", strategy: "Strategy", benchmarks: "Benchmarks", leaderboard: "Leaderboard", prescriptions: "Rx: Fix It" };
+    const tabs = ["overview", "language", "highlighted", "strategy", "leaderboard", "prescriptions"];
+    const labels = { overview: "Overview", language: "Clichés", highlighted: "Highlighted Text", strategy: "Strategy", leaderboard: "Leaderboard", prescriptions: "Rx: Fix It" };
     const avail = tabs.filter(t => {
       if (t === "strategy") return res.scores.strategy != null;
       if (t === "highlighted") return !!res.bodyText;
@@ -382,51 +374,6 @@ export default function App() {
               <div style={{ background: T.card, border: "1px solid " + T.border, borderRadius: 10, padding: 18 }}>
                 <div style={{ fontSize: 10, fontFamily: T.mono, color: "#ef4444", textTransform: "uppercase", marginBottom: 8 }}>Stock Phrases ({res.stockPhrases.length})</div>
                 {res.stockPhrases.length ? res.stockPhrases.map((c, i) => <p key={i} style={{ fontSize: 13, color: T.muted, lineHeight: 1.5, margin: "0 0 6px", fontStyle: "italic" }}>"{c}"</p>) : <p style={{ fontSize: 13, color: "#22c55e" }}>Clean.</p>}
-              </div>
-            </div>
-          )}
-
-          {/* BENCHMARKS */}
-          {activeTab === "benchmarks" && (
-            <div style={{ display: "grid", gap: 12 }}>
-              {/* Percentile card */}
-              <div style={{ background: T.card, border: "1px solid " + T.border, borderRadius: 10, padding: "24px", textAlign: "center" }}>
-                <div style={{ fontSize: 10, fontFamily: T.mono, color: T.accent, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 12 }}>Your Percentile Ranking</div>
-                <div style={{ fontSize: 48, fontFamily: T.serif, color: scoreColor(res.overall), lineHeight: 1 }}>{res.percentile?.percentile || 50}<span style={{ fontSize: 18, color: T.dim }}>th</span></div>
-                <p style={{ fontSize: 13, color: T.muted, marginTop: 8, marginBottom: 0 }}>You scored better than {res.percentile?.percentile || 50}% of {res.percentile?.totalCount || SCHOOL_BENCHMARKS.length} audited institutions</p>
-              </div>
-              {/* Category averages */}
-              <div className="benchmark-cats" style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 6 }}>
-                {[
-                  { cat: "elite", label: "Elite / Ivy" },
-                  { cat: "large_public", label: "Large Public" },
-                  { cat: "liberal_arts", label: "Liberal Arts" },
-                  { cat: "regional", label: "Regional" },
-                  { cat: "online", label: "Online" },
-                ].map(({ cat, label }) => {
-                  const schools = SCHOOL_BENCHMARKS.filter(b => b.category === cat);
-                  const avg = schools.length ? Math.round(schools.reduce((s, b) => s + b.overallScore, 0) / schools.length) : 0;
-                  return (
-                    <div key={cat} style={{ background: T.card, border: "1px solid " + T.border, borderRadius: 8, padding: "12px 6px", textAlign: "center" }}>
-                      <div style={{ fontSize: 22, fontFamily: T.serif, color: scoreColor(avg) }}>{avg}</div>
-                      <div style={{ fontSize: 8, fontFamily: T.mono, color: T.dim, textTransform: "uppercase", marginTop: 4, lineHeight: 1.2 }}>{label}</div>
-                    </div>
-                  );
-                })}
-              </div>
-              {/* Similar schools */}
-              <div style={{ background: T.card, border: "1px solid " + T.border, borderRadius: 10, padding: 18 }}>
-                <div style={{ fontSize: 10, fontFamily: T.mono, color: T.accent, textTransform: "uppercase", marginBottom: 10 }}>Schools With Similar Scores</div>
-                {SCHOOL_BENCHMARKS
-                  .filter(b => Math.abs(b.overallScore - res.overall) <= 12)
-                  .sort((a, b) => Math.abs(a.overallScore - res.overall) - Math.abs(b.overallScore - res.overall))
-                  .slice(0, 6)
-                  .map((b, i) => (
-                    <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 0", borderBottom: i < 5 ? "1px solid " + T.border : "none" }}>
-                      <span style={{ fontSize: 13, color: T.text }}>{b.name}</span>
-                      <span style={{ fontSize: 14, fontFamily: T.serif, color: scoreColor(b.overallScore) }}>{b.overallScore}</span>
-                    </div>
-                  ))}
               </div>
             </div>
           )}
