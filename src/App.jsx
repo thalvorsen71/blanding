@@ -21,7 +21,7 @@ function AnimNum({ value, dur = 1400 }) {
 function Ring({ score, size = 140, sw = 5 }) {
   const r = (size - sw) / 2, c = 2 * Math.PI * r;
   return (
-    <svg width={size} height={size} style={{ transform: "rotate(-90deg)" }}>
+    <svg width={size} height={size} style={{ transform: "rotate(-90deg)" }} role="img" aria-label={`Score: ${score} out of 100`}>
       <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="#1a1a1a" strokeWidth={sw} />
       <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={scoreColor(score)} strokeWidth={sw}
         strokeDasharray={c} strokeDashoffset={c - (c * score / 100)} strokeLinecap="round"
@@ -35,7 +35,7 @@ function Pill({ children, color = T.accent }) {
 }
 
 function Spinner({ size = 14 }) {
-  return <span style={{ width: size, height: size, border: "2px solid #222", borderTopColor: T.accent, borderRadius: "50%", display: "inline-block", animation: "spin 0.8s linear infinite", flexShrink: 0 }} />;
+  return <span role="status" aria-label="Loading" style={{ width: size, height: size, border: "2px solid #222", borderTopColor: T.accent, borderRadius: "50%", display: "inline-block", animation: "spin 0.8s linear infinite", flexShrink: 0 }} />;
 }
 
 /* ═══ SHARE HELPERS ═══ */
@@ -230,7 +230,7 @@ export default function App() {
     const dims = [{ key: "language", label: "Language & Voice" }, { key: "strategy", label: "Content Strategy" }].filter(d => res.scores[d.key] != null);
     return (
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ background: T.card, border: "1px solid " + T.border, borderRadius: 14, padding: compact ? "24px 16px" : "36px 28px", textAlign: "center", position: "relative", overflow: "hidden" }}>
+        <div className="result-card" style={{ background: T.card, border: "1px solid " + T.border, borderRadius: 14, padding: compact ? "24px 16px" : "36px 28px", textAlign: "center", position: "relative", overflow: "hidden" }}>
           <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%,-50%)", width: 280, height: 280, background: `radial-gradient(circle, ${scoreColor(res.overall)}11 0%, transparent 70%)`, pointerEvents: "none" }} />
           {res.url && <div style={{ fontSize: 11, fontFamily: T.mono, color: T.dim, marginBottom: 4, position: "relative", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{res.url}</div>}
           <div style={{ fontSize: 10, fontFamily: T.mono, color: T.muted, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 14, position: "relative" }}>{res.pagesAnalyzed.length} page{res.pagesAnalyzed.length > 1 ? "s" : ""} audited</div>
@@ -279,15 +279,15 @@ export default function App() {
 
     return (
       <>
-        <div style={{ display: "flex", gap: 4, marginTop: 20, overflowX: "auto", paddingBottom: 4 }}>
-          {avail.map(t => <button key={t} onClick={() => setActiveTab(t)} style={{ padding: "7px 14px", borderRadius: 6, border: `1px solid ${activeTab === t ? T.accent : T.borderLight}`, background: activeTab === t ? T.accent + "15" : "transparent", color: activeTab === t ? T.accent : T.dim, fontSize: 11, fontFamily: T.mono, whiteSpace: "nowrap" }}>{labels[t]}</button>)}
+        <div className="tab-bar" role="tablist" aria-label="Audit result tabs" style={{ display: "flex", gap: 4, marginTop: 20, overflowX: "auto", paddingBottom: 4 }}>
+          {avail.map(t => <button key={t} role="tab" aria-selected={activeTab === t} onClick={() => setActiveTab(t)} style={{ padding: "7px 14px", borderRadius: 6, border: `1px solid ${activeTab === t ? T.accent : T.borderLight}`, background: activeTab === t ? T.accent + "15" : "transparent", color: activeTab === t ? T.accent : T.dim, fontSize: 11, fontFamily: T.mono, whiteSpace: "nowrap" }}>{labels[t]}</button>)}
         </div>
         <div style={{ marginTop: 14 }}>
 
           {/* OVERVIEW */}
           {activeTab === "overview" && res.ai && (
             <div style={{ display: "grid", gap: 12 }}>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+              <div className="overview-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
                 {[{ l: "Biggest Sin", v: res.ai.biggest_sin, c: "#ef4444" }, { l: "Best Moment", v: res.ai.best_moment, c: "#22c55e" }, { l: "Differentiation Killer", v: res.ai.differentiation_killer, c: "#f97316" }, { l: "Missed Opportunity", v: res.ai.missed_opportunity, c: "#eab308" }].map((it, i) => (
                   <div key={i} style={{ background: T.card, border: "1px solid " + T.border, borderRadius: 10, padding: 16 }}>
                     <div style={{ fontSize: 10, fontFamily: T.mono, color: it.c, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6 }}>{it.l}</div>
@@ -346,7 +346,7 @@ export default function App() {
 
           {/* STRATEGY */}
           {activeTab === "strategy" && (
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+            <div className="strategy-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
               <div style={{ background: T.card, border: "1px solid " + T.border, borderRadius: 10, padding: 18 }}>
                 <div style={{ fontSize: 10, fontFamily: T.mono, color: "#22c55e", textTransform: "uppercase", marginBottom: 8 }}>Unique Claims ({res.uniqueClaims.length})</div>
                 {res.uniqueClaims.length ? res.uniqueClaims.map((c, i) => <p key={i} style={{ fontSize: 13, color: T.text, lineHeight: 1.5, margin: "0 0 6px", padding: "4px 0", borderBottom: i < res.uniqueClaims.length - 1 ? "1px solid " + T.border : "none" }}>{c}</p>) : <p style={{ fontSize: 13, color: "#ef4444" }}>No ownable claims found.</p>}
@@ -368,7 +368,7 @@ export default function App() {
                 <p style={{ fontSize: 13, color: T.muted, marginTop: 8, marginBottom: 0 }}>You scored better than {res.percentile?.percentile || 50}% of {res.percentile?.totalCount || SCHOOL_BENCHMARKS.length} audited institutions</p>
               </div>
               {/* Category averages */}
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 6 }}>
+              <div className="benchmark-cats" style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 6 }}>
                 {[
                   { cat: "elite", label: "Elite / Ivy" },
                   { cat: "large_public", label: "Large Public" },
@@ -433,7 +433,7 @@ export default function App() {
       <div style={{ position: "fixed", inset: 0, opacity: 0.03, backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")`, pointerEvents: "none", zIndex: 1 }} />
       <div style={{ position: "fixed", top: "-30%", right: "-10%", width: "60%", height: "60%", background: "radial-gradient(ellipse, rgba(200,120,60,0.06) 0%, transparent 70%)", pointerEvents: "none" }} />
 
-      <div style={{ position: "relative", zIndex: 2, maxWidth: 940, margin: "0 auto", padding: "0 24px" }}>
+      <main id="main-content" style={{ position: "relative", zIndex: 2, maxWidth: 940, margin: "0 auto", padding: "0 24px" }}>
 
         {/* HEADER */}
         <header style={{ paddingTop: 40, paddingBottom: 12 }}>
@@ -463,27 +463,30 @@ export default function App() {
 
           {mode === "single" && (
             <div>
-              <div style={{ display: "flex", gap: 10 }}>
+              <div className="audit-input-row" style={{ display: "flex", gap: 10 }}>
                 <input value={url1} onChange={e => setUrl1(e.target.value)} placeholder="e.g. middlebury.edu" onKeyDown={e => e.key === "Enter" && url1.trim() && isEdu(url1) && runSingle()}
+                  aria-label="School website URL" aria-invalid={url1.trim() && !isEdu(url1) ? "true" : undefined} aria-describedby={url1.trim() && !isEdu(url1) ? "edu-error" : undefined}
                   style={{ flex: 1, background: T.card, border: "1px solid " + (url1.trim() && !isEdu(url1) ? "#ef4444" : T.borderLight), borderRadius: 10, padding: "15px 18px", color: T.text, fontSize: 14, fontFamily: T.sans, outline: "none" }}
                   onFocus={e => e.target.style.borderColor = url1.trim() && !isEdu(url1) ? "#ef4444" : T.accent} onBlur={e => e.target.style.borderColor = url1.trim() && !isEdu(url1) ? "#ef4444" : T.borderLight} />
-                <button onClick={runSingle} disabled={analyzing || !url1.trim() || !isEdu(url1)}
+                <button onClick={runSingle} disabled={analyzing || !url1.trim() || !isEdu(url1)} aria-label="Audit this site"
                   style={{ padding: "15px 26px", background: (!url1.trim() || !isEdu(url1)) ? "#1a1a1a" : `linear-gradient(135deg, ${T.accent}, #b06830)`, border: "none", borderRadius: 10, color: (!url1.trim() || !isEdu(url1)) ? "#444" : "#fff", fontSize: 14, fontWeight: 600, fontFamily: T.sans, whiteSpace: "nowrap" }}>
                   {analyzing ? <span style={{ display: "flex", alignItems: "center", gap: 8 }}><Spinner />Auditing...</span> : "Audit Site"}
                 </button>
               </div>
-              {url1.trim() && !isEdu(url1) && <p style={{ margin: "8px 0 0", fontSize: 12, fontFamily: T.mono, color: "#ef4444" }}>Only .edu domains — this tool is built for higher education sites.</p>}
+              {url1.trim() && !isEdu(url1) && <p id="edu-error" role="alert" style={{ margin: "8px 0 0", fontSize: 12, fontFamily: T.mono, color: "#ef4444" }}>Only .edu domains — this tool is built for higher education sites.</p>}
             </div>
           )}
 
           {mode === "compare" && (
             <div style={{ display: "grid", gap: 10 }}>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", gap: 10, alignItems: "center" }}>
+              <div className="compare-grid" style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", gap: 10, alignItems: "center" }}>
                 <input value={url1} onChange={e => setUrl1(e.target.value)} placeholder="School A — e.g. williams.edu"
+                  aria-label="School A website URL" aria-invalid={url1.trim() && !isEdu(url1) ? "true" : undefined}
                   style={{ background: T.card, border: "1px solid " + (url1.trim() && !isEdu(url1) ? "#ef4444" : T.borderLight), borderRadius: 10, padding: "15px 18px", color: T.text, fontSize: 14, fontFamily: T.sans, outline: "none" }}
                   onFocus={e => e.target.style.borderColor = T.accent} onBlur={e => e.target.style.borderColor = T.borderLight} />
-                <span style={{ fontSize: 14, fontFamily: T.serif, fontStyle: "italic", color: T.dim }}>vs</span>
+                <span className="compare-vs" style={{ fontSize: 14, fontFamily: T.serif, fontStyle: "italic", color: T.dim }}>vs</span>
                 <input value={url2} onChange={e => setUrl2(e.target.value)} placeholder="School B — e.g. amherst.edu"
+                  aria-label="School B website URL" aria-invalid={url2.trim() && !isEdu(url2) ? "true" : undefined}
                   style={{ background: T.card, border: "1px solid " + (url2.trim() && !isEdu(url2) ? "#ef4444" : T.borderLight), borderRadius: 10, padding: "15px 18px", color: T.text, fontSize: 14, fontFamily: T.sans, outline: "none" }}
                   onFocus={e => e.target.style.borderColor = T.accent} onBlur={e => e.target.style.borderColor = T.borderLight} />
               </div>
@@ -497,7 +500,7 @@ export default function App() {
 
           {mode === "text" && (
             <>
-              <textarea value={inputText} onChange={e => setInputText(e.target.value)} placeholder="Paste your homepage copy, about page, or any marketing text..."
+              <textarea value={inputText} onChange={e => setInputText(e.target.value)} aria-label="Paste marketing text to analyze" placeholder="Paste your homepage copy, about page, or any marketing text..."
                 style={{ width: "100%", minHeight: 170, background: T.card, border: "1px solid " + T.borderLight, borderRadius: 10, padding: "16px 20px", color: T.text, fontSize: 14, lineHeight: 1.7, fontFamily: T.sans, resize: "vertical", outline: "none" }}
                 onFocus={e => e.target.style.borderColor = T.accent} onBlur={e => e.target.style.borderColor = T.borderLight} />
               <button onClick={runText} disabled={analyzing || inputText.trim().length < 50}
@@ -557,9 +560,9 @@ export default function App() {
             {/* COMPARE */}
             {mode === "compare" && result2 ? (
               <>
-                <div style={{ display: "flex", gap: 16, alignItems: "flex-start" }}>
+                <div className="compare-results" style={{ display: "flex", gap: 16, alignItems: "flex-start" }}>
                   <ResultBlock res={result} compact />
-                  <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "60px 0", flexShrink: 0 }}>
+                  <div className="compare-vs" style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "60px 0", flexShrink: 0 }}>
                     <span style={{ fontSize: 20, fontFamily: T.serif, fontStyle: "italic", color: T.dim }}>vs</span>
                   </div>
                   <ResultBlock res={result2} compact />
@@ -578,10 +581,10 @@ export default function App() {
                     const s1 = result.scores[d.key], s2 = result2.scores[d.key];
                     if (s1 == null || s2 == null) return null;
                     return (
-                      <div key={d.key} style={{ background: T.card, border: "1px solid " + T.border, borderRadius: 8, padding: "12px 16px", display: "grid", gridTemplateColumns: "70px 1fr auto 1fr 70px", alignItems: "center", gap: 10 }}>
+                      <div key={d.key} className="compare-bar-row" style={{ background: T.card, border: "1px solid " + T.border, borderRadius: 8, padding: "12px 16px", display: "grid", gridTemplateColumns: "70px 1fr auto 1fr 70px", alignItems: "center", gap: 10 }}>
                         <span style={{ fontSize: 20, fontFamily: T.serif, color: scoreColor(s1), textAlign: "right" }}>{s1}</span>
                         <div style={{ height: 6, borderRadius: 3, background: T.border, overflow: "hidden", direction: "rtl" }}><div style={{ height: "100%", width: `${s1}%`, background: scoreColor(s1), borderRadius: 3, transition: "width 1s ease" }} /></div>
-                        <span style={{ fontSize: 9, fontFamily: T.mono, color: T.dim, textTransform: "uppercase", textAlign: "center", minWidth: 55 }}>{d.label}</span>
+                        <span className="compare-bar-label" style={{ fontSize: 9, fontFamily: T.mono, color: T.dim, textTransform: "uppercase", textAlign: "center", minWidth: 55 }}>{d.label}</span>
                         <div style={{ height: 6, borderRadius: 3, background: T.border, overflow: "hidden" }}><div style={{ height: "100%", width: `${s2}%`, background: scoreColor(s2), borderRadius: 3, transition: "width 1s ease" }} /></div>
                         <span style={{ fontSize: 20, fontFamily: T.serif, color: scoreColor(s2) }}>{s2}</span>
                       </div>
@@ -597,7 +600,7 @@ export default function App() {
             )}
 
             {/* SHARE + ACTIONS */}
-            <div style={{ marginTop: 24, display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 8 }}>
+            <div className="action-grid" style={{ marginTop: 24, display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 8 }}>
               <button onClick={() => setShareModal(true)}
                 style={{ background: T.card, border: "1px solid " + T.borderLight, borderRadius: 9, padding: "14px 12px", color: T.muted, fontSize: 11, fontWeight: 500 }}
                 onMouseEnter={e => { e.target.style.borderColor = T.accent; e.target.style.color = T.accent; }}
@@ -629,16 +632,18 @@ export default function App() {
                   <span style={{ fontSize: 10, fontFamily: T.mono, color: T.accent, textTransform: "uppercase", letterSpacing: "0.1em" }}>Challenge Mode</span>
                   <span style={{ fontSize: 12, color: T.dim }}>Think a rival school can beat this score?</span>
                 </div>
-                <div style={{ display: "flex", gap: 8 }}>
+                <div className="audit-input-row" style={{ display: "flex", gap: 8 }}>
                   <input value={challengeUrl} onChange={e => setChallengeUrl(e.target.value)}
-                    placeholder="Enter rival school URL..." onKeyDown={e => e.key === "Enter" && handleChallenge()}
-                    style={{ flex: 1, background: T.bg, border: "1px solid " + T.borderLight, borderRadius: 8, padding: "10px 14px", color: T.text, fontSize: 13, fontFamily: T.sans, outline: "none" }}
-                    onFocus={e => e.target.style.borderColor = T.accent} onBlur={e => e.target.style.borderColor = T.borderLight} />
-                  <button onClick={handleChallenge} disabled={!challengeUrl.trim()}
-                    style={{ padding: "10px 18px", background: challengeUrl.trim() ? T.accent : "#1a1a1a", border: "none", borderRadius: 8, color: challengeUrl.trim() ? "#fff" : "#444", fontSize: 12, fontWeight: 600, fontFamily: T.mono, whiteSpace: "nowrap" }}>
+                    placeholder="Enter rival school .edu URL..." onKeyDown={e => e.key === "Enter" && challengeUrl.trim() && isEdu(challengeUrl) && handleChallenge()}
+                    aria-label="Rival school URL" aria-invalid={challengeUrl.trim() && !isEdu(challengeUrl) ? "true" : undefined}
+                    style={{ flex: 1, background: T.bg, border: "1px solid " + (challengeUrl.trim() && !isEdu(challengeUrl) ? "#ef4444" : T.borderLight), borderRadius: 8, padding: "10px 14px", color: T.text, fontSize: 13, fontFamily: T.sans, outline: "none" }}
+                    onFocus={e => e.target.style.borderColor = challengeUrl.trim() && !isEdu(challengeUrl) ? "#ef4444" : T.accent} onBlur={e => e.target.style.borderColor = challengeUrl.trim() && !isEdu(challengeUrl) ? "#ef4444" : T.borderLight} />
+                  <button onClick={handleChallenge} disabled={!challengeUrl.trim() || !isEdu(challengeUrl)}
+                    style={{ padding: "10px 18px", background: (challengeUrl.trim() && isEdu(challengeUrl)) ? T.accent : "#1a1a1a", border: "none", borderRadius: 8, color: (challengeUrl.trim() && isEdu(challengeUrl)) ? "#fff" : "#444", fontSize: 12, fontWeight: 600, fontFamily: T.mono, whiteSpace: "nowrap" }}>
                     Head-to-Head →
                   </button>
                 </div>
+                {challengeUrl.trim() && !isEdu(challengeUrl) && <p role="alert" style={{ margin: "6px 0 0", fontSize: 11, fontFamily: T.mono, color: "#ef4444" }}>Only .edu domains supported.</p>}
               </div>
             )}
 
@@ -655,11 +660,11 @@ export default function App() {
           <span style={{ fontSize: 10, color: T.faint, fontFamily: T.mono }}>© 2026 adeo — strategic communications</span>
           <span style={{ fontSize: 10, color: T.faint, fontFamily: T.mono }}>helloadeo.com</span>
         </footer>
-      </div>
+      </main>
 
       {/* SHARE MODAL */}
       {shareModal && result && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }} onClick={() => setShareModal(false)}>
+        <div role="dialog" aria-modal="true" aria-label="Share your score" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }} onClick={() => setShareModal(false)}>
           <div style={{ background: "#151515", border: "1px solid " + T.borderLight, borderRadius: 16, padding: "32px 28px", maxWidth: 420, width: "100%", textAlign: "center" }} onClick={e => e.stopPropagation()}>
             <h3 style={{ fontFamily: T.serif, fontSize: 22, fontWeight: 400, margin: "0 0 6px" }}>Share Your <span style={{ fontStyle: "italic", color: T.accent }}>Score</span></h3>
             <p style={{ fontSize: 13, color: T.muted, margin: "0 0 20px" }}>{result.schoolName}: {result.overall}/100</p>
@@ -694,7 +699,7 @@ export default function App() {
 
       {/* EMAIL MODAL */}
       {emailModal && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }} onClick={() => setEmailModal(false)}>
+        <div role="dialog" aria-modal="true" aria-label="Get your full report" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }} onClick={() => setEmailModal(false)}>
           <div style={{ background: "#151515", border: "1px solid " + T.borderLight, borderRadius: 16, padding: "36px 32px", maxWidth: 420, width: "100%", textAlign: "center" }} onClick={e => e.stopPropagation()}>
             <div style={{ width: 48, height: 48, background: `linear-gradient(135deg, ${T.accent}, ${T.accentLight})`, borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 20px", fontSize: 20, fontWeight: 700, color: T.bg, fontFamily: T.mono }}>a</div>
             <h3 style={{ fontFamily: T.serif, fontSize: 22, fontWeight: 400, margin: "0 0 8px" }}>Get Your <span style={{ fontStyle: "italic", color: T.accent }}>Full Report</span></h3>
@@ -706,7 +711,7 @@ export default function App() {
               </div>
             ) : (
               <>
-                <input value={email} onChange={e => setEmail(e.target.value)} placeholder="you@institution.edu" type="email"
+                <input value={email} onChange={e => setEmail(e.target.value)} placeholder="you@institution.edu" type="email" aria-label="Your email address"
                   onKeyDown={e => e.key === "Enter" && handleEmailSubmit()}
                   style={{ width: "100%", background: T.bg, border: "1px solid " + T.borderLight, borderRadius: 8, padding: "14px 16px", color: T.text, fontSize: 14, fontFamily: T.sans, outline: "none", marginBottom: 12 }}
                   onFocus={e => e.target.style.borderColor = T.accent} onBlur={e => e.target.style.borderColor = T.borderLight} />

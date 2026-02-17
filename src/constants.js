@@ -43,8 +43,8 @@ export const T = {
   borderLight: "#222",
   text: "#e8e4df",
   muted: "#888",
-  dim: "#555",
-  faint: "#333",
+  dim: "#777",
+  faint: "#555",
 };
 
 /* ═══ SCORING ═══ */
