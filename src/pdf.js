@@ -1,4 +1,5 @@
 import { scoreColor, scoreLabel, scoreVerdict } from './constants';
+import { adeoLogoSVG } from './logo';
 
 export function exportPDF(res) {
   const dims = [
@@ -32,9 +33,9 @@ export function exportPDF(res) {
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;700&family=DM+Mono&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
 <style>body{font-family:"DM Sans",sans-serif;color:#1a1a1a;max-width:720px;margin:0 auto;padding:40px 32px}@media print{body{padding:20px}@page{margin:0.6in;size:letter}}</style>
 </head><body>
-<div style="display:flex;align-items:center;gap:10px;margin-bottom:32px">
-  <div style="width:28px;height:28px;background:linear-gradient(135deg,#c87840,#e8a060);border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;font-family:monospace">a</div>
-  <span style="font-size:11px;text-transform:uppercase;letter-spacing:0.08em;color:#888">adeo brand audit</span>
+<div style="display:flex;align-items:center;gap:12px;margin-bottom:32px">
+  ${adeoLogoSVG(20, '#1a1a1a', '#E6BDED')}
+  <span style="font-size:11px;text-transform:uppercase;letter-spacing:0.08em;color:#888;border-left:1px solid #ddd;padding-left:12px">brand audit</span>
   <span style="margin-left:auto;font-size:11px;color:#bbb;font-family:monospace">${new Date().toLocaleDateString()}</span>
 </div>
 <h1 style="font-family:'Instrument Serif',Georgia,serif;font-weight:400;font-size:36px;margin:0 0 4px">Blanding Detector<span style="color:#c87840;font-style:italic"> Report</span></h1>
@@ -58,8 +59,9 @@ ${res.ai?.weak_sentence ? `<div style="margin-bottom:28px;border:1px solid #eee;
   <div style="display:flex"><div style="flex:1;padding:16px;border-right:1px solid #eee"><div style="font-size:9px;text-transform:uppercase;color:#ef4444;margin-bottom:6px;font-family:monospace">Generic</div><p style="font-size:13px;color:#888;font-style:italic;margin:0;line-height:1.5">"${res.ai.weak_sentence}"</p></div><div style="flex:1;padding:16px"><div style="font-size:9px;text-transform:uppercase;color:#22c55e;margin-bottom:6px;font-family:monospace">With a Pulse</div><p style="font-size:13px;color:#333;margin:0;line-height:1.5">"${res.ai.rewrite}"</p></div></div>
 </div>` : ""}
 <div style="text-align:center;padding:24px;background:#1a1a1a;color:#fff;border-radius:10px;margin-top:32px">
-  <p style="margin:0 0 8px;font-size:14px;color:#999">This audit catches surface-level sameness. Fixing the deeper problem requires strategic partnership.</p>
-  <p style="margin:0;font-size:15px;font-weight:600;color:#c87840">adeo — helloadeo.com</p>
+  <p style="margin:0 0 12px;font-size:14px;color:#999">This audit catches surface-level sameness. Fixing the deeper problem requires strategic partnership.</p>
+  <div style="display:flex;justify-content:center;align-items:center;gap:12px;margin-bottom:4px">${adeoLogoSVG(18, '#ffffff', '#E6BDED')}</div>
+  <p style="margin:0;font-size:12px;color:#666;font-family:monospace">helloadeo.com</p>
 </div></body></html>`;
 
   const blob = new Blob([html], { type: "text/html" });

@@ -1,4 +1,5 @@
 import { scoreColor, scoreLabel, scoreVerdict } from './constants';
+import { drawAdeoLogo } from './logo';
 
 /**
  * Generate a branded 1200x630 scorecard PNG for social sharing.
@@ -106,22 +107,8 @@ export async function generateScorecard(result) {
   ctx.fillStyle = '#c87840';
   ctx.fillRect(0, H - 50, W, 2);
 
-  // adeo branding
-  const gradBg = ctx.createLinearGradient(28, H - 38, 56, H - 10);
-  gradBg.addColorStop(0, '#c87840');
-  gradBg.addColorStop(1, '#e8a060');
-  ctx.fillStyle = gradBg;
-  roundRect(ctx, 28, H - 38, 28, 28, 5);
-  ctx.fill();
-  ctx.fillStyle = '#0a0a0a';
-  ctx.font = 'bold 12px monospace';
-  ctx.textAlign = 'center';
-  ctx.fillText('a', 42, H - 19);
-
-  ctx.textAlign = 'left';
-  ctx.fillStyle = '#666';
-  ctx.font = '12px monospace';
-  ctx.fillText('adeo — strategic communications', 68, H - 19);
+  // adeo logo (real SVG paths)
+  drawAdeoLogo(ctx, 28, H - 42, 24, '#ffffff', '#E6BDED');
 
   ctx.textAlign = 'right';
   ctx.fillStyle = '#c87840';

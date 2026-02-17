@@ -4,6 +4,7 @@ import { fetchPage, fetchSubPage, deepAnalysis, captureLead } from './api';
 import { exportPDF } from './pdf';
 import { generateScorecard } from './scorecard';
 import { generateBingoCard } from './bingo';
+import { AdeoLogo } from './logo.jsx';
 
 /* ═══ SMALL COMPONENTS ═══ */
 function AnimNum({ value, dur = 1400 }) {
@@ -522,11 +523,9 @@ export default function App() {
         {/* HEADER */}
         <header style={{ paddingTop: 40, paddingBottom: 12 }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 40 }}>
-            <a href="https://helloadeo.com" target="_blank" rel="noopener noreferrer" style={{ display: "flex", alignItems: "center", gap: 10, textDecoration: "none" }}>
-              <svg width="80" height="24" viewBox="0 0 80 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="adeo">
-                <text x="0" y="19" fontFamily="'Inter', 'Helvetica Neue', Arial, sans-serif" fontSize="22" fontWeight="600" letterSpacing="-0.5" fill={T.accent}>adeo</text>
-              </svg>
-              <span style={{ fontSize: 10, fontWeight: 500, letterSpacing: "0.06em", textTransform: "uppercase", color: T.dim, borderLeft: "1px solid " + T.border, paddingLeft: 10 }}>brand tools</span>
+            <a href="https://helloadeo.com" target="_blank" rel="noopener noreferrer" style={{ display: "flex", alignItems: "center", gap: 12, textDecoration: "none" }}>
+              <AdeoLogo height={22} color="#fff" dotColor="#E6BDED" />
+              <span style={{ fontSize: 10, fontWeight: 500, letterSpacing: "0.06em", textTransform: "uppercase", color: T.dim, borderLeft: "1px solid " + T.border, paddingLeft: 12 }}>brand tools</span>
             </a>
           </div>
           <span style={{ display: "inline-block", fontSize: 10, fontWeight: 500, letterSpacing: "0.12em", textTransform: "uppercase", color: T.accent, fontFamily: T.mono, marginBottom: 12 }}>Higher Ed Edition</span>
