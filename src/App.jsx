@@ -438,10 +438,12 @@ export default function App() {
         {/* HEADER */}
         <header style={{ paddingTop: 40, paddingBottom: 12 }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 40 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <div style={{ width: 28, height: 28, background: `linear-gradient(135deg, ${T.accent}, ${T.accentLight})`, borderRadius: 5, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 700, color: T.bg, fontFamily: T.mono }}>a</div>
-              <span style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.06em", textTransform: "uppercase", color: T.muted }}>adeo / brand tools</span>
-            </div>
+            <a href="https://helloadeo.com" target="_blank" rel="noopener noreferrer" style={{ display: "flex", alignItems: "center", gap: 10, textDecoration: "none" }}>
+              <svg width="80" height="24" viewBox="0 0 80 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="adeo">
+                <text x="0" y="19" fontFamily="'Inter', 'Helvetica Neue', Arial, sans-serif" fontSize="22" fontWeight="600" letterSpacing="-0.5" fill={T.accent}>adeo</text>
+              </svg>
+              <span style={{ fontSize: 10, fontWeight: 500, letterSpacing: "0.06em", textTransform: "uppercase", color: T.dim, borderLeft: "1px solid " + T.border, paddingLeft: 10 }}>brand tools</span>
+            </a>
           </div>
           <span style={{ display: "inline-block", fontSize: 10, fontWeight: 500, letterSpacing: "0.12em", textTransform: "uppercase", color: T.accent, fontFamily: T.mono, marginBottom: 12 }}>Higher Ed Edition</span>
           <h1 style={{ fontSize: "clamp(38px, 6.5vw, 64px)", fontFamily: T.serif, fontWeight: 400, lineHeight: 1.0, margin: 0, letterSpacing: "-0.02em" }}>
@@ -647,18 +649,23 @@ export default function App() {
               </div>
             )}
 
-            <div style={{ marginTop: 32, padding: "22px 24px", background: T.cardAlt, borderRadius: 10, border: "1px solid #161616", textAlign: "center" }}>
+            <div style={{ marginTop: 32, padding: "28px 24px", background: T.cardAlt, borderRadius: 10, border: "1px solid #161616", textAlign: "center" }}>
               <p style={{ fontSize: 13, color: T.muted, lineHeight: 1.65, margin: 0, maxWidth: 540, marginLeft: "auto", marginRight: "auto" }}>
                 This tool catches the surface-level sameness. The deeper problem — why institutions default to generic language and how to build a brand that actually differentiates — requires a strategic partner who understands higher ed from the inside.
               </p>
-              <p style={{ fontSize: 12, fontFamily: T.mono, color: T.accent, marginTop: 10, marginBottom: 0 }}>That's what adeo does.</p>
+              <p style={{ fontSize: 15, fontFamily: T.serif, fontStyle: "italic", color: T.text, marginTop: 14, marginBottom: 0 }}>Want to talk to an expert about your institution's brand communications?</p>
+              <a href="https://savvycal.com/traceyhalvorsen/chat-with-tracey-halvorsen?d=15" target="_blank" rel="noopener noreferrer"
+                style={{ display: "inline-block", marginTop: 14, padding: "12px 28px", background: `linear-gradient(135deg, ${T.accent}, #b06830)`, borderRadius: 8, color: "#fff", fontSize: 13, fontWeight: 600, fontFamily: T.sans, textDecoration: "none" }}>
+                Book a Free 15-Minute Call →
+              </a>
             </div>
           </section>
         )}
 
-        <footer style={{ paddingTop: 32, paddingBottom: 24, borderTop: "1px solid #151515", marginTop: result ? 0 : 80, display: "flex", justifyContent: "space-between" }}>
-          <span style={{ fontSize: 10, color: T.faint, fontFamily: T.mono }}>© 2026 adeo — strategic communications</span>
-          <span style={{ fontSize: 10, color: T.faint, fontFamily: T.mono }}>helloadeo.com</span>
+        <footer style={{ paddingTop: 32, paddingBottom: 24, borderTop: "1px solid #151515", marginTop: result ? 0 : 80, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <span style={{ fontSize: 10, color: T.faint, fontFamily: T.mono }}>© 2026 adeo</span>
+          <a href="https://helloadeo.com" target="_blank" rel="noopener noreferrer" style={{ fontSize: 10, color: T.faint, fontFamily: T.mono, textDecoration: "none" }}
+            onMouseEnter={e => { e.target.style.color = T.accent; }} onMouseLeave={e => { e.target.style.color = T.faint; }}>helloadeo.com</a>
         </footer>
       </main>
 
