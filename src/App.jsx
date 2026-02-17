@@ -791,7 +791,7 @@ export default function App() {
       {emailModal && (
         <div role="dialog" aria-modal="true" aria-label="Get your full report" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }} onClick={() => setEmailModal(false)}>
           <div style={{ background: "#151515", border: "1px solid " + T.borderLight, borderRadius: 16, padding: "36px 32px", maxWidth: 420, width: "100%", textAlign: "center" }} onClick={e => e.stopPropagation()}>
-            <div style={{ width: 48, height: 48, background: `linear-gradient(135deg, ${T.accent}, ${T.accentLight})`, borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 20px", fontSize: 20, fontWeight: 700, color: T.bg, fontFamily: T.mono }}>a</div>
+            <div style={{ margin: "0 auto 20px", display: "flex", justifyContent: "center" }}><AdeoLogo height={28} color="#fff" dotColor="#E6BDED" /></div>
             <h3 style={{ fontFamily: T.serif, fontSize: 22, fontWeight: 400, margin: "0 0 8px" }}>Get Your <span style={{ fontStyle: "italic", color: T.accent }}>Full Report</span></h3>
             <p style={{ fontSize: 13, color: T.muted, margin: "0 0 24px", lineHeight: 1.6 }}>Enter your email and we'll generate a branded PDF audit you can share with your team.</p>
             {emailSent ? (
