@@ -37,7 +37,7 @@ const SEED_DATA = {
 
 function initStore() {
   try {
-    return getStore("leaderboard");
+    return getStore({ name: "leaderboard", consistency: "strong" });
   } catch (e) {
     console.warn("Blobs store init failed:", e.message);
     return null;
