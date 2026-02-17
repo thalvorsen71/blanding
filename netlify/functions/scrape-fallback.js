@@ -17,6 +17,14 @@ exports.handler = async (event) => {
     const { url } = JSON.parse(event.body);
     if (!url) return { statusCode: 400, headers, body: JSON.stringify({ error: "URL required" }) };
 
+    // Only allow .edu domains
+    try {
+      const hostname = new URL(url).hostname;
+      if (!hostname.endsWith(".edu")) {
+        return { statusCode: 403, headers, body: JSON.stringify({ error: "Only .edu domains are supported" }) };
+      }
+    } catch { return { statusCode: 400, headers, body: JSON.stringify({ error: "Invalid URL" }) }; }
+
     // Fetch with a reasonable timeout
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 15000);

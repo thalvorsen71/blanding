@@ -85,10 +85,15 @@ export default function App() {
   }, []);
 
   const norm = u => { let x = u.trim(); if (!x.match(/^https?:\/\//)) x = "https://" + x; return x; };
+  const isEdu = u => { try { return new URL(norm(u)).hostname.endsWith(".edu"); } catch { return false; } };
 
   /* ─── AUDIT ENGINE (with retry + parallel sub-pages) ─── */
   async function runAudit(inputUrl, prefix = "") {
     const url = norm(inputUrl);
+    if (!isEdu(url)) {
+      addProg(prefix + "Only .edu domains are supported — this tool is built for higher education.", "error");
+      return null;
+    }
     addProg(prefix + "Fetching: " + url);
 
     // fetchPage now handles retries + fallback internally
@@ -457,14 +462,17 @@ export default function App() {
           </div>
 
           {mode === "single" && (
-            <div style={{ display: "flex", gap: 10 }}>
-              <input value={url1} onChange={e => setUrl1(e.target.value)} placeholder="e.g. middlebury.edu" onKeyDown={e => e.key === "Enter" && url1.trim() && runSingle()}
-                style={{ flex: 1, background: T.card, border: "1px solid " + T.borderLight, borderRadius: 10, padding: "15px 18px", color: T.text, fontSize: 14, fontFamily: T.sans, outline: "none" }}
-                onFocus={e => e.target.style.borderColor = T.accent} onBlur={e => e.target.style.borderColor = T.borderLight} />
-              <button onClick={runSingle} disabled={analyzing || !url1.trim()}
-                style={{ padding: "15px 26px", background: !url1.trim() ? "#1a1a1a" : `linear-gradient(135deg, ${T.accent}, #b06830)`, border: "none", borderRadius: 10, color: !url1.trim() ? "#444" : "#fff", fontSize: 14, fontWeight: 600, fontFamily: T.sans, whiteSpace: "nowrap" }}>
-                {analyzing ? <span style={{ display: "flex", alignItems: "center", gap: 8 }}><Spinner />Auditing...</span> : "Audit Site"}
-              </button>
+            <div>
+              <div style={{ display: "flex", gap: 10 }}>
+                <input value={url1} onChange={e => setUrl1(e.target.value)} placeholder="e.g. middlebury.edu" onKeyDown={e => e.key === "Enter" && url1.trim() && isEdu(url1) && runSingle()}
+                  style={{ flex: 1, background: T.card, border: "1px solid " + (url1.trim() && !isEdu(url1) ? "#ef4444" : T.borderLight), borderRadius: 10, padding: "15px 18px", color: T.text, fontSize: 14, fontFamily: T.sans, outline: "none" }}
+                  onFocus={e => e.target.style.borderColor = url1.trim() && !isEdu(url1) ? "#ef4444" : T.accent} onBlur={e => e.target.style.borderColor = url1.trim() && !isEdu(url1) ? "#ef4444" : T.borderLight} />
+                <button onClick={runSingle} disabled={analyzing || !url1.trim() || !isEdu(url1)}
+                  style={{ padding: "15px 26px", background: (!url1.trim() || !isEdu(url1)) ? "#1a1a1a" : `linear-gradient(135deg, ${T.accent}, #b06830)`, border: "none", borderRadius: 10, color: (!url1.trim() || !isEdu(url1)) ? "#444" : "#fff", fontSize: 14, fontWeight: 600, fontFamily: T.sans, whiteSpace: "nowrap" }}>
+                  {analyzing ? <span style={{ display: "flex", alignItems: "center", gap: 8 }}><Spinner />Auditing...</span> : "Audit Site"}
+                </button>
+              </div>
+              {url1.trim() && !isEdu(url1) && <p style={{ margin: "8px 0 0", fontSize: 12, fontFamily: T.mono, color: "#ef4444" }}>Only .edu domains — this tool is built for higher education sites.</p>}
             </div>
           )}
 
@@ -472,14 +480,15 @@ export default function App() {
             <div style={{ display: "grid", gap: 10 }}>
               <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", gap: 10, alignItems: "center" }}>
                 <input value={url1} onChange={e => setUrl1(e.target.value)} placeholder="School A — e.g. williams.edu"
-                  style={{ background: T.card, border: "1px solid " + T.borderLight, borderRadius: 10, padding: "15px 18px", color: T.text, fontSize: 14, fontFamily: T.sans, outline: "none" }}
+                  style={{ background: T.card, border: "1px solid " + (url1.trim() && !isEdu(url1) ? "#ef4444" : T.borderLight), borderRadius: 10, padding: "15px 18px", color: T.text, fontSize: 14, fontFamily: T.sans, outline: "none" }}
                   onFocus={e => e.target.style.borderColor = T.accent} onBlur={e => e.target.style.borderColor = T.borderLight} />
                 <span style={{ fontSize: 14, fontFamily: T.serif, fontStyle: "italic", color: T.dim }}>vs</span>
                 <input value={url2} onChange={e => setUrl2(e.target.value)} placeholder="School B — e.g. amherst.edu"
-                  style={{ background: T.card, border: "1px solid " + T.borderLight, borderRadius: 10, padding: "15px 18px", color: T.text, fontSize: 14, fontFamily: T.sans, outline: "none" }}
+                  style={{ background: T.card, border: "1px solid " + (url2.trim() && !isEdu(url2) ? "#ef4444" : T.borderLight), borderRadius: 10, padding: "15px 18px", color: T.text, fontSize: 14, fontFamily: T.sans, outline: "none" }}
                   onFocus={e => e.target.style.borderColor = T.accent} onBlur={e => e.target.style.borderColor = T.borderLight} />
               </div>
-              <button onClick={runCompare} disabled={analyzing || !url1.trim() || !url2.trim()}
+              {((url1.trim() && !isEdu(url1)) || (url2.trim() && !isEdu(url2))) && <p style={{ margin: 0, fontSize: 12, fontFamily: T.mono, color: "#ef4444" }}>Only .edu domains — this tool is built for higher education sites.</p>}
+              <button onClick={runCompare} disabled={analyzing || !url1.trim() || !url2.trim() || !isEdu(url1) || !isEdu(url2)}
                 style={{ padding: "15px", background: (!url1.trim() || !url2.trim()) ? "#1a1a1a" : `linear-gradient(135deg, ${T.accent}, #b06830)`, border: "none", borderRadius: 10, color: (!url1.trim() || !url2.trim()) ? "#444" : "#fff", fontSize: 14, fontWeight: 600, fontFamily: T.sans }}>
                 {analyzing ? "Running Head-to-Head..." : "Compare These Schools"}
               </button>
