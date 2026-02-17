@@ -1,4 +1,4 @@
-import { getStore } from "@netlify/blobs";
+import { connectLambda, getStore } from "@netlify/blobs";
 
 const headers = {
   "Access-Control-Allow-Origin": "*",
@@ -69,6 +69,9 @@ export async function handler(event) {
   if (event.httpMethod === "OPTIONS") {
     return { statusCode: 200, headers, body: "" };
   }
+
+  // Must call connectLambda before getStore in legacy handler format
+  try { connectLambda(event); } catch (e) { console.warn("connectLambda failed:", e.message); }
 
   const store = initStore();
   const storeAvailable = store !== null;
