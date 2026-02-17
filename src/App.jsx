@@ -78,6 +78,8 @@ export default function App() {
   const [email, setEmail] = useState("");
   const [emailSent, setEmailSent] = useState(false);
   const [challengeUrl, setChallengeUrl] = useState("");
+  const [leaderboard, setLeaderboard] = useState([]);
+  const [lbLoading, setLbLoading] = useState(false);
   const resultRef = useRef(null);
 
   const addProg = useCallback((msg, status = "loading") => {
@@ -86,6 +88,30 @@ export default function App() {
 
   const norm = u => { let x = u.trim(); if (!x.match(/^https?:\/\//)) x = "https://" + x; return x; };
   const isEdu = u => { try { return new URL(norm(u)).hostname.endsWith(".edu"); } catch { return false; } };
+
+  const fetchLeaderboard = useCallback(async () => {
+    if (lbLoading) return;
+    setLbLoading(true);
+    try {
+      const r = await fetch("/.netlify/functions/leaderboard");
+      if (r.ok) { const d = await r.json(); setLeaderboard(d.schools || []); }
+    } catch (e) { console.warn("Leaderboard fetch failed:", e); }
+    setLbLoading(false);
+  }, [lbLoading]);
+
+  const submitToLeaderboard = useCallback(async (res) => {
+    if (!res?.url || !res?.schoolName) return;
+    try {
+      await fetch("/.netlify/functions/leaderboard", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: res.schoolName, url: res.url, overall: res.overall,
+          language: res.scores?.language, strategy: res.scores?.strategy,
+          cliches: res.totalCliches, pagesAudited: res.pagesAnalyzed?.length || 1,
+        }),
+      });
+    } catch (e) { console.warn("Leaderboard submit failed:", e); }
+  }, []);
 
   /* ─── AUDIT ENGINE (with retry + parallel sub-pages) ─── */
   async function runAudit(inputUrl, prefix = "") {
@@ -172,9 +198,9 @@ export default function App() {
 
   const scrollToResult = () => setTimeout(() => resultRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 300);
 
-  const runSingle = async () => { setAnalyzing(true); setProgress([]); setResult(null); setResult2(null); setActiveTab("overview"); const r = await runAudit(url1); if (r) setResult(r); setProgress(p => p.map(i => ({ ...i, status: "done" }))); setAnalyzing(false); scrollToResult(); };
+  const runSingle = async () => { setAnalyzing(true); setProgress([]); setResult(null); setResult2(null); setActiveTab("overview"); const r = await runAudit(url1); if (r) { setResult(r); submitToLeaderboard(r); } setProgress(p => p.map(i => ({ ...i, status: "done" }))); setAnalyzing(false); scrollToResult(); };
 
-  const runCompare = async () => { setAnalyzing(true); setProgress([]); setResult(null); setResult2(null); setActiveTab("overview"); addProg("Starting head-to-head audit..."); const r1 = await runAudit(url1, "A → "); const r2 = await runAudit(url2, "B → "); if (r1) setResult(r1); if (r2) setResult2(r2); setProgress(p => p.map(i => ({ ...i, status: "done" }))); setAnalyzing(false); scrollToResult(); };
+  const runCompare = async () => { setAnalyzing(true); setProgress([]); setResult(null); setResult2(null); setActiveTab("overview"); addProg("Starting head-to-head audit..."); const r1 = await runAudit(url1, "A → "); const r2 = await runAudit(url2, "B → "); if (r1) { setResult(r1); submitToLeaderboard(r1); } if (r2) { setResult2(r2); submitToLeaderboard(r2); } setProgress(p => p.map(i => ({ ...i, status: "done" }))); setAnalyzing(false); scrollToResult(); };
 
   const runText = async () => {
     if (inputText.trim().length < 50) return;
@@ -268,8 +294,8 @@ export default function App() {
 
   /* ═══ TAB CONTENT ═══ */
   function TabContent({ res }) {
-    const tabs = ["overview", "language", "highlighted", "strategy", "benchmarks", "prescriptions"];
-    const labels = { overview: "Overview", language: "Clichés", highlighted: "Highlighted Text", strategy: "Strategy", benchmarks: "Benchmarks", prescriptions: "Rx: Fix It" };
+    const tabs = ["overview", "language", "highlighted", "strategy", "benchmarks", "leaderboard", "prescriptions"];
+    const labels = { overview: "Overview", language: "Clichés", highlighted: "Highlighted Text", strategy: "Strategy", benchmarks: "Benchmarks", leaderboard: "Leaderboard", prescriptions: "Rx: Fix It" };
     const avail = tabs.filter(t => {
       if (t === "strategy") return res.scores.strategy != null;
       if (t === "highlighted") return !!res.bodyText;
@@ -280,7 +306,7 @@ export default function App() {
     return (
       <>
         <div className="tab-bar" role="tablist" aria-label="Audit result tabs" style={{ display: "flex", gap: 4, marginTop: 20, overflowX: "auto", paddingBottom: 4 }}>
-          {avail.map(t => <button key={t} role="tab" aria-selected={activeTab === t} onClick={() => setActiveTab(t)} style={{ padding: "7px 14px", borderRadius: 6, border: `1px solid ${activeTab === t ? T.accent : T.borderLight}`, background: activeTab === t ? T.accent + "15" : "transparent", color: activeTab === t ? T.accent : T.dim, fontSize: 11, fontFamily: T.mono, whiteSpace: "nowrap" }}>{labels[t]}</button>)}
+          {avail.map(t => <button key={t} role="tab" aria-selected={activeTab === t} onClick={() => { setActiveTab(t); if (t === "leaderboard" && leaderboard.length === 0) fetchLeaderboard(); }} style={{ padding: "7px 14px", borderRadius: 6, border: `1px solid ${activeTab === t ? T.accent : T.borderLight}`, background: activeTab === t ? T.accent + "15" : "transparent", color: activeTab === t ? T.accent : T.dim, fontSize: 11, fontFamily: T.mono, whiteSpace: "nowrap" }}>{labels[t]}</button>)}
         </div>
         <div style={{ marginTop: 14 }}>
 
@@ -399,6 +425,63 @@ export default function App() {
                       <span style={{ fontSize: 14, fontFamily: T.serif, color: scoreColor(b.overallScore) }}>{b.overallScore}</span>
                     </div>
                   ))}
+              </div>
+            </div>
+          )}
+
+          {/* LEADERBOARD */}
+          {activeTab === "leaderboard" && (
+            <div style={{ display: "grid", gap: 12 }}>
+              <div style={{ background: T.card, border: "1px solid " + T.border, borderRadius: 10, padding: "20px 24px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+                  <div>
+                    <div style={{ fontSize: 10, fontFamily: T.mono, color: T.accent, textTransform: "uppercase", letterSpacing: "0.1em" }}>Live Leaderboard</div>
+                    <div style={{ fontSize: 11, color: T.dim, marginTop: 2 }}>{leaderboard.length} institutions ranked</div>
+                  </div>
+                  <button onClick={fetchLeaderboard} disabled={lbLoading}
+                    style={{ padding: "6px 14px", background: T.cardAlt, border: "1px solid " + T.borderLight, borderRadius: 6, color: T.dim, fontSize: 10, fontFamily: T.mono }}>
+                    {lbLoading ? "Loading..." : "Refresh"}
+                  </button>
+                </div>
+                {leaderboard.length === 0 && !lbLoading && (
+                  <p style={{ color: T.dim, fontSize: 13, textAlign: "center", padding: 20 }}>No leaderboard data yet. Scores are added as schools are audited.</p>
+                )}
+                {leaderboard.map((s, i) => {
+                  const isYou = res.url && s.url && res.url.includes(s.url);
+                  return (
+                    <div key={s.url} style={{
+                      display: "grid", gridTemplateColumns: "32px 1fr 60px 60px 60px", gap: 8, alignItems: "center",
+                      padding: "10px 12px", borderRadius: 8, marginBottom: 2,
+                      background: isYou ? T.accent + "12" : (i % 2 === 0 ? "transparent" : T.cardAlt),
+                      border: isYou ? "1px solid " + T.accent + "40" : "1px solid transparent",
+                    }}>
+                      <span style={{ fontSize: 14, fontFamily: T.mono, color: i < 3 ? T.accent : T.dim, fontWeight: i < 3 ? 700 : 400, textAlign: "center" }}>
+                        {i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : `#${i + 1}`}
+                      </span>
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{ fontSize: 13, color: isYou ? T.accent : T.text, fontWeight: isYou ? 600 : 400, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                          {s.name}{isYou && <span style={{ fontSize: 10, marginLeft: 6, color: T.accent, fontFamily: T.mono }}>← YOU</span>}
+                        </div>
+                        <div style={{ fontSize: 9, fontFamily: T.mono, color: T.dim }}>{s.url}</div>
+                      </div>
+                      <div style={{ textAlign: "center" }}>
+                        <div style={{ fontSize: 18, fontFamily: T.serif, color: scoreColor(s.overall) }}>{s.overall}</div>
+                        <div style={{ fontSize: 7, fontFamily: T.mono, color: T.dim, textTransform: "uppercase" }}>Overall</div>
+                      </div>
+                      <div style={{ textAlign: "center" }}>
+                        <div style={{ fontSize: 14, fontFamily: T.serif, color: s.language != null ? scoreColor(s.language) : T.dim }}>{s.language ?? "–"}</div>
+                        <div style={{ fontSize: 7, fontFamily: T.mono, color: T.dim, textTransform: "uppercase" }}>Lang</div>
+                      </div>
+                      <div style={{ textAlign: "center" }}>
+                        <div style={{ fontSize: 14, fontFamily: T.serif, color: s.strategy != null ? scoreColor(s.strategy) : T.dim }}>{s.strategy ?? "–"}</div>
+                        <div style={{ fontSize: 7, fontFamily: T.mono, color: T.dim, textTransform: "uppercase" }}>Strat</div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              <div style={{ background: T.cardAlt, border: "1px solid " + T.border, borderRadius: 8, padding: "14px 20px", textAlign: "center" }}>
+                <p style={{ fontSize: 12, color: T.dim, margin: 0, fontFamily: T.mono }}>Scores update automatically as institutions are audited. Challenge a rival with Head-to-Head mode.</p>
               </div>
             </div>
           )}
