@@ -75,18 +75,15 @@ export async function handler(event) {
   try { connectLambda(event); } catch (e) { console.warn("connectLambda failed:", e.message); }
 
   const store = initStore();
-  const storeAvailable = store !== null;
 
   // GET — return full leaderboard
   if (event.httpMethod === "GET") {
-    const { data: rawData, err: readErr } = await readData(store);
+    const { data: rawData } = await readData(store);
     let data = rawData;
-    let seeded = false;
 
     // If empty, use seed data (and try to persist if store is available)
     if (!data || Object.keys(data).length === 0) {
       data = SEED_DATA;
-      seeded = true;
       if (store) await writeData(store, data);
     }
 
@@ -94,7 +91,7 @@ export async function handler(event) {
     return {
       statusCode: 200,
       headers,
-      body: JSON.stringify({ schools: sorted, count: sorted.length, store: storeAvailable, readErr, seeded }),
+      body: JSON.stringify({ schools: sorted, count: sorted.length }),
     };
   }
 
@@ -119,7 +116,7 @@ export async function handler(event) {
       }
 
       // Load current data from store or seed
-      const { data: rawData, err: readErr } = await readData(store);
+      const { data: rawData } = await readData(store);
       let data = rawData || { ...SEED_DATA };
 
       // Upsert
@@ -140,7 +137,7 @@ export async function handler(event) {
       return {
         statusCode: 200,
         headers,
-        body: JSON.stringify({ success: true, count: Object.keys(data).length, store: storeAvailable, readErr, writeErr: writeResult.err, wrote: writeResult.ok }),
+        body: JSON.stringify({ success: true, count: Object.keys(data).length }),
       };
     } catch (err) {
       console.error("POST error:", err);
