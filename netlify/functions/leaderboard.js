@@ -1,5 +1,3 @@
-import { getStore } from "@netlify/blobs";
-
 const headers = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "Content-Type",
@@ -35,49 +33,62 @@ const SEED_DATA = {
   "dickinson.edu": { name: "Dickinson College", url: "dickinson.edu", overall: 56, language: 64, strategy: 46, cliches: 5, pagesAudited: 3, lastAudited: "2026-02-15T00:00:00Z" },
 };
 
+// Try to get Netlify Blobs store — may not be available in all environments
+async function getStoreOrNull() {
+  try {
+    const { getStore } = await import("@netlify/blobs");
+    return getStore("leaderboard");
+  } catch (e) {
+    console.warn("Netlify Blobs not available:", e.message);
+    return null;
+  }
+}
+
 export async function handler(event) {
   if (event.httpMethod === "OPTIONS") {
     return { statusCode: 200, headers, body: "" };
   }
 
-  try {
-    const store = getStore("leaderboard");
+  const store = await getStoreOrNull();
 
-    // GET — return full leaderboard
-    if (event.httpMethod === "GET") {
-      // Try to load the master list
-      let data;
+  // GET — return full leaderboard
+  if (event.httpMethod === "GET") {
+    let data = null;
+
+    // Try to read from Blobs
+    if (store) {
       try {
-        const raw = await store.get("schools", { type: "json" });
-        data = raw;
+        data = await store.get("schools", { type: "json" });
       } catch (e) {
-        data = null;
+        console.warn("Blobs read failed:", e.message);
       }
-
-      // If empty or missing, seed with baseline data
-      if (!data || Object.keys(data).length === 0) {
-        data = SEED_DATA;
-        await store.setJSON("schools", data);
-      }
-
-      // Sort by overall score descending
-      const sorted = Object.values(data).sort((a, b) => b.overall - a.overall);
-      return {
-        statusCode: 200,
-        headers,
-        body: JSON.stringify({ schools: sorted, count: sorted.length }),
-      };
     }
 
-    // POST — submit or update a score
-    if (event.httpMethod === "POST") {
+    // If empty, use seed data (and try to persist if store is available)
+    if (!data || Object.keys(data).length === 0) {
+      data = SEED_DATA;
+      if (store) {
+        try { await store.setJSON("schools", data); } catch (e) { console.warn("Blobs seed write failed:", e.message); }
+      }
+    }
+
+    const sorted = Object.values(data).sort((a, b) => b.overall - a.overall);
+    return {
+      statusCode: 200,
+      headers,
+      body: JSON.stringify({ schools: sorted, count: sorted.length }),
+    };
+  }
+
+  // POST — submit or update a score
+  if (event.httpMethod === "POST") {
+    try {
       const { name, url, overall, language, strategy, cliches, pagesAudited } = JSON.parse(event.body);
 
       if (!url || !name || overall == null) {
         return { statusCode: 400, headers, body: JSON.stringify({ error: "Missing required fields" }) };
       }
 
-      // Normalize the key (hostname only)
       let hostname;
       try {
         hostname = new URL(url.startsWith("http") ? url : "https://" + url).hostname.replace(/^www\./, "");
@@ -85,21 +96,18 @@ export async function handler(event) {
         return { statusCode: 400, headers, body: JSON.stringify({ error: "Invalid URL" }) };
       }
 
-      // Must be .edu
       if (!hostname.endsWith(".edu")) {
         return { statusCode: 403, headers, body: JSON.stringify({ error: "Only .edu domains" }) };
       }
 
-      // Load current data
-      let data;
-      try {
-        data = await store.get("schools", { type: "json" });
-      } catch {
-        data = null;
+      // Load current data from store or seed
+      let data = null;
+      if (store) {
+        try { data = await store.get("schools", { type: "json" }); } catch { /* ignore */ }
       }
       if (!data) data = { ...SEED_DATA };
 
-      // Upsert — always update with latest score
+      // Upsert
       data[hostname] = {
         name: name.substring(0, 100),
         url: hostname,
@@ -111,22 +119,21 @@ export async function handler(event) {
         lastAudited: new Date().toISOString(),
       };
 
-      await store.setJSON("schools", data);
+      // Try to persist
+      if (store) {
+        try { await store.setJSON("schools", data); } catch (e) { console.warn("Blobs write failed:", e.message); }
+      }
 
       return {
         statusCode: 200,
         headers,
         body: JSON.stringify({ success: true, count: Object.keys(data).length }),
       };
+    } catch (err) {
+      console.error("POST error:", err);
+      return { statusCode: 500, headers, body: JSON.stringify({ error: "Failed to save score" }) };
     }
-
-    return { statusCode: 405, headers, body: JSON.stringify({ error: "Method not allowed" }) };
-  } catch (err) {
-    console.error("Leaderboard error:", err);
-    return {
-      statusCode: 500,
-      headers,
-      body: JSON.stringify({ error: "Internal error", schools: Object.values(SEED_DATA).sort((a, b) => b.overall - a.overall), count: Object.keys(SEED_DATA).length }),
-    };
   }
+
+  return { statusCode: 405, headers, body: JSON.stringify({ error: "Method not allowed" }) };
 }

@@ -94,7 +94,8 @@ export default function App() {
     setLbLoading(true);
     try {
       const r = await fetch("/.netlify/functions/leaderboard");
-      if (r.ok) { const d = await r.json(); setLeaderboard(d.schools || []); }
+      const d = await r.json();
+      if (d.schools?.length) setLeaderboard(d.schools);
     } catch (e) { console.warn("Leaderboard fetch failed:", e); }
     setLbLoading(false);
   }, [lbLoading]);
