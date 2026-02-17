@@ -116,7 +116,9 @@ export const SCHOOL_BENCHMARKS = [
   { category: "large_public", name: "Penn State", url: "psu.edu", overallScore: 38, languageScore: 34, strategyScore: 44 },
   // Liberal Arts — REAL AUDIT DATA (Feb 2026, corrected scoring: clichés fully penalized)
   { category: "liberal_arts", name: "Bowdoin College", url: "bowdoin.edu", overallScore: 90, languageScore: 93, strategyScore: 87 },
+  { category: "liberal_arts", name: "Williams College", url: "williams.edu", overallScore: 88, languageScore: 87, strategyScore: 89 },
   { category: "liberal_arts", name: "Oberlin College", url: "oberlin.edu", overallScore: 88, languageScore: 93, strategyScore: 81 },
+  { category: "liberal_arts", name: "Colby College", url: "colby.edu", overallScore: 76, languageScore: 80, strategyScore: 70 },
   { category: "liberal_arts", name: "Trinity College", url: "trinity.edu", overallScore: 80, languageScore: 86, strategyScore: 73 },
   { category: "liberal_arts", name: "Reed College", url: "reed.edu", overallScore: 80, languageScore: 93, strategyScore: 65 },
   { category: "liberal_arts", name: "Vassar College", url: "vassar.edu", overallScore: 79, languageScore: 87, strategyScore: 70 },
@@ -134,7 +136,9 @@ export const SCHOOL_BENCHMARKS = [
   { category: "liberal_arts", name: "Macalester College", url: "macalester.edu", overallScore: 66, languageScore: 85, strategyScore: 42 },
   { category: "liberal_arts", name: "Bates College", url: "bates.edu", overallScore: 64, languageScore: 77, strategyScore: 48 },
   { category: "liberal_arts", name: "Lafayette College", url: "lafayette.edu", overallScore: 60, languageScore: 75, strategyScore: 41 },
+  { category: "liberal_arts", name: "Skidmore College", url: "skidmore.edu", overallScore: 64, languageScore: 73, strategyScore: 54 },
   { category: "liberal_arts", name: "Middlebury College", url: "middlebury.edu", overallScore: 58, languageScore: 77, strategyScore: 35 },
+  { category: "liberal_arts", name: "Dickinson College", url: "dickinson.edu", overallScore: 56, languageScore: 64, strategyScore: 46 },
   // Regional / Other (estimates)
   { category: "regional", name: "Rice University", url: "rice.edu", overallScore: 56, languageScore: 58, strategyScore: 52 },
   { category: "regional", name: "Duke University", url: "duke.edu", overallScore: 54, languageScore: 52, strategyScore: 58 },
