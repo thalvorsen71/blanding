@@ -24,9 +24,11 @@ exports.handler = async (event) => {
     const resp = await fetch(url, {
       signal: controller.signal,
       headers: {
-        "User-Agent": "Mozilla/5.0 (compatible; BlandingDetector/1.0; +https://blandingaudit.netlify.app)",
-        "Accept": "text/html,application/xhtml+xml",
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
         "Accept-Language": "en-US,en;q=0.9",
+        "Accept-Encoding": "gzip, deflate, br",
+        "Cache-Control": "no-cache",
       },
       redirect: "follow",
     });
@@ -66,10 +68,25 @@ exports.handler = async (event) => {
     let bodyEl = $("main, [role='main'], #main-content, .main-content, article").first();
     if (!bodyEl.length) bodyEl = $("body");
 
-    // Remove nav/header/footer from body copy
+    // Remove ONLY site-chrome elements, preserve content sections
     const bodyClone = bodyEl.clone();
-    bodyClone.find("nav, header, footer, aside, [role='navigation'], [role='banner'], [role='contentinfo']").remove();
+    bodyClone.find("[role='navigation'], [role='contentinfo']").remove();
+    // Remove footer but keep header (some sites put hero/featured content in header area)
+    bodyClone.find("footer").remove();
+    // Remove nav elements but preserve their parent sections
+    bodyClone.find("nav").remove();
+
     let bodyText = bodyClone.text().replace(/\s+/g, " ").trim().substring(0, 6000);
+
+    // If main content area was too sparse, try the full body minus just nav/footer
+    if (bodyText.length < 300) {
+      const fullClone = $("body").clone();
+      fullClone.find("nav, footer, [role='navigation'], [role='contentinfo'], script, style").remove();
+      const fullText = fullClone.text().replace(/\s+/g, " ").trim().substring(0, 6000);
+      if (fullText.length > bodyText.length) {
+        bodyText = fullText;
+      }
+    }
 
     // CTAs
     const ctas = [];
