@@ -274,12 +274,12 @@ Return JSON only:
   try { return parseJSON(raw); } catch { return null; }
 }
 
-export async function captureLead(email, schoolName, score) {
+export async function captureLead(email, schoolName, score, name = "", title = "", source = "pdf_export") {
   try {
     await fetch(LEAD_ENDPOINT, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, schoolName, score }),
+      body: JSON.stringify({ email, schoolName, score, name, title, source }),
     });
     return true;
   } catch {

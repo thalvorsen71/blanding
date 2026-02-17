@@ -79,6 +79,10 @@ export default function App() {
   const [email, setEmail] = useState("");
   const [emailSent, setEmailSent] = useState(false);
   const [challengeUrl, setChallengeUrl] = useState("");
+  const [stayName, setStayName] = useState("");
+  const [stayEmail, setStayEmail] = useState("");
+  const [stayTitle, setStayTitle] = useState("");
+  const [staySent, setStaySent] = useState(false);
   const [leaderboard, setLeaderboard] = useState([]);
   const [lbLoading, setLbLoading] = useState(false);
   const resultRef = useRef(null);
@@ -212,6 +216,12 @@ export default function App() {
     lang = Math.max(0, Math.min(100, lang));
     setResult({ url: null, schoolName: "Your Copy", pagesAnalyzed: [{ type: "text" }], overall: lang, scores: { language: lang, strategy: null }, cliches: cl, totalCliches: tc, uniqueClaims: [], stockPhrases: [], allH1: [], allH2: [], metaDesc: "", bodyText: inputText, ai });
     setProgress(p => p.map(i => ({ ...i, status: "done" }))); setAnalyzing(false); scrollToResult();
+  };
+
+  const handleStayInTouch = async () => {
+    if (!stayEmail.includes("@")) return;
+    await captureLead(stayEmail, result?.schoolName, result?.overall, stayName, stayTitle, "stay_in_touch");
+    setStaySent(true);
   };
 
   const handleCopy = () => {
@@ -688,6 +698,41 @@ export default function App() {
                 style={{ display: "inline-block", marginTop: 14, padding: "12px 28px", background: `linear-gradient(135deg, ${T.accent}, #b06830)`, borderRadius: 8, color: "#fff", fontSize: 13, fontWeight: 600, fontFamily: T.sans, textDecoration: "none" }}>
                 Book a Free 15-Minute Call →
               </a>
+            </div>
+
+            {/* STAY IN TOUCH — lightweight lead capture */}
+            <div style={{ marginTop: 16, background: T.card, border: "1px solid " + T.border, borderRadius: 10, padding: "24px" }}>
+              {staySent ? (
+                <div style={{ textAlign: "center", padding: "12px 0" }}>
+                  <div style={{ fontSize: 22, color: "#22c55e", marginBottom: 8 }}>✓</div>
+                  <p style={{ fontSize: 14, color: T.text, fontFamily: T.serif, fontStyle: "italic", margin: 0 }}>You're on the list. We'll be in touch.</p>
+                </div>
+              ) : (
+                <>
+                  <div style={{ textAlign: "center", marginBottom: 16 }}>
+                    <div style={{ fontSize: 10, fontFamily: T.mono, color: T.accent, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 6 }}>Not ready to talk yet?</div>
+                    <p style={{ fontSize: 14, fontFamily: T.serif, fontStyle: "italic", color: T.text, margin: 0 }}>Drop your info and we'll keep you in the loop on new brand tools and higher ed insights.</p>
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 8 }}>
+                    <input value={stayName} onChange={e => setStayName(e.target.value)} placeholder="Name" aria-label="Your name"
+                      style={{ background: T.bg, border: "1px solid " + T.borderLight, borderRadius: 8, padding: "10px 14px", color: T.text, fontSize: 13, fontFamily: T.sans, outline: "none" }}
+                      onFocus={e => e.target.style.borderColor = T.accent} onBlur={e => e.target.style.borderColor = T.borderLight} />
+                    <input value={stayTitle} onChange={e => setStayTitle(e.target.value)} placeholder="Title (optional)" aria-label="Your title"
+                      style={{ background: T.bg, border: "1px solid " + T.borderLight, borderRadius: 8, padding: "10px 14px", color: T.text, fontSize: 13, fontFamily: T.sans, outline: "none" }}
+                      onFocus={e => e.target.style.borderColor = T.accent} onBlur={e => e.target.style.borderColor = T.borderLight} />
+                  </div>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <input value={stayEmail} onChange={e => setStayEmail(e.target.value)} placeholder="Email" type="email" aria-label="Your email"
+                      onKeyDown={e => e.key === "Enter" && handleStayInTouch()}
+                      style={{ flex: 1, background: T.bg, border: "1px solid " + T.borderLight, borderRadius: 8, padding: "10px 14px", color: T.text, fontSize: 13, fontFamily: T.sans, outline: "none" }}
+                      onFocus={e => e.target.style.borderColor = T.accent} onBlur={e => e.target.style.borderColor = T.borderLight} />
+                    <button onClick={handleStayInTouch} disabled={!stayEmail.includes("@")}
+                      style={{ padding: "10px 20px", background: stayEmail.includes("@") ? T.accent : "#1a1a1a", border: "none", borderRadius: 8, color: stayEmail.includes("@") ? "#fff" : "#444", fontSize: 12, fontWeight: 600, fontFamily: T.mono, whiteSpace: "nowrap" }}>
+                      Keep Me Posted
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
           </section>
         )}

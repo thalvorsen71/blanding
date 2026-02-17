@@ -1,5 +1,17 @@
 import { connectLambda, getStore } from "@netlify/blobs";
 
+// Rate limit POST requests (prevent leaderboard spam)
+const postLimits = {};
+function checkPostRate(ip) {
+  const now = Date.now();
+  if (!postLimits[ip] || now > postLimits[ip].reset) {
+    postLimits[ip] = { count: 1, reset: now + 300000 }; // 5 min window
+    return true;
+  }
+  postLimits[ip].count++;
+  return postLimits[ip].count <= 10; // 10 submissions per 5 min
+}
+
 const headers = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "Content-Type",
@@ -71,6 +83,10 @@ export async function handler(event) {
 
   // POST — submit or update a score
   if (event.httpMethod === "POST") {
+    const ip = event.headers["client-ip"] || event.headers["x-forwarded-for"] || "unknown";
+    if (!checkPostRate(ip)) {
+      return { statusCode: 429, headers, body: JSON.stringify({ error: "Too many submissions — please wait" }) };
+    }
     try {
       const { name, url, overall, language, strategy, cliches, pagesAudited } = JSON.parse(event.body);
 

@@ -12,14 +12,14 @@ exports.handler = async (event) => {
   if (event.httpMethod !== "POST") return { statusCode: 405, headers, body: JSON.stringify({ error: "Method not allowed" }) };
 
   try {
-    const { email, schoolName, score } = JSON.parse(event.body);
+    const { email, schoolName, score, name, title, source } = JSON.parse(event.body);
 
     if (!email || !email.includes("@")) {
       return { statusCode: 400, headers, body: JSON.stringify({ error: "Valid email required" }) };
     }
 
     // ─── OPTION 1: Log to Netlify Functions console (visible in Netlify dashboard) ───
-    console.log("LEAD CAPTURED:", JSON.stringify({ email, schoolName, score, timestamp: new Date().toISOString() }));
+    console.log("LEAD CAPTURED:", JSON.stringify({ email, name: name || "", title: title || "", schoolName, score, source: source || "pdf_export", timestamp: new Date().toISOString() }));
 
     // ─── OPTION 2: Send to Mailchimp (uncomment and add MAILCHIMP_API_KEY + LIST_ID to env vars) ───
     // const mcResp = await fetch(`https://us1.api.mailchimp.com/3.0/lists/${process.env.MAILCHIMP_LIST_ID}/members`, {
