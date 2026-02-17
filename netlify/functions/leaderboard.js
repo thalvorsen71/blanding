@@ -1,3 +1,5 @@
+import { getStore } from "@netlify/blobs";
+
 const headers = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "Content-Type",
@@ -33,14 +35,33 @@ const SEED_DATA = {
   "dickinson.edu": { name: "Dickinson College", url: "dickinson.edu", overall: 56, language: 64, strategy: 46, cliches: 5, pagesAudited: 3, lastAudited: "2026-02-15T00:00:00Z" },
 };
 
-// Try to get Netlify Blobs store — may not be available in all environments
-async function getStoreOrNull() {
+function initStore() {
   try {
-    const { getStore } = await import("@netlify/blobs");
     return getStore("leaderboard");
   } catch (e) {
-    console.warn("Netlify Blobs not available:", e.message);
+    console.warn("Blobs store init failed:", e.message);
     return null;
+  }
+}
+
+async function readData(store) {
+  if (!store) return null;
+  try {
+    return await store.get("schools", { type: "json" });
+  } catch (e) {
+    console.warn("Blobs read failed:", e.message);
+    return null;
+  }
+}
+
+async function writeData(store, data) {
+  if (!store) return false;
+  try {
+    await store.setJSON("schools", data);
+    return true;
+  } catch (e) {
+    console.warn("Blobs write failed:", e.message);
+    return false;
   }
 }
 
@@ -49,34 +70,24 @@ export async function handler(event) {
     return { statusCode: 200, headers, body: "" };
   }
 
-  const store = await getStoreOrNull();
+  const store = initStore();
+  const storeAvailable = store !== null;
 
   // GET — return full leaderboard
   if (event.httpMethod === "GET") {
-    let data = null;
-
-    // Try to read from Blobs
-    if (store) {
-      try {
-        data = await store.get("schools", { type: "json" });
-      } catch (e) {
-        console.warn("Blobs read failed:", e.message);
-      }
-    }
+    let data = await readData(store);
 
     // If empty, use seed data (and try to persist if store is available)
     if (!data || Object.keys(data).length === 0) {
       data = SEED_DATA;
-      if (store) {
-        try { await store.setJSON("schools", data); } catch (e) { console.warn("Blobs seed write failed:", e.message); }
-      }
+      if (store) await writeData(store, data);
     }
 
     const sorted = Object.values(data).sort((a, b) => b.overall - a.overall);
     return {
       statusCode: 200,
       headers,
-      body: JSON.stringify({ schools: sorted, count: sorted.length }),
+      body: JSON.stringify({ schools: sorted, count: sorted.length, persisted: storeAvailable }),
     };
   }
 
@@ -101,10 +112,7 @@ export async function handler(event) {
       }
 
       // Load current data from store or seed
-      let data = null;
-      if (store) {
-        try { data = await store.get("schools", { type: "json" }); } catch { /* ignore */ }
-      }
+      let data = await readData(store);
       if (!data) data = { ...SEED_DATA };
 
       // Upsert
@@ -119,15 +127,13 @@ export async function handler(event) {
         lastAudited: new Date().toISOString(),
       };
 
-      // Try to persist
-      if (store) {
-        try { await store.setJSON("schools", data); } catch (e) { console.warn("Blobs write failed:", e.message); }
-      }
+      // Persist
+      const wrote = await writeData(store, data);
 
       return {
         statusCode: 200,
         headers,
-        body: JSON.stringify({ success: true, count: Object.keys(data).length }),
+        body: JSON.stringify({ success: true, count: Object.keys(data).length, persisted: wrote }),
       };
     } catch (err) {
       console.error("POST error:", err);
