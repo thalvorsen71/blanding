@@ -37,7 +37,7 @@ const SEED_DATA = {
 
 function initStore() {
   try {
-    return getStore({ name: "leaderboard", consistency: "strong" });
+    return getStore("leaderboard");
   } catch (e) {
     console.warn("Blobs store init failed:", e.message);
     return null;
@@ -47,7 +47,9 @@ function initStore() {
 async function readData(store) {
   if (!store) return { data: null, err: "no store" };
   try {
-    const d = await store.get("schools", { type: "json" });
+    const raw = await store.get("schools");
+    if (!raw) return { data: null, err: "empty" };
+    const d = JSON.parse(raw);
     return { data: d, err: null };
   } catch (e) {
     return { data: null, err: e.message };
@@ -57,7 +59,7 @@ async function readData(store) {
 async function writeData(store, data) {
   if (!store) return { ok: false, err: "no store" };
   try {
-    await store.setJSON("schools", data);
+    await store.set("schools", JSON.stringify(data));
     return { ok: true, err: null };
   } catch (e) {
     return { ok: false, err: e.message };
