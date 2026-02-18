@@ -96,6 +96,7 @@ export default function App() {
   const resultRef = useRef(null);
   const methRef = useRef(null);
   const disclaimerRef = useRef(null);
+  const progressRef = useRef(null);
 
   // Fetch audit count on mount for social proof
   useEffect(() => {
@@ -263,9 +264,9 @@ export default function App() {
 
   const scrollToResult = () => setTimeout(() => resultRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 300);
 
-  const runSingle = async () => { _animatedScores.clear(); setAnalyzing(true); setProgress([]); setResult(null); setResult2(null); setActiveTab("overview"); const r = await runAudit(url1); if (r) { setResult(r); submitToLeaderboard(r); } setProgress(p => p.map(i => i.status === "error" ? i : { ...i, status: "done" })); setAnalyzing(false); scrollToResult(); };
+  const runSingle = async () => { _animatedScores.clear(); setAnalyzing(true); setProgress([]); setResult(null); setResult2(null); setActiveTab("overview"); const r = await runAudit(url1); if (r) { setResult(r); submitToLeaderboard(r); } setProgress(p => p.map(i => i.status === "error" ? i : { ...i, status: "done" })); setAnalyzing(false); if (r) scrollToResult(); else setTimeout(() => progressRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 300); };
 
-  const runCompare = async () => { _animatedScores.clear(); setAnalyzing(true); setProgress([]); setResult(null); setResult2(null); setActiveTab("overview"); addProg("Starting head-to-head audit..."); const r1 = await runAudit(url1, "A → "); const r2 = await runAudit(url2, "B → "); if (r1) { setResult(r1); submitToLeaderboard(r1); } if (r2) { setResult2(r2); submitToLeaderboard(r2); } setProgress(p => p.map(i => i.status === "error" ? i : { ...i, status: "done" })); setAnalyzing(false); scrollToResult(); };
+  const runCompare = async () => { _animatedScores.clear(); setAnalyzing(true); setProgress([]); setResult(null); setResult2(null); setActiveTab("overview"); addProg("Starting head-to-head audit..."); const r1 = await runAudit(url1, "A → "); const r2 = await runAudit(url2, "B → "); if (r1) { setResult(r1); submitToLeaderboard(r1); } if (r2) { setResult2(r2); submitToLeaderboard(r2); } setProgress(p => p.map(i => i.status === "error" ? i : { ...i, status: "done" })); setAnalyzing(false); if (r1 || r2) scrollToResult(); else setTimeout(() => progressRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 300); };
 
   const runText = async () => {
     if (inputText.trim().length < 50) return;
@@ -847,7 +848,7 @@ export default function App() {
 
         {/* PROGRESS */}
         {progress.length > 0 && !result && (
-          <section style={{ marginTop: 28 }}>
+          <section ref={progressRef} style={{ marginTop: 28 }}>
             <div style={{ background: T.card, border: "1px solid " + T.border, borderRadius: 10, padding: "18px 22px" }}>
               {progress.map(p => (
                 <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "5px 0", opacity: p.status === "done" ? 0.45 : 1, transition: "opacity 0.3s" }}>
