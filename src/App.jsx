@@ -710,7 +710,7 @@ export default function App() {
           {mode === "single" && (
             <div>
               <div className="audit-input-row" style={{ display: "flex", gap: 10 }}>
-                <input value={url1} onChange={e => setUrl1(e.target.value)} placeholder="e.g. middlebury.edu" onKeyDown={e => e.key === "Enter" && url1.trim() && isEdu(url1) && runSingle()}
+                <input value={url1} onChange={e => setUrl1(e.target.value)} placeholder="e.g. bowdoin.edu" onKeyDown={e => e.key === "Enter" && url1.trim() && isEdu(url1) && runSingle()}
                   aria-label="School website URL" aria-invalid={url1.trim() && !isEdu(url1) ? "true" : undefined} aria-describedby={url1.trim() && !isEdu(url1) ? "edu-error" : undefined}
                   style={{ flex: 1, background: T.card, border: "1px solid " + (url1.trim() && !isEdu(url1) ? "#ef4444" : T.borderLight), borderRadius: 10, padding: "15px 18px", color: T.text, fontSize: 14, fontFamily: T.sans, outline: "none" }}
                   onFocus={e => e.target.style.borderColor = url1.trim() && !isEdu(url1) ? "#ef4444" : T.accent} onBlur={e => e.target.style.borderColor = url1.trim() && !isEdu(url1) ? "#ef4444" : T.borderLight} />
@@ -762,7 +762,7 @@ export default function App() {
               <span style={{ fontSize: 10, color: T.dim, fontFamily: T.mono }}>Try:</span>
               {(mode === "compare"
                 ? [{ l: "Williams vs Amherst", a: "williams.edu", b: "amherst.edu" }, { l: "Harvard vs MIT", a: "harvard.edu", b: "mit.edu" }]
-                : [{ l: "middlebury.edu" }, { l: "asu.edu" }, { l: "snhu.edu" }, { l: "skidmore.edu" }]
+                : [{ l: "bowdoin.edu" }, { l: "asu.edu" }, { l: "snhu.edu" }, { l: "liberty.edu" }]
               ).map((s, i) => (
                 <button key={i} onClick={() => { if (mode === "compare") { setUrl1(s.a); setUrl2(s.b); } else setUrl1(s.l); }}
                   style={{ background: "#141414", border: "1px solid " + T.borderLight, borderRadius: 5, padding: "3px 10px", color: T.dim, fontSize: 10, fontFamily: T.mono }}
@@ -1047,7 +1047,7 @@ export default function App() {
               <div style={{ background: T.cardAlt, border: "1px solid " + T.border, borderRadius: 10, padding: "18px 24px" }}>
                 <div style={{ fontSize: 12, fontFamily: T.mono, color: T.dim, fontWeight: 600, marginBottom: 10 }}>Limitation of Liability</div>
                 <p style={{ fontSize: 13, color: T.muted, lineHeight: 1.7, margin: 0 }}>
-                  This tool is provided "as is" for informational and entertainment purposes. Scores may vary between runs due to the AI analysis component. adeo strategic communications makes no warranties about the accuracy, completeness, or reliability of scores and is not liable for decisions made based on audit results. If you believe your institution has been unfairly characterized, <a href="mailto:hello@helloadeo.com" style={{ color: T.accent }}>contact us</a>.
+                  This tool is provided "as is" for informational and entertainment purposes. Scores may vary between runs due to the AI analysis component. adeo makes no warranties about the accuracy, completeness, or reliability of scores and is not liable for decisions made based on audit results. If you believe your institution has been unfairly characterized, <a href="mailto:hello@helloadeo.com" style={{ color: T.accent }}>contact us</a>.
                 </p>
               </div>
 
@@ -1060,7 +1060,7 @@ export default function App() {
 
               <div style={{ background: T.card, border: "1px solid " + T.border, borderRadius: 10, padding: "18px 24px" }}>
                 <p style={{ fontSize: 13, color: T.muted, lineHeight: 1.7, margin: 0 }}>
-                  Built by <a href="https://helloadeo.com" target="_blank" rel="noopener noreferrer" style={{ color: T.accent, textDecoration: "none", fontWeight: 600 }}>adeo strategic communications</a>. Questions or concerns? <a href="mailto:hello@helloadeo.com" style={{ color: T.accent, textDecoration: "none" }}>hello@helloadeo.com</a>
+                  Built by <a href="https://helloadeo.com" target="_blank" rel="noopener noreferrer" style={{ color: T.accent, textDecoration: "none", fontWeight: 600 }}>adeo</a>. Questions or concerns? <a href="mailto:hello@helloadeo.com" style={{ color: T.accent, textDecoration: "none" }}>hello@helloadeo.com</a>
                 </p>
               </div>
             </div>
