@@ -686,7 +686,7 @@ export default function App() {
 
               <div style={{ background: T.card, border: "1px solid " + T.border, borderRadius: 8, padding: "16px 20px", textAlign: "center" }}>
                 <p style={{ fontSize: 13, color: T.muted, margin: "0 0 8px", lineHeight: 1.6 }}>Questions about the methodology? Disagree with a score? We'd love to hear from you.</p>
-                <a href="https://savvycal.com/traceyhalvorsen/chat-with-tracey-halvorsen?d=15" target="_blank" rel="noopener noreferrer" style={{ fontSize: 13, color: T.accent, fontWeight: 600, textDecoration: "none" }}>Book a call and let's talk about it →</a>
+                <a href="https://helloadeo.com" target="_blank" rel="noopener noreferrer" style={{ fontSize: 13, color: T.accent, fontWeight: 600, textDecoration: "none" }}>Get in touch →</a>
               </div>
             </div>
           )}
@@ -709,7 +709,6 @@ export default function App() {
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 40 }}>
             <a href="https://helloadeo.com" target="_blank" rel="noopener noreferrer" style={{ display: "flex", alignItems: "center", gap: 12, textDecoration: "none" }}>
               <AdeoLogo height={22} color="#fff" dotColor="#E6BDED" />
-              <span style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.06em", textTransform: "uppercase", color: T.dim, borderLeft: "1px solid " + T.border, paddingLeft: 12 }}>brand tools</span>
             </a>
           </div>
           <span style={{ display: "inline-block", fontSize: 11, fontWeight: 500, letterSpacing: "0.12em", textTransform: "uppercase", color: T.accent, fontFamily: T.mono, marginBottom: 12 }}>Higher Ed Edition</span>
@@ -988,9 +987,9 @@ export default function App() {
                 This tool catches the surface-level sameness. The deeper problem — why institutions default to generic language and how to build a brand that actually differentiates — requires a strategic partner who understands higher ed from the inside.
               </p>
               <p style={{ fontSize: 15, fontFamily: T.serif, fontStyle: "italic", color: T.text, marginTop: 14, marginBottom: 0 }}>Want to talk to an expert about your institution's brand communications?</p>
-              <a href="https://savvycal.com/traceyhalvorsen/chat-with-tracey-halvorsen?d=15" target="_blank" rel="noopener noreferrer"
+              <a href="https://helloadeo.com" target="_blank" rel="noopener noreferrer"
                 style={{ display: "inline-block", marginTop: 14, padding: "12px 28px", background: `linear-gradient(135deg, ${T.accent}, #b06830)`, borderRadius: 8, color: "#fff", fontSize: 13, fontWeight: 600, fontFamily: T.sans, textDecoration: "none" }}>
-                Book a Free 15-Minute Call →
+                Get in Touch →
               </a>
             </div>
 
@@ -1005,7 +1004,7 @@ export default function App() {
                 <>
                   <div style={{ textAlign: "center", marginBottom: 16 }}>
                     <div style={{ fontSize: 10, fontFamily: T.mono, color: T.accent, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 6 }}>Not ready to talk yet?</div>
-                    <p style={{ fontSize: 14, fontFamily: T.serif, fontStyle: "italic", color: T.text, margin: 0 }}>Drop your info and we'll keep you in the loop on new brand tools and higher ed insights.</p>
+                    <p style={{ fontSize: 14, fontFamily: T.serif, fontStyle: "italic", color: T.text, margin: 0 }}>Drop your info and we'll keep you in the loop on higher ed branding insights.</p>
                   </div>
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 8 }}>
                     <input value={stayName} onChange={e => setStayName(e.target.value)} placeholder="Name" aria-label="Your name"
