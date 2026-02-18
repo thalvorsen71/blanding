@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { T, scoreColor, scoreLabel, scoreVerdict, countCliches, highlightCliches, contentRichnessBonus } from './constants';
+import { T, scoreColor, scoreLabel, scoreVerdict, countCliches, countWeightedCliches, highlightCliches, contentRichnessBonus } from './constants';
 import { fetchPage, fetchSubPage, deepAnalysis, captureLead } from './api';
 import { exportPDF } from './pdf';
 import { generateScorecard } from './scorecard';
@@ -153,6 +153,15 @@ export default function App() {
       addProg(prefix + "Could not reach this site", "error");
       return null;
     }
+
+    // Check for effectively empty content (site blocks scrapers but returns 200)
+    const bodyLen = (hp.body_text || "").trim().length;
+    const h1Len = (hp.h1 || []).join("").length;
+    if (bodyLen < 50 && h1Len < 10) {
+      addProg(prefix + "Could not reach this site", "error");
+      return null;
+    }
+
     addProg(prefix + 'Loaded: "' + (hp.title || "Untitled") + '"');
 
     const scrapeSource = hp._source || "unknown"; // "cheerio" or "claude_websearch"
@@ -186,13 +195,18 @@ export default function App() {
     const totalC = cliches.reduce((s, c) => s + c.count, 0);
     const wc = allBody.split(/\s+/).length;
 
+    // Weighted cliché analysis: H1 clichés hurt 3x, H2/meta 2x, body 1x
+    const weighted = countWeightedCliches(allBody, allH1, allH2, hp.meta_description || "");
+
     // Content richness bonus: rewards specific, distinctive content (0-30 pts)
     const richness = contentRichnessBonus(allBody, allH1, allH2, uniq);
 
-    // Language score: penalizes cliché usage. More clichés found = lower score.
-    // With expanded dictionary, expect more hits — each unique cliché costs 3pts (was 4),
-    // but density penalty is stricter and "you know better" penalty kicks in harder.
-    let lang = 100 - Math.min(cliches.length * 3, 50) - Math.min((totalC / Math.max(wc / 100, 1)) * 7, 30) - (uniq.length < 2 ? 10 : 0);
+    // Language score: penalizes cliché usage with severity + placement weighting.
+    // weightedTotal accounts for both severity tier (severe=1.5x, normal=1x, mild=0.5x)
+    // and placement (H1=3x, H2=2x, meta=2x, body=1x).
+    let lang = 100 - Math.min(cliches.length * 2.5, 45) - Math.min((weighted.weightedTotal / Math.max(wc / 100, 1)) * 5, 35) - (uniq.length < 2 ? 10 : 0);
+    // H1 cliché penalty: using platitudes in your headline is a brand crime
+    if (weighted.h1Count > 0) lang -= Math.min(weighted.h1Count * 5, 15);
     // "You know better" penalty: if content is rich but you still use clichés,
     // it proves you CAN be specific but chose platitudes in spots.
     if (richness > 10 && cliches.length > 3) lang -= Math.min(cliches.length * 2, 15);

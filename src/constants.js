@@ -137,6 +137,46 @@ export const scoreVerdict = s => {
   return "The higher ed greatest hits album. Your web presence could belong to any institution in the country.";
 };
 
+/* ═══ CLICHÉ SEVERITY TIERS ═══ */
+// Some clichés are worse than others. "World-class" and "transformative" in your
+// H1 is a brand crime. "Apply now" in a CTA is just functional.
+export const CLICHE_SEVERITY = {
+  // Tier 1: The worst offenders — identity-killing platitudes (weight 1.5x)
+  severe: new Set([
+    "world-class", "transformative", "transformative experience", "cutting-edge",
+    "state-of-the-art", "best and brightest", "leaders of tomorrow", "holistic approach",
+    "committed to excellence", "excellence in", "tradition of excellence",
+    "culture of excellence", "history of excellence", "premier institution",
+    "prestigious", "esteemed", "preeminent", "unparalleled", "unmatched", "unrivaled",
+    "like no other", "unlike any other", "truly unique", "uniquely positioned",
+    "one of a kind", "groundbreaking", "pioneering", "trailblazing", "revolutionizing",
+    "reimagining", "pushing boundaries", "breaking new ground", "at the forefront",
+    "shaping the future", "changing the world", "transforming lives",
+  ]),
+  // Tier 2: Generic but less toxic — common filler (weight 1x, baseline)
+  // Everything not in severe or mild falls here by default
+  // Tier 3: Functional/expected — CTAs, nav items, mild phrases (weight 0.5x)
+  mild: new Set([
+    "apply now", "apply today", "enroll today", "enroll now", "learn more about",
+    "explore programs", "explore our", "discover more", "find out more",
+    "request information", "plan your visit", "get started today", "start today",
+    "take the next step", "calculate your cost", "don't wait", "free to apply",
+    "no application fee", "waived application fee", "rolling admissions",
+    "about us", "campus life", "student life",
+  ]),
+};
+
+/**
+ * Returns severity weight for a cliché phrase.
+ * severe = 1.5, normal = 1.0, mild = 0.5
+ */
+export function clicheSeverity(phrase) {
+  const lower = phrase.toLowerCase();
+  if (CLICHE_SEVERITY.severe.has(lower)) return 1.5;
+  if (CLICHE_SEVERITY.mild.has(lower)) return 0.5;
+  return 1.0;
+}
+
 /* ═══ TEXT ANALYSIS ═══ */
 export function countCliches(text) {
   const lower = text.toLowerCase();
@@ -144,9 +184,42 @@ export function countCliches(text) {
   for (const phrase of CLICHES) {
     const regex = new RegExp("\\b" + phrase.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "gi");
     const matches = lower.match(regex);
-    if (matches) found.push({ phrase, count: matches.length });
+    if (matches) found.push({ phrase, count: matches.length, severity: clicheSeverity(phrase) });
   }
-  return found.sort((a, b) => b.count - a.count);
+  return found.sort((a, b) => (b.count * b.severity) - (a.count * a.severity));
+}
+
+/**
+ * Weighted cliché counting: clichés in H1s/H2s/meta count more than body copy.
+ * Returns { weightedTotal, h1Cliches, h2Cliches, bodyCliches }
+ */
+export function countWeightedCliches(bodyText, h1s = [], h2s = [], metaDesc = "") {
+  const h1Text = h1s.join(" ");
+  const h2Text = h2s.join(" ");
+
+  // Count clichés in each zone separately
+  const h1Cliches = countCliches(h1Text);
+  const h2Cliches = countCliches(h2Text);
+  const metaCliches = countCliches(metaDesc);
+  const bodyCliches = countCliches(bodyText);
+
+  // Weighted total: H1=3x, H2=2x, meta=2x, body=1x
+  // Each cliché also has its own severity multiplier (1.5x, 1x, or 0.5x)
+  let weightedTotal = 0;
+  h1Cliches.forEach(c => { weightedTotal += c.count * c.severity * 3; });
+  h2Cliches.forEach(c => { weightedTotal += c.count * c.severity * 2; });
+  metaCliches.forEach(c => { weightedTotal += c.count * c.severity * 2; });
+  bodyCliches.forEach(c => { weightedTotal += c.count * c.severity * 1; });
+
+  return {
+    weightedTotal: Math.round(weightedTotal * 10) / 10,
+    h1Cliches,
+    h2Cliches,
+    metaCliches,
+    bodyCliches,
+    h1Count: h1Cliches.reduce((s, c) => s + c.count, 0),
+    h2Count: h2Cliches.reduce((s, c) => s + c.count, 0),
+  };
 }
 
 export function highlightCliches(text) {
