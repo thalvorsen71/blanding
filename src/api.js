@@ -258,6 +258,13 @@ CRITICAL GROUNDING RULES — READ CAREFULLY:
 RATIO ASSESSMENT — This is critical:
 Look at ALL the text on the page. What percentage is genuinely specific (names, dates, numbers, unique programs, real stories) vs. generic filler (platitudes, stock CTAs, boilerplate)? A page with one great story buried in 90% generic copy is NOT a specific page. A page that is 80% real content with a few stock CTAs IS specific. Score the RATIO, not the best moment.
 
+CONTENT TYPE HIERARCHY — NOT ALL CONTENT IS EQUAL:
+News items, event listings, and press releases should NOT boost scores as much as branded copy. Here's how to weight what you see:
+- H1s, H2s, hero text, taglines, value propositions → HIGHEST weight. This is the brand voice. If clichés appear here, it's a brand identity problem.
+- Feature descriptions, program overviews, about-us copy → HIGH weight. This is core messaging.
+- News headlines, event announcements, press releases → LOW weight. Having specific news items (names, dates, achievements) shows a real institution exists, but it does NOT prove brand differentiation. A school can have great news and still have zero brand voice. News specificity should contribute modestly to specificity_score (cap its contribution at +1-2 points) but should NOT boost voice_score at all.
+- CTAs, navigation labels, footer boilerplate → IGNORE for scoring purposes.
+
 SCORING CALIBRATION — USE THE FULL RANGE:
 Do NOT cluster scores in the 4-7 range. Use the ENTIRE 1-10 scale. Here are anchors:
 - voice_score 9-10: A page so distinctive you could identify the school with the logo removed. Specific stories, named people, unique turns of phrase.

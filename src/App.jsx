@@ -37,7 +37,7 @@ function Ring({ score, size = 140, sw = 5 }) {
 }
 
 function Pill({ children, color = T.accent }) {
-  return <span style={{ background: color + "12", border: "1px solid " + color + "30", borderRadius: 5, padding: "4px 10px", fontSize: 12, color, fontFamily: T.mono, display: "inline-block" }}>{children}</span>;
+  return <span style={{ background: color + "12", border: "1px solid " + color + "30", borderRadius: 5, padding: "4px 10px", fontSize: 13, color, fontFamily: T.mono, display: "inline-block" }}>{children}</span>;
 }
 
 function Spinner({ size = 14 }) {
@@ -123,6 +123,9 @@ export default function App() {
     setLbLoading(false);
   }, [lbLoading]);
 
+  // Auto-fetch leaderboard on mount for landing page preview
+  useEffect(() => { fetchLeaderboard(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   const submitToLeaderboard = useCallback(async (res) => {
     if (!res?.url || !res?.schoolName) return;
     try {
@@ -201,6 +204,16 @@ export default function App() {
     // Content richness bonus: rewards specific, distinctive content (0-30 pts)
     const richness = contentRichnessBonus(allBody, allH1, allH2, uniq);
 
+    // H1/H2 brand quality: reward distinctive headlines, penalize generic ones
+    const h1Cliches = weighted.h1Count;
+    const h2Cliches = weighted.h2Count;
+    const h1Total = allH1.filter(h => h.trim().length > 3).length;
+    const h2Total = allH2.filter(h => h.trim().length > 3).length;
+    // If most headlines are cliché-free, that's a brand voice signal
+    const headlineQuality = (h1Total + h2Total) > 0
+      ? Math.round(((h1Total + h2Total - h1Cliches - h2Cliches) / (h1Total + h2Total)) * 10)
+      : 0;
+
     // Language score: penalizes cliché usage with severity + placement weighting.
     // weightedTotal accounts for both severity tier (severe=1.5x, normal=1x, mild=0.5x)
     // and placement (H1=3x, H2=2x, meta=2x, body=1x).
@@ -218,7 +231,7 @@ export default function App() {
 
     // Strategy score: mechanical base from content signals, then one-step AI blend.
     // All AI inputs are combined in a single weighted average to avoid cascading dilution.
-    let mechStrat = 30 + uniq.length * 5 - stock.length * 4 + Math.min(richness * 0.7, 15);
+    let mechStrat = 30 + uniq.length * 5 - stock.length * 4 + Math.min(richness * 0.7, 15) + Math.min(headlineQuality, 8);
     mechStrat = Math.max(0, Math.min(100, mechStrat));
     let strat;
     if (ai?.specificity_score && ai?.consistency_score) {
@@ -318,20 +331,20 @@ export default function App() {
       <div style={{ flex: 1, minWidth: 0 }}>
         <div className="result-card" style={{ background: T.card, border: "1px solid " + T.border, borderRadius: 14, padding: compact ? "24px 16px" : "36px 28px", textAlign: "center", position: "relative", overflow: "hidden" }}>
           <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%,-50%)", width: 280, height: 280, background: `radial-gradient(circle, ${scoreColor(res.overall)}11 0%, transparent 70%)`, pointerEvents: "none" }} />
-          {res.url && <div style={{ fontSize: 11, fontFamily: T.mono, color: T.dim, marginBottom: 4, position: "relative", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{res.url}</div>}
-          <div style={{ fontSize: 10, fontFamily: T.mono, color: T.muted, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 14, position: "relative" }}>{res.pagesAnalyzed.length} page{res.pagesAnalyzed.length > 1 ? "s" : ""} audited</div>
+          {res.url && <div style={{ fontSize: 13, fontFamily: T.mono, color: T.dim, marginBottom: 4, position: "relative", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{res.url}</div>}
+          <div style={{ fontSize: 12, fontFamily: T.mono, color: T.muted, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 14, position: "relative" }}>{res.pagesAnalyzed.length} page{res.pagesAnalyzed.length > 1 ? "s" : ""} audited</div>
           <div style={{ position: "relative", display: "inline-block" }}>
             <Ring score={res.overall} size={compact ? 110 : 140} />
             <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
               <div style={{ fontSize: compact ? 36 : 46, fontFamily: T.serif, color: scoreColor(res.overall), lineHeight: 1 }}><AnimNum value={res.overall} /></div>
-              <div style={{ fontSize: 11, color: T.dim, fontFamily: T.mono }}>/100</div>
+              <div style={{ fontSize: 13, color: T.dim, fontFamily: T.mono }}>/100</div>
             </div>
           </div>
           <div style={{ fontSize: compact ? 16 : 20, fontFamily: T.serif, fontStyle: "italic", color: scoreColor(res.overall), marginTop: 8, position: "relative" }}>{scoreLabel(res.overall)}</div>
           {!compact && <p style={{ fontSize: 13, color: T.muted, lineHeight: 1.6, maxWidth: 480, margin: "12px auto 0", position: "relative" }}>{scoreVerdict(res.overall)}</p>}
           {dims.length > 1 && (
             <div style={{ display: "grid", gridTemplateColumns: `repeat(${dims.length}, 1fr)`, gap: 1, marginTop: 20, background: T.border, borderRadius: 8, overflow: "hidden", position: "relative" }}>
-              {dims.map(d => <div key={d.key} style={{ background: "#121212", padding: compact ? "10px 4px" : "14px 6px" }}><div style={{ fontSize: compact ? 20 : 26, fontFamily: T.serif, color: scoreColor(res.scores[d.key]) }}>{res.scores[d.key]}</div><div style={{ fontSize: 9, fontFamily: T.mono, color: T.dim, marginTop: 2, textTransform: "uppercase" }}>{d.label}</div></div>)}
+              {dims.map(d => <div key={d.key} style={{ background: "#121212", padding: compact ? "10px 4px" : "14px 6px" }}><div style={{ fontSize: compact ? 20 : 26, fontFamily: T.serif, color: scoreColor(res.scores[d.key]) }}>{res.scores[d.key]}</div><div style={{ fontSize: 11, fontFamily: T.mono, color: T.dim, marginTop: 2, textTransform: "uppercase" }}>{d.label}</div></div>)}
             </div>
           )}
         </div>
@@ -347,16 +360,16 @@ export default function App() {
         {!compact && res.pagesAnalyzed?.length <= 1 && (res.bodyText || "").split(/\s+/).length < 400 && (
           <div style={{ background: "#1a1a00", border: "1px solid #3d3d00", borderRadius: 8, padding: "10px 14px", marginTop: 10, display: "flex", alignItems: "center", gap: 8, position: "relative" }}>
             <span style={{ fontSize: 14 }}>⚠</span>
-            <div style={{ fontSize: 11, color: "#cca700", margin: 0, fontFamily: T.mono, lineHeight: 1.6 }}>
+            <div style={{ fontSize: 13, color: "#cca700", margin: 0, fontFamily: T.mono, lineHeight: 1.6 }}>
               <p style={{ margin: 0 }}>Limited content detected — this site likely uses heavy JavaScript rendering. Score based on what we could extract; full picture may differ.</p>
-              <p style={{ margin: "6px 0 0", fontSize: 10, color: "#aa8800" }}>Worth noting: if our scraper can't read this site, neither can AI search tools like ChatGPT, Perplexity, or Claude. That means prospective students using AI to research schools may not see this institution's content at all. <a href="https://web.dev/articles/rendering-on-the-web" target="_blank" rel="noopener noreferrer" style={{ color: "#cca700", textDecoration: "underline" }}>Learn how to fix this →</a></p>
+              <p style={{ margin: "6px 0 0", fontSize: 12, color: "#aa8800" }}>Worth noting: if our scraper can't read this site, neither can AI search tools like ChatGPT, Perplexity, or Claude. That means prospective students using AI to research schools may not see this institution's content at all. <a href="https://web.dev/articles/rendering-on-the-web" target="_blank" rel="noopener noreferrer" style={{ color: "#cca700", textDecoration: "underline" }}>Learn how to fix this →</a></p>
             </div>
           </div>
         )}
         {res.ai?.tone_diagnosis && (
           <div style={{ background: T.card, border: "1px solid " + T.border, borderRadius: 10, padding: "18px", marginTop: 12, position: "relative", overflow: "hidden" }}>
             <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 2, background: `linear-gradient(90deg, ${T.accent}, ${T.accentLight}, ${T.accent})` }} />
-            <div style={{ fontSize: 10, fontFamily: T.mono, color: T.dim, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 6 }}>Brand Personality</div>
+            <div style={{ fontSize: 12, fontFamily: T.mono, color: T.dim, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 6 }}>Brand Personality</div>
             <p style={{ fontSize: compact ? 13 : 15, fontFamily: T.serif, fontStyle: "italic", color: T.text, lineHeight: 1.5, margin: 0, paddingLeft: 12, borderLeft: "2px solid " + T.accent }}>{res.ai.tone_diagnosis}</p>
           </div>
         )}
@@ -378,7 +391,7 @@ export default function App() {
     return (
       <>
         <div className="tab-bar" role="tablist" aria-label="Audit result tabs" style={{ display: "flex", gap: 4, marginTop: 20, overflowX: "auto", paddingBottom: 4 }}>
-          {avail.map(t => <button key={t} role="tab" aria-selected={activeTab === t} onClick={() => { setActiveTab(t); if (t === "leaderboard" && leaderboard.length === 0) fetchLeaderboard(); }} style={{ padding: "7px 14px", borderRadius: 6, border: `1px solid ${activeTab === t ? T.accent : T.borderLight}`, background: activeTab === t ? T.accent + "15" : "transparent", color: activeTab === t ? T.accent : T.dim, fontSize: 11, fontFamily: T.mono, whiteSpace: "nowrap" }}>{labels[t]}</button>)}
+          {avail.map(t => <button key={t} role="tab" aria-selected={activeTab === t} onClick={() => { setActiveTab(t); if (t === "leaderboard" && leaderboard.length === 0) fetchLeaderboard(); }} style={{ padding: "7px 14px", borderRadius: 6, border: `1px solid ${activeTab === t ? T.accent : T.borderLight}`, background: activeTab === t ? T.accent + "15" : "transparent", color: activeTab === t ? T.accent : T.dim, fontSize: 13, fontFamily: T.mono, whiteSpace: "nowrap" }}>{labels[t]}</button>)}
         </div>
         <div style={{ marginTop: 14 }}>
 
@@ -388,17 +401,17 @@ export default function App() {
               <div className="overview-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
                 {[{ l: "Biggest Sin", v: res.ai.biggest_sin, c: "#ef4444" }, { l: "Best Moment", v: res.ai.best_moment, c: "#22c55e" }, { l: "Differentiation Killer", v: res.ai.differentiation_killer, c: "#f97316" }, { l: "Missed Opportunity", v: res.ai.missed_opportunity, c: "#eab308" }].map((it, i) => (
                   <div key={i} style={{ background: T.card, border: "1px solid " + T.border, borderRadius: 10, padding: 16 }}>
-                    <div style={{ fontSize: 10, fontFamily: T.mono, color: it.c, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6 }}>{it.l}</div>
-                    <p style={{ fontSize: 13, color: T.text, lineHeight: 1.55, margin: 0 }}>{it.v}</p>
+                    <div style={{ fontSize: 12, fontFamily: T.mono, color: it.c, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6 }}>{it.l}</div>
+                    <p style={{ fontSize: 14, color: T.text, lineHeight: 1.55, margin: 0 }}>{it.v}</p>
                   </div>
                 ))}
               </div>
               {res.ai.weak_sentence && res.ai.rewrite && res.ai.weak_sentence !== "NO_CONTENT" && !res.ai.weak_sentence.toLowerCase().includes("no clear example") && !res.ai.rewrite.toLowerCase().includes("cannot rewrite") && !res.ai.rewrite.includes("NO_CONTENT") && (
                 <div style={{ background: T.cardAlt, borderRadius: 10, overflow: "hidden", border: "1px solid " + T.border }}>
-                  <div style={{ padding: "8px 16px", borderBottom: "1px solid " + T.border, fontSize: 10, fontFamily: T.mono, color: T.accent, textTransform: "uppercase" }}>What If You Actually Said Something?</div>
+                  <div style={{ padding: "8px 16px", borderBottom: "1px solid " + T.border, fontSize: 12, fontFamily: T.mono, color: T.accent, textTransform: "uppercase" }}>What If You Actually Said Something?</div>
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 1, background: T.border }}>
-                    <div style={{ background: T.cardAlt, padding: "14px 16px" }}><div style={{ fontSize: 9, fontFamily: T.mono, color: "#ef4444", textTransform: "uppercase", marginBottom: 6 }}>Their Version</div><p style={{ fontSize: 13, color: "#666", lineHeight: 1.55, margin: 0, fontStyle: "italic" }}>"{res.ai.weak_sentence}"</p></div>
-                    <div style={{ background: T.cardAlt, padding: "14px 16px" }}><div style={{ fontSize: 9, fontFamily: T.mono, color: "#22c55e", textTransform: "uppercase", marginBottom: 6 }}>With a Pulse</div><p style={{ fontSize: 13, color: T.text, lineHeight: 1.55, margin: 0 }}>"{res.ai.rewrite}"</p></div>
+                    <div style={{ background: T.cardAlt, padding: "14px 16px" }}><div style={{ fontSize: 11, fontFamily: T.mono, color: "#ef4444", textTransform: "uppercase", marginBottom: 6 }}>Their Version</div><p style={{ fontSize: 14, color: "#888", lineHeight: 1.55, margin: 0, fontStyle: "italic" }}>"{res.ai.weak_sentence}"</p></div>
+                    <div style={{ background: T.cardAlt, padding: "14px 16px" }}><div style={{ fontSize: 11, fontFamily: T.mono, color: "#22c55e", textTransform: "uppercase", marginBottom: 6 }}>With a Pulse</div><p style={{ fontSize: 14, color: T.text, lineHeight: 1.55, margin: 0 }}>"{res.ai.rewrite}"</p></div>
                   </div>
                 </div>
               )}
@@ -409,8 +422,8 @@ export default function App() {
           {activeTab === "language" && (
             <div style={{ background: T.card, border: "1px solid " + T.border, borderRadius: 10, padding: 20 }}>
               <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 12 }}>
-                <span style={{ fontSize: 10, fontFamily: T.mono, color: T.accent, textTransform: "uppercase" }}>Cliché Inventory</span>
-                <span style={{ fontSize: 11, fontFamily: T.mono, color: T.dim }}>{res.totalCliches} total / {res.cliches.length} unique</span>
+                <span style={{ fontSize: 12, fontFamily: T.mono, color: T.accent, textTransform: "uppercase" }}>Cliché Inventory</span>
+                <span style={{ fontSize: 13, fontFamily: T.mono, color: T.dim }}>{res.totalCliches} total / {res.cliches.length} unique</span>
               </div>
               {res.cliches.length === 0 ? <p style={{ color: "#22c55e", fontSize: 13 }}>No common clichés detected.</p> :
                 (() => {
@@ -431,7 +444,7 @@ export default function App() {
                             border: `1px solid rgba(239, 68, 68, ${0.1 + weight * 0.15})`,
                             whiteSpace: "nowrap", lineHeight: 1.3,
                           }}>
-                            {c.phrase}{c.count > 1 && <span style={{ fontSize: 10, fontFamily: T.mono, opacity: 0.6, marginLeft: 4 }}>×{c.count}</span>}
+                            {c.phrase}{c.count > 1 && <span style={{ fontSize: 12, fontFamily: T.mono, opacity: 0.6, marginLeft: 4 }}>×{c.count}</span>}
                           </span>
                         );
                       })}
@@ -446,14 +459,14 @@ export default function App() {
           {activeTab === "highlighted" && res.bodyText && (
             <div style={{ background: T.card, border: "1px solid " + T.border, borderRadius: 10, padding: 20 }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
-                <div style={{ fontSize: 10, fontFamily: T.mono, color: T.accent, textTransform: "uppercase" }}>Your Copy — Clichés Highlighted</div>
+                <div style={{ fontSize: 12, fontFamily: T.mono, color: T.accent, textTransform: "uppercase" }}>Your Copy — Clichés Highlighted</div>
                 {res.scrapeSource && (
-                  <span style={{ fontSize: 9, fontFamily: T.mono, color: res.scrapeSource === "cheerio" ? "#22c55e" : "#eab308", background: res.scrapeSource === "cheerio" ? "#22c55e12" : "#eab30812", border: `1px solid ${res.scrapeSource === "cheerio" ? "#22c55e30" : "#eab30830"}`, borderRadius: 4, padding: "2px 8px" }}>
+                  <span style={{ fontSize: 11, fontFamily: T.mono, color: res.scrapeSource === "cheerio" ? "#22c55e" : "#eab308", background: res.scrapeSource === "cheerio" ? "#22c55e12" : "#eab30812", border: `1px solid ${res.scrapeSource === "cheerio" ? "#22c55e30" : "#eab30830"}`, borderRadius: 4, padding: "2px 8px" }}>
                     {res.scrapeSource === "cheerio" ? "✓ Direct HTML extract" : "⚠ AI-assisted scrape"}
                   </span>
                 )}
               </div>
-              <p style={{ fontSize: 11, fontFamily: T.mono, color: T.dim, marginBottom: 14 }}>
+              <p style={{ fontSize: 13, fontFamily: T.mono, color: T.dim, marginBottom: 14 }}>
                 {res.scrapeSource === "cheerio"
                   ? <>This is the <strong style={{ color: "#22c55e" }}>exact text</strong> extracted from the page HTML. Every <span style={{ background: "#ef444425", color: "#ef4444", padding: "1px 4px", borderRadius: 3 }}>highlighted phrase</span> could appear on any college website.</>
                   : <>This text was extracted using AI web search (the site may use heavy JavaScript). Every <span style={{ background: "#ef444425", color: "#ef4444", padding: "1px 4px", borderRadius: 3 }}>highlighted phrase</span> could appear on any college website.</>
@@ -471,11 +484,11 @@ export default function App() {
           {activeTab === "strategy" && (
             <div className="strategy-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
               <div style={{ background: T.card, border: "1px solid " + T.border, borderRadius: 10, padding: 18 }}>
-                <div style={{ fontSize: 10, fontFamily: T.mono, color: "#22c55e", textTransform: "uppercase", marginBottom: 8 }}>Unique Claims ({res.uniqueClaims.length})</div>
+                <div style={{ fontSize: 12, fontFamily: T.mono, color: "#22c55e", textTransform: "uppercase", marginBottom: 8 }}>Unique Claims ({res.uniqueClaims.length})</div>
                 {res.uniqueClaims.length ? res.uniqueClaims.map((c, i) => <p key={i} style={{ fontSize: 13, color: T.text, lineHeight: 1.5, margin: "0 0 6px", padding: "4px 0", borderBottom: i < res.uniqueClaims.length - 1 ? "1px solid " + T.border : "none" }}>{c}</p>) : <p style={{ fontSize: 13, color: "#ef4444" }}>No ownable claims found.</p>}
               </div>
               <div style={{ background: T.card, border: "1px solid " + T.border, borderRadius: 10, padding: 18 }}>
-                <div style={{ fontSize: 10, fontFamily: T.mono, color: "#ef4444", textTransform: "uppercase", marginBottom: 8 }}>Stock Phrases ({res.stockPhrases.length})</div>
+                <div style={{ fontSize: 12, fontFamily: T.mono, color: "#ef4444", textTransform: "uppercase", marginBottom: 8 }}>Stock Phrases ({res.stockPhrases.length})</div>
                 {res.stockPhrases.length ? res.stockPhrases.map((c, i) => <p key={i} style={{ fontSize: 13, color: T.muted, lineHeight: 1.5, margin: "0 0 6px", fontStyle: "italic" }}>"{c}"</p>) : <p style={{ fontSize: 13, color: "#22c55e" }}>Clean.</p>}
               </div>
             </div>
@@ -487,11 +500,11 @@ export default function App() {
               <div style={{ background: T.card, border: "1px solid " + T.border, borderRadius: 10, padding: "20px 24px" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
                   <div>
-                    <div style={{ fontSize: 10, fontFamily: T.mono, color: T.accent, textTransform: "uppercase", letterSpacing: "0.1em" }}>Live Leaderboard</div>
-                    <div style={{ fontSize: 11, color: T.dim, marginTop: 2 }}>{leaderboard.length} institutions ranked</div>
+                    <div style={{ fontSize: 12, fontFamily: T.mono, color: T.accent, textTransform: "uppercase", letterSpacing: "0.1em" }}>Live Leaderboard</div>
+                    <div style={{ fontSize: 13, color: T.dim, marginTop: 2 }}>{leaderboard.length} institutions ranked</div>
                   </div>
                   <button onClick={fetchLeaderboard} disabled={lbLoading}
-                    style={{ padding: "6px 14px", background: T.cardAlt, border: "1px solid " + T.borderLight, borderRadius: 6, color: T.dim, fontSize: 10, fontFamily: T.mono }}>
+                    style={{ padding: "6px 14px", background: T.cardAlt, border: "1px solid " + T.borderLight, borderRadius: 6, color: T.dim, fontSize: 12, fontFamily: T.mono }}>
                     {lbLoading ? "Loading..." : "Refresh"}
                   </button>
                 </div>
@@ -512,28 +525,28 @@ export default function App() {
                       </span>
                       <div style={{ minWidth: 0 }}>
                         <div style={{ fontSize: 13, color: isYou ? T.accent : T.text, fontWeight: isYou ? 600 : 400, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                          {s.name}{isYou && <span style={{ fontSize: 10, marginLeft: 6, color: T.accent, fontFamily: T.mono }}>← YOU</span>}
+                          {s.name}{isYou && <span style={{ fontSize: 12, marginLeft: 6, color: T.accent, fontFamily: T.mono }}>← YOU</span>}
                         </div>
-                        <div style={{ fontSize: 9, fontFamily: T.mono, color: T.dim }}>{s.url}</div>
+                        <div style={{ fontSize: 11, fontFamily: T.mono, color: T.dim }}>{s.url}</div>
                       </div>
                       <div style={{ textAlign: "center" }}>
                         <div style={{ fontSize: 18, fontFamily: T.serif, color: scoreColor(s.overall) }}>{s.overall}</div>
-                        <div style={{ fontSize: 7, fontFamily: T.mono, color: T.dim, textTransform: "uppercase" }}>Overall</div>
+                        <div style={{ fontSize: 9, fontFamily: T.mono, color: T.dim, textTransform: "uppercase" }}>Overall</div>
                       </div>
                       <div style={{ textAlign: "center" }}>
                         <div style={{ fontSize: 14, fontFamily: T.serif, color: s.language != null ? scoreColor(s.language) : T.dim }}>{s.language ?? "–"}</div>
-                        <div style={{ fontSize: 7, fontFamily: T.mono, color: T.dim, textTransform: "uppercase" }}>Lang</div>
+                        <div style={{ fontSize: 9, fontFamily: T.mono, color: T.dim, textTransform: "uppercase" }}>Lang</div>
                       </div>
                       <div style={{ textAlign: "center" }}>
                         <div style={{ fontSize: 14, fontFamily: T.serif, color: s.strategy != null ? scoreColor(s.strategy) : T.dim }}>{s.strategy ?? "–"}</div>
-                        <div style={{ fontSize: 7, fontFamily: T.mono, color: T.dim, textTransform: "uppercase" }}>Strat</div>
+                        <div style={{ fontSize: 9, fontFamily: T.mono, color: T.dim, textTransform: "uppercase" }}>Strat</div>
                       </div>
                     </div>
                   );
                 })}
               </div>
               <div style={{ background: T.cardAlt, border: "1px solid " + T.border, borderRadius: 8, padding: "14px 20px", textAlign: "center" }}>
-                <p style={{ fontSize: 12, color: T.dim, margin: 0, fontFamily: T.mono }}>Scores update automatically as institutions are audited. Challenge a rival with Head-to-Head mode.</p>
+                <p style={{ fontSize: 13, color: T.dim, margin: 0, fontFamily: T.mono }}>Scores update automatically as institutions are audited. Challenge a rival with Head-to-Head mode.</p>
               </div>
             </div>
           )}
@@ -546,17 +559,17 @@ export default function App() {
                 { l: "Content Strategy", t: res.ai.rx_strategy, c: "#22c55e" },
               ].filter(r => r.t).map((r, i) => (
                 <div key={i} style={{ background: T.card, border: "1px solid " + T.border, borderRadius: 10, padding: "18px 20px", borderLeft: "3px solid " + r.c }}>
-                  <div style={{ fontSize: 10, fontFamily: T.mono, color: r.c, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6 }}>Rx: {r.l}</div>
+                  <div style={{ fontSize: 12, fontFamily: T.mono, color: r.c, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6 }}>Rx: {r.l}</div>
                   <p style={{ fontSize: 14, color: T.text, lineHeight: 1.6, margin: 0 }}>{r.t}</p>
                 </div>
               ))}
               {res.pagesAnalyzed?.length <= 1 && (res.bodyText || "").split(/\s+/).length < 400 && (
                 <div style={{ background: "#1a1a00", border: "1px solid #3d3d00", borderRadius: 10, padding: "18px 20px", borderLeft: "3px solid #cca700" }}>
-                  <div style={{ fontSize: 10, fontFamily: T.mono, color: "#cca700", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6 }}>Rx: AI Visibility</div>
+                  <div style={{ fontSize: 12, fontFamily: T.mono, color: "#cca700", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6 }}>Rx: AI Visibility</div>
                   <p style={{ fontSize: 14, color: T.text, lineHeight: 1.6, margin: 0 }}>
                     This site appears to use heavy JavaScript rendering, which limited what our scraper could extract. This isn't just a scoring issue — <strong style={{ color: "#cca700" }}>69% of AI crawlers can't execute JavaScript</strong>. That means tools like ChatGPT, Perplexity, and Claude may not be able to read this site's content either. As more prospective students use AI to research schools, a JS-heavy site without server-side rendering risks being invisible to an entire discovery channel.
                   </p>
-                  <p style={{ fontSize: 12, color: "#aa8800", margin: "8px 0 0", lineHeight: 1.5 }}>
+                  <p style={{ fontSize: 13, color: "#aa8800", margin: "8px 0 0", lineHeight: 1.5 }}>
                     Fix: Ask your web team about server-side rendering (SSR) or pre-rendering. <a href="https://web.dev/articles/rendering-on-the-web" target="_blank" rel="noopener noreferrer" style={{ color: "#cca700", textDecoration: "underline" }}>Google's guide to rendering strategies →</a>
                   </p>
                 </div>
@@ -572,7 +585,7 @@ export default function App() {
           {activeTab === "methodology" && (
             <div style={{ display: "grid", gap: 14 }}>
               <div style={{ background: T.card, border: "1px solid " + T.border, borderRadius: 10, padding: "22px 24px" }}>
-                <div style={{ fontSize: 10, fontFamily: T.mono, color: T.accent, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 12 }}>How the Blanding Detector Scores Your Site</div>
+                <div style={{ fontSize: 12, fontFamily: T.mono, color: T.accent, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 12 }}>How the Blanding Detector Scores Your Site</div>
                 <p style={{ fontSize: 13, color: T.muted, lineHeight: 1.7, margin: "0 0 14px" }}>
                   Every audit produces two sub-scores that combine into your overall rating. Here's exactly what we measure and how.
                 </p>
@@ -594,10 +607,10 @@ export default function App() {
                   ].map((item, i) => (
                     <div key={i} style={{ background: T.bg, borderRadius: 6, padding: "10px 14px" }}>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 3 }}>
-                        <span style={{ fontSize: 12, color: T.text, fontWeight: 500 }}>{item.label}</span>
-                        <span style={{ fontSize: 10, fontFamily: T.mono, color: T.dim }}>{item.weight}</span>
+                        <span style={{ fontSize: 13, color: T.text, fontWeight: 500 }}>{item.label}</span>
+                        <span style={{ fontSize: 12, fontFamily: T.mono, color: T.dim }}>{item.weight}</span>
                       </div>
-                      <p style={{ fontSize: 12, color: T.dim, lineHeight: 1.55, margin: 0 }}>{item.desc}</p>
+                      <p style={{ fontSize: 13, color: T.dim, lineHeight: 1.55, margin: 0 }}>{item.desc}</p>
                     </div>
                   ))}
                 </div>
@@ -620,10 +633,10 @@ export default function App() {
                   ].map((item, i) => (
                     <div key={i} style={{ background: T.bg, borderRadius: 6, padding: "10px 14px" }}>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 3 }}>
-                        <span style={{ fontSize: 12, color: T.text, fontWeight: 500 }}>{item.label}</span>
-                        <span style={{ fontSize: 10, fontFamily: T.mono, color: T.dim }}>{item.weight}</span>
+                        <span style={{ fontSize: 13, color: T.text, fontWeight: 500 }}>{item.label}</span>
+                        <span style={{ fontSize: 12, fontFamily: T.mono, color: T.dim }}>{item.weight}</span>
                       </div>
-                      <p style={{ fontSize: 12, color: T.dim, lineHeight: 1.55, margin: 0 }}>{item.desc}</p>
+                      <p style={{ fontSize: 13, color: T.dim, lineHeight: 1.55, margin: 0 }}>{item.desc}</p>
                     </div>
                   ))}
                 </div>
@@ -696,20 +709,20 @@ export default function App() {
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 40 }}>
             <a href="https://helloadeo.com" target="_blank" rel="noopener noreferrer" style={{ display: "flex", alignItems: "center", gap: 12, textDecoration: "none" }}>
               <AdeoLogo height={22} color="#fff" dotColor="#E6BDED" />
-              <span style={{ fontSize: 10, fontWeight: 500, letterSpacing: "0.06em", textTransform: "uppercase", color: T.dim, borderLeft: "1px solid " + T.border, paddingLeft: 12 }}>brand tools</span>
+              <span style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.06em", textTransform: "uppercase", color: T.dim, borderLeft: "1px solid " + T.border, paddingLeft: 12 }}>brand tools</span>
             </a>
           </div>
-          <span style={{ display: "inline-block", fontSize: 10, fontWeight: 500, letterSpacing: "0.12em", textTransform: "uppercase", color: T.accent, fontFamily: T.mono, marginBottom: 12 }}>Higher Ed Edition</span>
+          <span style={{ display: "inline-block", fontSize: 11, fontWeight: 500, letterSpacing: "0.12em", textTransform: "uppercase", color: T.accent, fontFamily: T.mono, marginBottom: 12 }}>Higher Ed Edition</span>
           <h1 style={{ fontSize: "clamp(38px, 6.5vw, 64px)", fontFamily: T.serif, fontWeight: 400, lineHeight: 1.0, margin: 0, letterSpacing: "-0.02em" }}>
             The Blanding<br /><span style={{ fontStyle: "italic", color: T.accent }}>Detector</span>
           </h1>
-          <p style={{ fontSize: 15, lineHeight: 1.65, color: "#999", maxWidth: 540, marginTop: 16, fontWeight: 300 }}>
+          <p style={{ fontSize: 16, lineHeight: 1.65, color: "#aaa", maxWidth: 540, marginTop: 16, fontWeight: 300 }}>
             How generic is your institution's website copy? Paste a URL and find out. We scan your homepage and landing pages for clichés, stock phrases, and the kind of language that makes every school sound the same.
           </p>
           {auditCount > 0 && (
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 14 }}>
               <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#22c55e", boxShadow: "0 0 6px #22c55e80" }} />
-              <span style={{ fontSize: 11, fontFamily: T.mono, color: T.dim }}>{auditCount} institutions audited and counting</span>
+              <span style={{ fontSize: 13, fontFamily: T.mono, color: T.dim }}>{auditCount} institutions audited and counting</span>
             </div>
           )}
         </header>
@@ -719,7 +732,7 @@ export default function App() {
           <div style={{ display: "flex", gap: 2, marginBottom: 16, background: T.card, borderRadius: 8, padding: 3, width: "fit-content" }}>
             {[{ l: "Single Audit", v: "single" }, { l: "Head-to-Head", v: "compare" }, { l: "Paste Text", v: "text" }].map(m => (
               <button key={m.v} onClick={() => { setMode(m.v); setResult(null); setResult2(null); setProgress([]); }}
-                style={{ padding: "7px 16px", borderRadius: 6, border: "none", background: mode === m.v ? T.accent : "transparent", color: mode === m.v ? "#fff" : T.dim, fontSize: 11, fontFamily: T.mono, fontWeight: 500 }}>{m.l}</button>
+                style={{ padding: "7px 16px", borderRadius: 6, border: "none", background: mode === m.v ? T.accent : "transparent", color: mode === m.v ? "#fff" : T.dim, fontSize: 13, fontFamily: T.mono, fontWeight: 500 }}>{m.l}</button>
             ))}
           </div>
 
@@ -787,6 +800,48 @@ export default function App() {
                   {s.l || `${s.a} vs ${s.b}`}
                 </button>
               ))}
+            </div>
+          )}
+          {/* LANDING LEADERBOARD PREVIEW — shows before any audit */}
+          {!result && !result2 && !analyzing && leaderboard.length >= 3 && (
+            <div style={{ marginTop: 32, background: T.card, border: "1px solid " + T.border, borderRadius: 12, padding: "22px 24px", overflow: "hidden" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+                <div>
+                  <div style={{ fontSize: 12, fontFamily: T.mono, color: T.accent, textTransform: "uppercase", letterSpacing: "0.1em" }}>Leaderboard</div>
+                  <div style={{ fontSize: 13, color: T.dim, marginTop: 2 }}>{leaderboard.length} institutions ranked — where does yours land?</div>
+                </div>
+              </div>
+              {leaderboard.slice(0, 8).map((s, i) => (
+                <div key={s.url} style={{
+                  display: "grid", gridTemplateColumns: "28px 1fr 55px 55px 55px", gap: 6, alignItems: "center",
+                  padding: "8px 10px", borderRadius: 6, marginBottom: 1,
+                  background: i % 2 === 0 ? "transparent" : T.cardAlt,
+                }}>
+                  <span style={{ fontSize: 13, fontFamily: T.mono, color: i < 3 ? T.accent : T.dim, fontWeight: i < 3 ? 700 : 400, textAlign: "center" }}>
+                    {i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : `#${i + 1}`}
+                  </span>
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ fontSize: 13, color: T.text, fontWeight: 400, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.name}</div>
+                  </div>
+                  <div style={{ textAlign: "center" }}>
+                    <div style={{ fontSize: 16, fontFamily: T.serif, color: scoreColor(s.overall) }}>{s.overall}</div>
+                    <div style={{ fontSize: 9, fontFamily: T.mono, color: T.dim, textTransform: "uppercase" }}>Score</div>
+                  </div>
+                  <div style={{ textAlign: "center" }}>
+                    <div style={{ fontSize: 13, fontFamily: T.serif, color: s.language != null ? scoreColor(s.language) : T.dim }}>{s.language ?? "–"}</div>
+                    <div style={{ fontSize: 9, fontFamily: T.mono, color: T.dim, textTransform: "uppercase" }}>Lang</div>
+                  </div>
+                  <div style={{ textAlign: "center" }}>
+                    <div style={{ fontSize: 13, fontFamily: T.serif, color: s.strategy != null ? scoreColor(s.strategy) : T.dim }}>{s.strategy ?? "–"}</div>
+                    <div style={{ fontSize: 9, fontFamily: T.mono, color: T.dim, textTransform: "uppercase" }}>Strat</div>
+                  </div>
+                </div>
+              ))}
+              {leaderboard.length > 8 && (
+                <div style={{ textAlign: "center", marginTop: 8 }}>
+                  <span style={{ fontSize: 12, fontFamily: T.mono, color: T.dim }}>+ {leaderboard.length - 8} more — audit a site to see the full list</span>
+                </div>
+              )}
             </div>
           )}
         </section>

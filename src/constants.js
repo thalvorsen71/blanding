@@ -116,10 +116,10 @@ export const T = {
   cardAlt: "#0d0d0d",
   border: "#1a1a1a",
   borderLight: "#222",
-  text: "#e8e4df",
-  muted: "#888",
-  dim: "#777",
-  faint: "#555",
+  text: "#ede9e4",
+  muted: "#aaa",
+  dim: "#999",
+  faint: "#777",
 };
 
 /* ═══ SCORING ═══ */
