@@ -90,8 +90,10 @@ export default function App() {
   const [lbLoading, setLbLoading] = useState(false);
   const [auditCount, setAuditCount] = useState(0);
   const [showMethodology, setShowMethodology] = useState(false);
+  const [showDisclaimer, setShowDisclaimer] = useState(false);
   const resultRef = useRef(null);
   const methRef = useRef(null);
+  const disclaimerRef = useRef(null);
 
   // Fetch audit count on mount for social proof
   useEffect(() => {
@@ -928,10 +930,15 @@ export default function App() {
         <footer style={{ paddingTop: 32, paddingBottom: 24, borderTop: "1px solid #151515", marginTop: result ? 0 : 80, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <span style={{ fontSize: 10, color: T.faint, fontFamily: T.mono }}>© 2026 adeo</span>
           <div style={{ display: "flex", gap: 16, alignItems: "center" }}>
-            <button onClick={() => { setShowMethodology(m => !m); setTimeout(() => methRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 100); }}
+            <button onClick={() => { setShowMethodology(m => !m); setShowDisclaimer(false); setTimeout(() => methRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 100); }}
               style={{ background: "none", border: "none", padding: 0, fontSize: 10, color: T.faint, fontFamily: T.mono, textDecoration: "none", cursor: "pointer" }}
               onMouseEnter={e => { e.target.style.color = T.accent; }} onMouseLeave={e => { e.target.style.color = T.faint; }}>
               How We Score
+            </button>
+            <button onClick={() => { setShowDisclaimer(d => !d); setShowMethodology(false); setTimeout(() => disclaimerRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 100); }}
+              style={{ background: "none", border: "none", padding: 0, fontSize: 10, color: T.faint, fontFamily: T.mono, textDecoration: "none", cursor: "pointer" }}
+              onMouseEnter={e => { e.target.style.color = T.accent; }} onMouseLeave={e => { e.target.style.color = T.faint; }}>
+              Disclaimer
             </button>
             <a href="https://helloadeo.com" target="_blank" rel="noopener noreferrer" style={{ fontSize: 10, color: T.faint, fontFamily: T.mono, textDecoration: "none" }}
               onMouseEnter={e => { e.target.style.color = T.accent; }} onMouseLeave={e => { e.target.style.color = T.faint; }}>helloadeo.com</a>
@@ -985,6 +992,61 @@ export default function App() {
                 <div style={{ fontSize: 11, fontFamily: T.mono, color: T.dim, fontWeight: 600, marginBottom: 8 }}>What this tool doesn't measure</div>
                 <p style={{ fontSize: 13, color: T.muted, lineHeight: 1.7, margin: 0 }}>
                   This scores <em>language differentiation</em> — whether your website copy sounds like you or sounds like everyone else. It doesn't measure brand strategy effectiveness, enrollment outcomes, or audience resonance. Scores may vary slightly between runs due to the AI component. JS-heavy sites may not be fully scrapable.
+                </p>
+              </div>
+            </div>
+          </section>
+        )}
+
+        {/* STANDALONE DISCLAIMER (footer link) */}
+        {showDisclaimer && (
+          <section ref={disclaimerRef} style={{ paddingBottom: 60 }}>
+            <div style={{ display: "grid", gap: 14 }}>
+              <div style={{ background: T.card, border: "1px solid " + T.border, borderRadius: 10, padding: "22px 24px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <div style={{ fontSize: 18, fontFamily: T.serif, color: T.text }}>Disclaimer & <span style={{ fontStyle: "italic", color: T.accent }}>Terms of Use</span></div>
+                  <button onClick={() => setShowDisclaimer(false)} style={{ background: "none", border: "none", color: T.dim, fontSize: 11, fontFamily: T.mono, cursor: "pointer" }}>Close ✕</button>
+                </div>
+              </div>
+
+              <div style={{ background: T.cardAlt, border: "1px solid " + T.border, borderRadius: 10, padding: "18px 24px" }}>
+                <div style={{ fontSize: 12, fontFamily: T.mono, color: T.dim, fontWeight: 600, marginBottom: 10 }}>What This Tool Does</div>
+                <p style={{ fontSize: 13, color: T.muted, lineHeight: 1.7, margin: 0 }}>
+                  The Blanding Detector reads publicly accessible web pages — the same content any visitor sees in a browser. It does not access password-protected areas, bypass authentication, extract private data, or circumvent any technical restrictions. The tool respects robots.txt directives and standard web access protocols.
+                </p>
+              </div>
+
+              <div style={{ background: T.cardAlt, border: "1px solid " + T.border, borderRadius: 10, padding: "18px 24px" }}>
+                <div style={{ fontSize: 12, fontFamily: T.mono, color: T.dim, fontWeight: 600, marginBottom: 10 }}>Editorial Commentary & Fair Use</div>
+                <p style={{ fontSize: 13, color: T.muted, lineHeight: 1.7, margin: 0 }}>
+                  Scores, ratings, and all commentary generated by this tool constitute editorial opinion and analysis — not statements of objective fact about institutional quality, value, or outcomes. The tool analyzes <em>language patterns</em> (cliché frequency, word diversity, content specificity) and produces transformative commentary about writing style. No institution's content is republished, redistributed, or displayed in its original form. Brief quotations used in audit results are for purposes of criticism and commentary.
+                </p>
+              </div>
+
+              <div style={{ background: T.cardAlt, border: "1px solid " + T.border, borderRadius: 10, padding: "18px 24px" }}>
+                <div style={{ fontSize: 12, fontFamily: T.mono, color: T.dim, fontWeight: 600, marginBottom: 10 }}>No Endorsement or Affiliation</div>
+                <p style={{ fontSize: 13, color: T.muted, lineHeight: 1.7, margin: 0 }}>
+                  This tool is not affiliated with, endorsed by, or connected to any institution it analyzes. School names and URLs are used solely to identify the subject of analysis. Scores do not reflect the quality of education, student outcomes, or institutional value — only the distinctiveness of publicly visible website language.
+                </p>
+              </div>
+
+              <div style={{ background: T.cardAlt, border: "1px solid " + T.border, borderRadius: 10, padding: "18px 24px" }}>
+                <div style={{ fontSize: 12, fontFamily: T.mono, color: T.dim, fontWeight: 600, marginBottom: 10 }}>Limitation of Liability</div>
+                <p style={{ fontSize: 13, color: T.muted, lineHeight: 1.7, margin: 0 }}>
+                  This tool is provided "as is" for informational and entertainment purposes. Scores may vary between runs due to the AI analysis component. adeo strategic communications makes no warranties about the accuracy, completeness, or reliability of scores and is not liable for decisions made based on audit results. If you believe your institution has been unfairly characterized, <a href="mailto:hello@helloadeo.com" style={{ color: T.accent }}>contact us</a>.
+                </p>
+              </div>
+
+              <div style={{ background: T.cardAlt, border: "1px solid " + T.border, borderRadius: 10, padding: "18px 24px" }}>
+                <div style={{ fontSize: 12, fontFamily: T.mono, color: T.dim, fontWeight: 600, marginBottom: 10 }}>Data & Privacy</div>
+                <p style={{ fontSize: 13, color: T.muted, lineHeight: 1.7, margin: 0 }}>
+                  We do not store the content of pages we analyze. Text is processed in memory during the audit and discarded. We do not build databases of institutional content. Email addresses submitted for PDF reports are used solely to deliver reports and are not sold or shared with third parties.
+                </p>
+              </div>
+
+              <div style={{ background: T.card, border: "1px solid " + T.border, borderRadius: 10, padding: "18px 24px" }}>
+                <p style={{ fontSize: 13, color: T.muted, lineHeight: 1.7, margin: 0 }}>
+                  Built by <a href="https://helloadeo.com" target="_blank" rel="noopener noreferrer" style={{ color: T.accent, textDecoration: "none", fontWeight: 600 }}>adeo strategic communications</a>. Questions or concerns? <a href="mailto:hello@helloadeo.com" style={{ color: T.accent, textDecoration: "none" }}>hello@helloadeo.com</a>
                 </p>
               </div>
             </div>

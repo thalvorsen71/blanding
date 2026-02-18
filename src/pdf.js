@@ -62,7 +62,9 @@ ${res.ai?.weak_sentence ? `<div style="margin-bottom:28px;border:1px solid #eee;
   <p style="margin:0 0 12px;font-size:14px;color:#999">This audit catches surface-level sameness. Fixing the deeper problem requires strategic partnership.</p>
   <div style="display:flex;justify-content:center;align-items:center;gap:12px;margin-bottom:4px">${adeoLogoSVG(18, '#ffffff', '#E6BDED')}</div>
   <p style="margin:0;font-size:12px;color:#666;font-family:monospace">helloadeo.com</p>
-</div></body></html>`;
+</div>
+<p style="text-align:center;font-size:9px;color:#999;margin-top:16px;line-height:1.5;font-family:system-ui,sans-serif">Scores reflect editorial analysis of website language patterns and do not represent judgments about institutional quality, educational outcomes, or value. This tool reads only publicly accessible content. Not affiliated with or endorsed by any institution analyzed. Full disclaimer at blandingaudit.netlify.app.</p>
+</body></html>`;
 
   const blob = new Blob([html], { type: "text/html" });
   const w = window.open(URL.createObjectURL(blob), "_blank");
