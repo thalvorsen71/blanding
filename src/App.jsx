@@ -263,9 +263,9 @@ export default function App() {
 
   const scrollToResult = () => setTimeout(() => resultRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 300);
 
-  const runSingle = async () => { _animatedScores.clear(); setAnalyzing(true); setProgress([]); setResult(null); setResult2(null); setActiveTab("overview"); const r = await runAudit(url1); if (r) { setResult(r); submitToLeaderboard(r); } setProgress(p => p.map(i => ({ ...i, status: "done" }))); setAnalyzing(false); scrollToResult(); };
+  const runSingle = async () => { _animatedScores.clear(); setAnalyzing(true); setProgress([]); setResult(null); setResult2(null); setActiveTab("overview"); const r = await runAudit(url1); if (r) { setResult(r); submitToLeaderboard(r); } setProgress(p => p.map(i => i.status === "error" ? i : { ...i, status: "done" })); setAnalyzing(false); scrollToResult(); };
 
-  const runCompare = async () => { _animatedScores.clear(); setAnalyzing(true); setProgress([]); setResult(null); setResult2(null); setActiveTab("overview"); addProg("Starting head-to-head audit..."); const r1 = await runAudit(url1, "A → "); const r2 = await runAudit(url2, "B → "); if (r1) { setResult(r1); submitToLeaderboard(r1); } if (r2) { setResult2(r2); submitToLeaderboard(r2); } setProgress(p => p.map(i => ({ ...i, status: "done" }))); setAnalyzing(false); scrollToResult(); };
+  const runCompare = async () => { _animatedScores.clear(); setAnalyzing(true); setProgress([]); setResult(null); setResult2(null); setActiveTab("overview"); addProg("Starting head-to-head audit..."); const r1 = await runAudit(url1, "A → "); const r2 = await runAudit(url2, "B → "); if (r1) { setResult(r1); submitToLeaderboard(r1); } if (r2) { setResult2(r2); submitToLeaderboard(r2); } setProgress(p => p.map(i => i.status === "error" ? i : { ...i, status: "done" })); setAnalyzing(false); scrollToResult(); };
 
   const runText = async () => {
     if (inputText.trim().length < 50) return;
@@ -276,7 +276,7 @@ export default function App() {
     if (ai?.voice_score) lang = Math.round(lang * 0.6 + ai.voice_score * 10 * 0.4);
     lang = Math.max(0, Math.min(100, lang));
     setResult({ url: null, schoolName: "Your Copy", pagesAnalyzed: [{ type: "text" }], overall: lang, scores: { language: lang, strategy: null }, cliches: cl, totalCliches: tc, uniqueClaims: [], stockPhrases: [], allH1: [], allH2: [], metaDesc: "", bodyText: inputText, ai });
-    setProgress(p => p.map(i => ({ ...i, status: "done" }))); setAnalyzing(false); scrollToResult();
+    setProgress(p => p.map(i => i.status === "error" ? i : { ...i, status: "done" })); setAnalyzing(false); scrollToResult();
   };
 
   const handleStayInTouch = async () => {
@@ -686,7 +686,7 @@ export default function App() {
 
               <div style={{ background: T.card, border: "1px solid " + T.border, borderRadius: 8, padding: "16px 20px", textAlign: "center" }}>
                 <p style={{ fontSize: 13, color: T.muted, margin: "0 0 8px", lineHeight: 1.6 }}>Questions about the methodology? Disagree with a score? We'd love to hear from you.</p>
-                <a href="https://helloadeo.com" target="_blank" rel="noopener noreferrer" style={{ fontSize: 13, color: T.accent, fontWeight: 600, textDecoration: "none" }}>Get in touch →</a>
+                <a href="https://www.helloadeo.com/contact" target="_blank" rel="noopener noreferrer" style={{ fontSize: 13, color: T.accent, fontWeight: 600, textDecoration: "none" }}>Get in touch →</a>
               </div>
             </div>
           )}
@@ -954,9 +954,9 @@ export default function App() {
                 onMouseLeave={e => { e.target.style.borderColor = T.borderLight; e.target.style.color = T.muted; }}>
                 Export PDF
               </button>
-              <a href="https://helloadeo.com" target="_blank" rel="noopener noreferrer"
+              <a href="https://www.helloadeo.com/contact" target="_blank" rel="noopener noreferrer"
                 style={{ background: `linear-gradient(135deg, ${T.accent}, #b06830)`, borderRadius: 9, padding: "14px 12px", color: "#fff", fontSize: 11, fontWeight: 600, textAlign: "center", display: "flex", alignItems: "center", justifyContent: "center", textDecoration: "none" }}>
-                Fix Your Brand →
+                Get in Touch →
               </a>
             </div>
 
@@ -987,45 +987,10 @@ export default function App() {
                 This tool catches the surface-level sameness. Fixing it is a different conversation — one about brand strategy, not just word choice.
               </p>
               <p style={{ fontSize: 15, fontFamily: T.serif, fontStyle: "italic", color: T.text, marginTop: 14, marginBottom: 0 }}>Curious what your institution could sound like instead?</p>
-              <a href="https://helloadeo.com" target="_blank" rel="noopener noreferrer"
+              <a href="https://www.helloadeo.com/contact" target="_blank" rel="noopener noreferrer"
                 style={{ display: "inline-block", marginTop: 14, padding: "12px 28px", background: `linear-gradient(135deg, ${T.accent}, #b06830)`, borderRadius: 8, color: "#fff", fontSize: 13, fontWeight: 600, fontFamily: T.sans, textDecoration: "none" }}>
                 Get in Touch →
               </a>
-            </div>
-
-            {/* STAY IN TOUCH — lightweight lead capture */}
-            <div style={{ marginTop: 16, background: T.card, border: "1px solid " + T.border, borderRadius: 10, padding: "24px" }}>
-              {staySent ? (
-                <div style={{ textAlign: "center", padding: "12px 0" }}>
-                  <div style={{ fontSize: 22, color: "#22c55e", marginBottom: 8 }}>✓</div>
-                  <p style={{ fontSize: 14, color: T.text, fontFamily: T.serif, fontStyle: "italic", margin: 0 }}>You're on the list — and your full PDF report is downloading now.</p>
-                </div>
-              ) : (
-                <>
-                  <div style={{ textAlign: "center", marginBottom: 16 }}>
-                    <div style={{ fontSize: 10, fontFamily: T.mono, color: T.accent, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 6 }}>Not ready to talk yet?</div>
-                    <p style={{ fontSize: 14, fontFamily: T.serif, fontStyle: "italic", color: T.text, margin: 0 }}>Drop your info and we'll keep you in the loop on higher ed branding insights.</p>
-                  </div>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 8 }}>
-                    <input value={stayName} onChange={e => setStayName(e.target.value)} placeholder="Name" aria-label="Your name"
-                      style={{ background: T.bg, border: "1px solid " + T.borderLight, borderRadius: 8, padding: "10px 14px", color: T.text, fontSize: 13, fontFamily: T.sans, outline: "none" }}
-                      onFocus={e => e.target.style.borderColor = T.accent} onBlur={e => e.target.style.borderColor = T.borderLight} />
-                    <input value={stayTitle} onChange={e => setStayTitle(e.target.value)} placeholder="Title (optional)" aria-label="Your title"
-                      style={{ background: T.bg, border: "1px solid " + T.borderLight, borderRadius: 8, padding: "10px 14px", color: T.text, fontSize: 13, fontFamily: T.sans, outline: "none" }}
-                      onFocus={e => e.target.style.borderColor = T.accent} onBlur={e => e.target.style.borderColor = T.borderLight} />
-                  </div>
-                  <div style={{ display: "flex", gap: 8 }}>
-                    <input value={stayEmail} onChange={e => setStayEmail(e.target.value)} placeholder="Email" type="email" aria-label="Your email"
-                      onKeyDown={e => e.key === "Enter" && handleStayInTouch()}
-                      style={{ flex: 1, background: T.bg, border: "1px solid " + T.borderLight, borderRadius: 8, padding: "10px 14px", color: T.text, fontSize: 13, fontFamily: T.sans, outline: "none" }}
-                      onFocus={e => e.target.style.borderColor = T.accent} onBlur={e => e.target.style.borderColor = T.borderLight} />
-                    <button onClick={handleStayInTouch} disabled={!stayEmail.includes("@")}
-                      style={{ padding: "10px 20px", background: stayEmail.includes("@") ? T.accent : "#1a1a1a", border: "none", borderRadius: 8, color: stayEmail.includes("@") ? "#fff" : "#444", fontSize: 12, fontWeight: 600, fontFamily: T.mono, whiteSpace: "nowrap" }}>
-                      Keep Me Posted
-                    </button>
-                  </div>
-                </>
-              )}
             </div>
           </section>
         )}
