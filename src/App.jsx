@@ -193,11 +193,20 @@ export default function App() {
     if (ai?.voice_score) lang = Math.round(lang * 0.6 + ai.voice_score * 10 * 0.4);
     lang = Math.max(0, Math.min(100, Math.round(lang)));
 
-    // Strategy score: base lowered from 45 to 30. Unique claims help, stock phrases hurt.
-    // Content richness contributes but is capped lower. AI scores blended at 35% (was 50%).
+    // Strategy score: base 30. Unique claims help, stock phrases hurt.
+    // AI specificity_ratio tempers everything — a site that's 90% generic doesn't
+    // get saved by one good story. The ratio acts as a multiplier on the final score.
     let strat = 30 + uniq.length * 5 - stock.length * 4 + Math.min(richness * 0.7, 15);
     if (ai?.specificity_score) strat = Math.round(strat * 0.65 + ai.specificity_score * 10 * 0.35);
     if (ai?.consistency_score) strat = Math.round(strat * 0.65 + ai.consistency_score * 10 * 0.35);
+    // Ratio adjustment: if AI reports low specificity ratio, pull score toward that reality.
+    // A 20% specific page shouldn't score above ~50 no matter what individual scores say.
+    if (ai?.specificity_ratio != null) {
+      const ratio = Math.max(0, Math.min(100, ai.specificity_ratio));
+      // Blend: 60% calculated score, 40% ratio-adjusted ceiling
+      const ratioCeiling = ratio + 15; // ratio of 20 → ceiling ~35, ratio of 70 → ceiling ~85
+      if (strat > ratioCeiling) strat = Math.round(strat * 0.6 + ratioCeiling * 0.4);
+    }
     strat = Math.max(0, Math.min(100, Math.round(strat)));
 
     const overall = Math.round(lang * 0.55 + strat * 0.45);
