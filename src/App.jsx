@@ -192,7 +192,7 @@ export default function App() {
     addProg(prefix + "Running AI brand analysis...");
     const allBody = pages.map(p => p.data.body_text || "").join(" ");
     let ai;
-    try { ai = await deepAnalysis(url, hp.body_text || JSON.stringify(hp), allBody, allH1, allH2, hp.meta_description || ""); } catch (e) { addProg(prefix + "AI analysis timed out — using cliché data only", "error"); ai = null; }
+    try { ai = await deepAnalysis(url, hp.body_text || JSON.stringify(hp), allBody, allH1, allH2, hp.meta_description || "", hp.h1 || []); } catch (e) { addProg(prefix + "AI analysis timed out — using cliché data only", "error"); ai = null; }
     const uniq = pages.flatMap(p => p.data.unique_claims || []);
     const stock = pages.flatMap(p => p.data.stock_phrases || []);
     const cliches = countCliches(allBody + " " + allH1.join(" ") + " " + allH2.join(" "));
@@ -257,7 +257,7 @@ export default function App() {
       scores: { language: lang, strategy: strat },
       cliches, totalCliches: totalC,
       uniqueClaims: uniq, stockPhrases: stock,
-      allH1, allH2, metaDesc: hp.meta_description || "", bodyText: allBody, ai,
+      homepageH1: hp.h1 || [], allH1, allH2, metaDesc: hp.meta_description || "", bodyText: allBody, ai,
       scrapeSource,
     };
   }
@@ -399,13 +399,13 @@ export default function App() {
           {/* OVERVIEW */}
           {activeTab === "overview" && res.ai && (
             <div style={{ display: "grid", gap: 12 }}>
-              {/* HERO TAGLINE — show what H1 the scraper found */}
-              {res.allH1 && res.allH1.length > 0 && (
+              {/* HERO TAGLINE — show the HOMEPAGE H1 only */}
+              {res.homepageH1 && res.homepageH1.length > 0 && (
                 <div style={{ background: T.card, border: "1px solid " + T.border, borderRadius: 10, padding: "14px 18px" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
                     <span style={{ fontSize: 11, fontFamily: T.mono, color: T.accent, textTransform: "uppercase", letterSpacing: "0.08em" }}>Hero Tagline (H1)</span>
                   </div>
-                  <p style={{ fontSize: 18, fontFamily: T.serif, fontStyle: "italic", color: T.text, margin: "0 0 8px", lineHeight: 1.4 }}>"{res.allH1[0]}"</p>
+                  <p style={{ fontSize: 18, fontFamily: T.serif, fontStyle: "italic", color: T.text, margin: "0 0 8px", lineHeight: 1.4 }}>"{res.homepageH1[0]}"</p>
                   {res.ai.hero_assessment && <p style={{ fontSize: 13, color: T.dim, lineHeight: 1.55, margin: 0 }}>{res.ai.hero_assessment}</p>}
                 </div>
               )}

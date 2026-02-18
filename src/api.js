@@ -205,7 +205,7 @@ export async function fetchSubPage(url) {
   return null; // Skip Claude for sub-pages to stay within rate limits
 }
 
-export async function deepAnalysis(url, text, allText, h1s = [], h2s = [], metaDesc = "") {
+export async function deepAnalysis(url, text, allText, h1s = [], h2s = [], metaDesc = "", homepageH1s = []) {
   const combinedText = (text + " " + allText).trim();
   const wordCount = combinedText.split(/\s+/).length;
 
@@ -241,8 +241,10 @@ IMPORTANT: A homepage full of specific stories, named events, real research high
 Your job: What strategy is this page using? How well does it execute? Does a first-time visitor leave knowing what makes this institution DIFFERENT? Give credit where credit is due for specific, vivid, timely content.
 
 URL: ${url}
-=== HERO HEADLINE (H1 tags — this is the primary brand statement visitors see first) ===
-${h1s.length > 0 ? h1s.join(" | ") : "NONE FOUND — the page has no H1 tag, which is itself a brand problem."}
+=== HOMEPAGE H1 (the hero tagline — this is THE primary brand statement visitors see first) ===
+${homepageH1s.length > 0 ? homepageH1s.join(" | ") : "NONE FOUND — the homepage has no H1 tag, which is itself a brand problem."}
+=== ALL H1 TAGS ACROSS SITE (homepage + sub-pages) ===
+${h1s.length > 0 ? h1s.join(" | ") : "NONE FOUND"}
 === KEY HEADINGS (H2 tags — these frame the page's content sections) ===
 ${h2s.length > 0 ? h2s.slice(0, 15).join(" | ") : "NONE FOUND"}
 === META DESCRIPTION (what search engines show) ===
