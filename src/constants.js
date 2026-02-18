@@ -1,5 +1,6 @@
 /* ═══ CLICHÉ DATABASE ═══ */
 export const CLICHES = [
+  // --- Classic higher ed emptiness ---
   "world-class","cutting-edge","state-of-the-art","best and brightest","leaders of tomorrow",
   "transforming lives","global citizens","rigorous academics","vibrant community","diverse perspectives",
   "holistic approach","innovative research","excellence in","committed to excellence","rich tradition",
@@ -20,7 +21,81 @@ export const CLICHES = [
   "reimagining","revolutionizing","inspiring","inspired by","rooted in","grounded in",
   "preparing the next generation","tomorrow's leaders","world of possibilities","make an impact",
   "tradition of innovation","culture of excellence","legacy of","spirit of","commitment to",
-  "aspire to","strive for","journey of discovery","path to success","bridge to"
+  "aspire to","strive for","journey of discovery","path to success","bridge to",
+
+  // --- Mission statement bingo ---
+  "reach for your goals","achieve your goals","achieve your dreams","reach your goals",
+  "supportive education","practical skills","career-ready","career-focused","market-driven",
+  "job-ready","in-demand careers","high-demand fields","flexible learning","flexible programs",
+  "affordable education","accessible education","quality education","higher education",
+  "academic programs","degree programs","online programs","innovative solutions",
+  "student success","success story","start your success","your success","success stories",
+
+  // --- Conversion funnel filler ---
+  "take the next step","get started today","start your journey","begin your journey",
+  "your journey starts","learn more about","explore programs","explore our","discover more",
+  "find out more","request information","calculate your cost","plan your visit",
+  "apply today","apply now","start today","enroll today","enroll now",
+  "the education you need","education and support","support you need",
+
+  // --- Vague purpose statements ---
+  "developing leaders","develop leaders","change makers","making a difference",
+  "making an impact","positive impact","impact the world","impact on the world",
+  "shape the future","build the future","building futures","building a better",
+  "better world","better tomorrow","brighter future","brighter tomorrow",
+  "innovation in higher education","innovation in education","years of innovation",
+  "years of excellence","history of excellence","history of innovation",
+
+  // --- Community platitudes ---
+  "sense of community","sense of belonging","community of scholars","community of learners",
+  "learning community","campus community","global community","international community",
+  "diverse community","tight-knit","tight knit","small class","small classes",
+  "faculty who care","professors who","mentoring relationships","mentor relationships",
+
+  // --- Promise without proof ---
+  "transformative","transform your","empowering","empowerment","world of opportunity",
+  "opportunities for","limitless possibilities","unlimited potential","full potential",
+  "fullest potential","highest potential","unique potential","realize your potential",
+  "shape your future","your future starts","future-ready","future ready",
+  "prepare you for","prepared to lead","equip you with","the skills you need",
+  "skills and knowledge","tools and resources","knowledge and skills",
+
+  // --- Filler adjectives ---
+  "exceptional","outstanding","unparalleled","unmatched","unrivaled",
+  "extraordinary","remarkable","groundbreaking","pioneering","trailblazing",
+  "forward-thinking","progressive","leading","premier","preeminent",
+
+  // --- Stock identity claims ---
+  "who we are","our values","our commitment","our promise","our vision",
+  "our mission","mission-driven","values-driven","purpose-driven","faith-based",
+  "faith-forward","christ-centered","biblically-based",
+  "the only university","only institution of its kind","unlike any other",
+  "like no other","one of a kind","truly unique","uniquely positioned",
+
+  // --- Outcome vagueness ---
+  "career outcomes","career services","career development","career advancement",
+  "professional development","professional growth","personal growth","personal development",
+  "leadership development","leadership skills","leadership opportunities",
+  "research opportunities","experiential learning","service learning",
+  "study abroad","global experiences","global opportunities","cultural experiences",
+
+  // --- Campus life generics ---
+  "campus life","student life","student experience","college experience",
+  "residential experience","living and learning","learning environment",
+  "state-of-the-art facilities","modern facilities","world-class facilities",
+  "cutting-edge technology","latest technology","advanced technology",
+  "dining options","dining experience","recreational facilities",
+
+  // --- Application pressure ---
+  "don't wait","limited spots","spaces are limited","seats are limited",
+  "rolling admissions","no application fee","free to apply","waived application fee",
+  "generous scholarships","merit-based","need-based","financial aid available",
+
+  // --- Diversity checkbox language ---
+  "we celebrate","we value","we embrace","we welcome","we believe in",
+  "all backgrounds","all walks of life","from all over the world",
+  "nations represented","countries represented","states represented",
+  "diverse student body","multicultural","inclusive excellence"
 ];
 
 export const NAV_CLICHES = [
@@ -49,16 +124,16 @@ export const T = {
 
 /* ═══ SCORING ═══ */
 export const scoreColor = s =>
-  s >= 70 ? "#22c55e" : s >= 50 ? "#84cc16" : s >= 35 ? "#eab308" : s >= 18 ? "#f97316" : "#ef4444";
+  s >= 75 ? "#22c55e" : s >= 55 ? "#84cc16" : s >= 40 ? "#eab308" : s >= 22 ? "#f97316" : "#ef4444";
 
 export const scoreLabel = s =>
-  s >= 75 ? "Standing Out" : s >= 55 ? "Getting There" : s >= 35 ? "Blending In" : s >= 18 ? "Wallpaper" : "Invisible";
+  s >= 80 ? "Standing Out" : s >= 65 ? "Getting There" : s >= 45 ? "Blending In" : s >= 25 ? "Wallpaper" : "Invisible";
 
 export const scoreVerdict = s => {
-  if (s >= 75) return "Your brand has real texture. Prospective students can feel the difference.";
-  if (s >= 55) return "Sparks of personality buried under institutional safety. The bones are good — the voice needs conviction.";
-  if (s >= 35) return "You sound like a college. That's the problem. Swap your name with any peer and nobody notices.";
-  if (s >= 18) return "Institutional wallpaper. Every page reads like it was approved by a committee afraid of saying anything.";
+  if (s >= 80) return "Your brand has real texture. Prospective students can feel the difference.";
+  if (s >= 65) return "Sparks of personality buried under institutional safety. The bones are good — the voice needs conviction.";
+  if (s >= 45) return "You sound like a college. That's the problem. Swap your name with any peer and nobody notices.";
+  if (s >= 25) return "Institutional wallpaper. Every page reads like it was approved by a committee afraid of saying anything.";
   return "The higher ed greatest hits album. Your web presence could belong to any institution in the country.";
 };
 

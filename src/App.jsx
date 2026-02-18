@@ -180,22 +180,24 @@ export default function App() {
     // Content richness bonus: rewards specific, distinctive content (0-30 pts)
     const richness = contentRichnessBonus(allBody, allH1, allH2, uniq);
 
-    // Language score: purely about cliché usage — richness does NOT offset clichés.
-    // Having a great event description doesn't make "prepare students" less bland.
-    let lang = 100 - Math.min(cliches.length * 4, 45) - Math.min((totalC / Math.max(wc / 100, 1)) * 6, 25) - (uniq.length < 2 ? 10 : 0);
+    // Language score: penalizes cliché usage. More clichés found = lower score.
+    // With expanded dictionary, expect more hits — each unique cliché costs 3pts (was 4),
+    // but density penalty is stricter and "you know better" penalty kicks in harder.
+    let lang = 100 - Math.min(cliches.length * 3, 50) - Math.min((totalC / Math.max(wc / 100, 1)) * 7, 30) - (uniq.length < 2 ? 10 : 0);
     // "You know better" penalty: if content is rich but you still use clichés,
     // it proves you CAN be specific but chose platitudes in spots.
-    if (richness > 12 && cliches.length > 0) lang -= Math.min(cliches.length * 2, 10);
+    if (richness > 10 && cliches.length > 3) lang -= Math.min(cliches.length * 2, 15);
     // Thin content penalty: saying nothing isn't the same as being distinctive.
-    // Under 300 words on a homepage means you're absent, not differentiated.
-    if (wc < 300) lang -= Math.round((300 - wc) / 30);
-    if (ai?.voice_score) lang = (lang + ai.voice_score * 10) / 2;
+    if (wc < 300) lang -= Math.round((300 - wc) / 25);
+    // AI voice score blended at 40% AI / 60% mechanical (was 50/50)
+    if (ai?.voice_score) lang = Math.round(lang * 0.6 + ai.voice_score * 10 * 0.4);
     lang = Math.max(0, Math.min(100, Math.round(lang)));
 
-    // Strategy score: unique claims, stock phrases, content richness (where it belongs)
-    let strat = 45 + uniq.length * 5 - stock.length * 3 + Math.min(richness * 0.8, 20);
-    if (ai?.specificity_score) strat = (strat + ai.specificity_score * 10) / 2;
-    if (ai?.consistency_score) strat = (strat + ai.consistency_score * 10) / 2;
+    // Strategy score: base lowered from 45 to 30. Unique claims help, stock phrases hurt.
+    // Content richness contributes but is capped lower. AI scores blended at 35% (was 50%).
+    let strat = 30 + uniq.length * 5 - stock.length * 4 + Math.min(richness * 0.7, 15);
+    if (ai?.specificity_score) strat = Math.round(strat * 0.65 + ai.specificity_score * 10 * 0.35);
+    if (ai?.consistency_score) strat = Math.round(strat * 0.65 + ai.consistency_score * 10 * 0.35);
     strat = Math.max(0, Math.min(100, Math.round(strat)));
 
     const overall = Math.round(lang * 0.55 + strat * 0.45);
@@ -220,8 +222,8 @@ export default function App() {
     setAnalyzing(true); setProgress([]); setResult(null); setResult2(null); setActiveTab("overview");
     addProg("Analyzing copy..."); const cl = countCliches(inputText); const tc = cl.reduce((s, c) => s + c.count, 0);
     addProg("Running AI analysis..."); const ai = await deepAnalysis("(pasted text)", inputText, "");
-    let lang = 100 - Math.min(cl.length * 4, 45) - Math.min((tc / Math.max(inputText.split(/\s+/).length / 100, 1)) * 7, 30);
-    if (ai?.voice_score) lang = Math.round((lang + ai.voice_score * 10) / 2);
+    let lang = 100 - Math.min(cl.length * 3, 50) - Math.min((tc / Math.max(inputText.split(/\s+/).length / 100, 1)) * 7, 30);
+    if (ai?.voice_score) lang = Math.round(lang * 0.6 + ai.voice_score * 10 * 0.4);
     lang = Math.max(0, Math.min(100, lang));
     setResult({ url: null, schoolName: "Your Copy", pagesAnalyzed: [{ type: "text" }], overall: lang, scores: { language: lang, strategy: null }, cliches: cl, totalCliches: tc, uniqueClaims: [], stockPhrases: [], allH1: [], allH2: [], metaDesc: "", bodyText: inputText, ai });
     setProgress(p => p.map(i => ({ ...i, status: "done" }))); setAnalyzing(false); scrollToResult();
