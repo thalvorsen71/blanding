@@ -138,6 +138,11 @@ export default function App() {
           cliches: res.totalCliches, pagesAudited: res.pagesAnalyzed?.length || 1,
         }),
       });
+      // Re-fetch leaderboard after successful submit so new entries appear immediately
+      const r = await fetch("/.netlify/functions/leaderboard");
+      const d = await r.json();
+      if (d.schools?.length) setLeaderboard(d.schools);
+      if (d.count) setAuditCount(d.count);
     } catch (e) { console.warn("Leaderboard submit failed:", e); }
   }, []);
 
@@ -392,7 +397,7 @@ export default function App() {
     return (
       <>
         <div className="tab-bar" role="tablist" aria-label="Audit result tabs" style={{ display: "flex", gap: 4, marginTop: 20, overflowX: "auto", paddingBottom: 4 }}>
-          {avail.map(t => <button key={t} role="tab" aria-selected={activeTab === t} onClick={() => { setActiveTab(t); if (t === "leaderboard" && leaderboard.length === 0) fetchLeaderboard(); }} style={{ padding: "7px 14px", borderRadius: 6, border: `1px solid ${activeTab === t ? T.accent : T.borderLight}`, background: activeTab === t ? T.accent + "15" : "transparent", color: activeTab === t ? T.accent : T.dim, fontSize: 13, fontFamily: T.mono, whiteSpace: "nowrap" }}>{labels[t]}</button>)}
+          {avail.map(t => <button key={t} role="tab" aria-selected={activeTab === t} onClick={() => { setActiveTab(t); if (t === "leaderboard") fetchLeaderboard(); }} style={{ padding: "7px 14px", borderRadius: 6, border: `1px solid ${activeTab === t ? T.accent : T.borderLight}`, background: activeTab === t ? T.accent + "15" : "transparent", color: activeTab === t ? T.accent : T.dim, fontSize: 13, fontFamily: T.mono, whiteSpace: "nowrap" }}>{labels[t]}</button>)}
         </div>
         <div style={{ marginTop: 14 }}>
 
