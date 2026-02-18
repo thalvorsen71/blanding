@@ -575,8 +575,8 @@ export default function App() {
                 </div>
               )}
               <div style={{ background: T.cardAlt, border: "1px solid " + T.border, borderRadius: 8, padding: "16px 20px", textAlign: "center" }}>
-                <p style={{ fontSize: 13, color: T.muted, margin: "0 0 6px", lineHeight: 1.6 }}>These are starting points. Real differentiation requires strategic partnership.</p>
-                <a href="https://helloadeo.com" target="_blank" rel="noopener noreferrer" style={{ fontSize: 13, color: T.accent, fontWeight: 600 }}>Let's talk → helloadeo.com</a>
+                <p style={{ fontSize: 13, color: T.muted, margin: "0 0 6px", lineHeight: 1.6 }}>These are starting points — the kind of thing we think about a lot.</p>
+                <a href="https://helloadeo.com" target="_blank" rel="noopener noreferrer" style={{ fontSize: 13, color: T.accent, fontWeight: 600 }}>helloadeo.com</a>
               </div>
             </div>
           )}
@@ -984,9 +984,9 @@ export default function App() {
 
             <div style={{ marginTop: 32, padding: "28px 24px", background: T.cardAlt, borderRadius: 10, border: "1px solid #161616", textAlign: "center" }}>
               <p style={{ fontSize: 13, color: T.muted, lineHeight: 1.65, margin: 0, maxWidth: 540, marginLeft: "auto", marginRight: "auto" }}>
-                This tool catches the surface-level sameness. The deeper problem — why institutions default to generic language and how to build a brand that actually differentiates — requires a strategic partner who understands higher ed from the inside.
+                This tool catches the surface-level sameness. Fixing it is a different conversation — one about brand strategy, not just word choice.
               </p>
-              <p style={{ fontSize: 15, fontFamily: T.serif, fontStyle: "italic", color: T.text, marginTop: 14, marginBottom: 0 }}>Want to talk to an expert about your institution's brand communications?</p>
+              <p style={{ fontSize: 15, fontFamily: T.serif, fontStyle: "italic", color: T.text, marginTop: 14, marginBottom: 0 }}>Curious what your institution could sound like instead?</p>
               <a href="https://helloadeo.com" target="_blank" rel="noopener noreferrer"
                 style={{ display: "inline-block", marginTop: 14, padding: "12px 28px", background: `linear-gradient(135deg, ${T.accent}, #b06830)`, borderRadius: 8, color: "#fff", fontSize: 13, fontWeight: 600, fontFamily: T.sans, textDecoration: "none" }}>
                 Get in Touch →
@@ -1136,7 +1136,7 @@ export default function App() {
               <div style={{ background: T.cardAlt, border: "1px solid " + T.border, borderRadius: 10, padding: "18px 24px" }}>
                 <div style={{ fontSize: 12, fontFamily: T.mono, color: T.dim, fontWeight: 600, marginBottom: 10 }}>Limitation of Liability</div>
                 <p style={{ fontSize: 13, color: T.muted, lineHeight: 1.7, margin: 0 }}>
-                  This tool is provided "as is" for informational and entertainment purposes. Scores may vary between runs due to the AI analysis component. adeo makes no warranties about the accuracy, completeness, or reliability of scores and is not liable for decisions made based on audit results. If you believe your institution has been unfairly characterized, <a href="mailto:hello@helloadeo.com" style={{ color: T.accent }}>contact us</a>.
+                  This is an experimental tool provided "as is" for informational and entertainment purposes. Scores may vary between runs due to the AI analysis component. No warranties are made about the accuracy, completeness, or reliability of scores, and they should not be the basis for institutional decisions. If you believe your institution has been unfairly characterized, <a href="mailto:hello@helloadeo.com" style={{ color: T.accent }}>contact us</a>.
                 </p>
               </div>
 
