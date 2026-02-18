@@ -331,7 +331,10 @@ export default function App() {
         {!compact && res.pagesAnalyzed?.length <= 1 && (res.bodyText || "").split(/\s+/).length < 400 && (
           <div style={{ background: "#1a1a00", border: "1px solid #3d3d00", borderRadius: 8, padding: "10px 14px", marginTop: 10, display: "flex", alignItems: "center", gap: 8, position: "relative" }}>
             <span style={{ fontSize: 14 }}>⚠</span>
-            <p style={{ fontSize: 11, color: "#cca700", margin: 0, fontFamily: T.mono, lineHeight: 1.4 }}>Limited content detected — this site may use heavy JavaScript. Score based on what we could extract; full picture may differ.</p>
+            <div style={{ fontSize: 11, color: "#cca700", margin: 0, fontFamily: T.mono, lineHeight: 1.6 }}>
+              <p style={{ margin: 0 }}>Limited content detected — this site likely uses heavy JavaScript rendering. Score based on what we could extract; full picture may differ.</p>
+              <p style={{ margin: "6px 0 0", fontSize: 10, color: "#aa8800" }}>Worth noting: if our scraper can't read this site, neither can AI search tools like ChatGPT, Perplexity, or Claude. That means prospective students using AI to research schools may not see this institution's content at all. <a href="https://web.dev/articles/rendering-on-the-web" target="_blank" rel="noopener noreferrer" style={{ color: "#cca700", textDecoration: "underline" }}>Learn how to fix this →</a></p>
+            </div>
           </div>
         )}
         {res.ai?.tone_diagnosis && (
@@ -531,6 +534,17 @@ export default function App() {
                   <p style={{ fontSize: 14, color: T.text, lineHeight: 1.6, margin: 0 }}>{r.t}</p>
                 </div>
               ))}
+              {res.pagesAnalyzed?.length <= 1 && (res.bodyText || "").split(/\s+/).length < 400 && (
+                <div style={{ background: "#1a1a00", border: "1px solid #3d3d00", borderRadius: 10, padding: "18px 20px", borderLeft: "3px solid #cca700" }}>
+                  <div style={{ fontSize: 10, fontFamily: T.mono, color: "#cca700", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6 }}>Rx: AI Visibility</div>
+                  <p style={{ fontSize: 14, color: T.text, lineHeight: 1.6, margin: 0 }}>
+                    This site appears to use heavy JavaScript rendering, which limited what our scraper could extract. This isn't just a scoring issue — <strong style={{ color: "#cca700" }}>69% of AI crawlers can't execute JavaScript</strong>. That means tools like ChatGPT, Perplexity, and Claude may not be able to read this site's content either. As more prospective students use AI to research schools, a JS-heavy site without server-side rendering risks being invisible to an entire discovery channel.
+                  </p>
+                  <p style={{ fontSize: 12, color: "#aa8800", margin: "8px 0 0", lineHeight: 1.5 }}>
+                    Fix: Ask your web team about server-side rendering (SSR) or pre-rendering. <a href="https://web.dev/articles/rendering-on-the-web" target="_blank" rel="noopener noreferrer" style={{ color: "#cca700", textDecoration: "underline" }}>Google's guide to rendering strategies →</a>
+                  </p>
+                </div>
+              )}
               <div style={{ background: T.cardAlt, border: "1px solid " + T.border, borderRadius: 8, padding: "16px 20px", textAlign: "center" }}>
                 <p style={{ fontSize: 13, color: T.muted, margin: "0 0 6px", lineHeight: 1.6 }}>These are starting points. Real differentiation requires strategic partnership.</p>
                 <a href="https://helloadeo.com" target="_blank" rel="noopener noreferrer" style={{ fontSize: 13, color: T.accent, fontWeight: 600 }}>Let's talk → helloadeo.com</a>

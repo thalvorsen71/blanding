@@ -18,12 +18,14 @@ export function exportPDF(res) {
     `<span style="display:inline-block;background:#c8784015;border:1px solid #c8784040;border-radius:4px;padding:3px 10px;margin:3px;font-size:12px;color:#c87840;font-family:monospace">${c.phrase}${c.count > 1 ? ` ×${c.count}` : ""}</span>`
   ).join("");
 
+  const isJSHeavy = res.pagesAnalyzed?.length <= 1 && (res.bodyText || "").split(/\s+/).length < 400;
   const rx = [
     res.ai?.rx_language && { l: "Language & Voice", t: res.ai.rx_language },
     res.ai?.rx_strategy && { l: "Content Strategy", t: res.ai.rx_strategy },
+    isJSHeavy && { l: "AI Visibility", t: "This site uses heavy JavaScript rendering, which limits what AI tools can read. 69% of AI crawlers — including ChatGPT, Perplexity, and Claude — can't execute JavaScript. As prospective students increasingly use AI to research schools, a JS-heavy site without server-side rendering risks being invisible to an entire discovery channel. Ask your web team about SSR or pre-rendering. Learn more: web.dev/articles/rendering-on-the-web", jsWarn: true },
   ].filter(Boolean).map(r =>
-    `<div style="margin-bottom:14px;padding:12px 16px;background:#f8f6f3;border-radius:6px;border-left:3px solid #c87840">
-      <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.1em;color:#c87840;margin-bottom:6px;font-family:monospace">${r.l}</div>
+    `<div style="margin-bottom:14px;padding:12px 16px;background:${r.jsWarn ? "#fffde6" : "#f8f6f3"};border-radius:6px;border-left:3px solid ${r.jsWarn ? "#cca700" : "#c87840"}">
+      <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.1em;color:${r.jsWarn ? "#8a7600" : "#c87840"};margin-bottom:6px;font-family:monospace">${r.l}</div>
       <div style="font-size:13px;color:#333;line-height:1.6">${r.t}</div>
     </div>`
   ).join("");
@@ -39,7 +41,10 @@ export function exportPDF(res) {
   <span style="margin-left:auto;font-size:11px;color:#bbb;font-family:monospace">${new Date().toLocaleDateString()}</span>
 </div>
 <h1 style="font-family:'Instrument Serif',Georgia,serif;font-weight:400;font-size:36px;margin:0 0 4px">Blanding Detector<span style="color:#c87840;font-style:italic"> Report</span></h1>
-<p style="color:#888;font-size:14px;margin:0 0 32px">${res.url || "Text analysis"} — ${res.pagesAnalyzed.length} page${res.pagesAnalyzed.length > 1 ? "s" : ""} audited</p>
+<p style="color:#888;font-size:14px;margin:0 0 ${res.pagesAnalyzed.length <= 1 && (res.bodyText || "").split(/\s+/).length < 400 ? "12px" : "32px"}">${res.url || "Text analysis"} — ${res.pagesAnalyzed.length} page${res.pagesAnalyzed.length > 1 ? "s" : ""} audited</p>
+${res.pagesAnalyzed.length <= 1 && (res.bodyText || "").split(/\s+/).length < 400 ? `<div style="background:#fffde6;border:1px solid #e6d500;border-radius:8px;padding:12px 16px;margin-bottom:28px;font-size:12px;color:#665c00;line-height:1.5">
+  <strong>Limited content detected.</strong> This site likely uses heavy JavaScript rendering. Score based on what we could extract. Worth noting: if our scraper can't read this site, neither can AI search tools like ChatGPT, Perplexity, or Claude — prospective students using AI to research schools may not see this content at all. <a href="https://web.dev/articles/rendering-on-the-web" style="color:#665c00">Learn how to fix this →</a>
+</div>` : ""}
 <div style="text-align:center;padding:32px;background:#faf9f7;border-radius:12px;margin-bottom:28px">
   <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.1em;color:#888;margin-bottom:12px;font-family:monospace">Overall Differentiation Score</div>
   <div style="font-size:72px;font-family:'Instrument Serif',Georgia,serif;color:${scoreColor(res.overall)};line-height:1">${res.overall}<span style="font-size:24px;color:#ccc">/100</span></div>
