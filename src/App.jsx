@@ -788,14 +788,33 @@ export default function App() {
                 </div>
               ))}
             </div>
-            {/* If failed, offer paste fallback */}
+            {/* If failed, show AI visibility diagnostic + paste fallback */}
             {progress.some(p => p.status === "error" && p.msg.includes("Could not reach")) && !analyzing && (
-              <div style={{ marginTop: 10, background: T.cardAlt, border: "1px solid " + T.border, borderRadius: 8, padding: "14px 18px", textAlign: "center" }}>
-                <p style={{ fontSize: 13, color: T.muted, margin: "0 0 8px" }}>Can't reach this site? Try pasting your homepage copy instead.</p>
-                <button onClick={() => { setMode("text"); setProgress([]); }}
-                  style={{ padding: "8px 18px", background: T.accent + "20", border: "1px solid " + T.accent + "40", borderRadius: 6, color: T.accent, fontSize: 12, fontFamily: T.mono }}>
-                  Switch to Paste Text
-                </button>
+              <div style={{ marginTop: 16 }}>
+                {/* Diagnostic card */}
+                <div style={{ background: "#1a0a0a", border: "1px solid #3d1515", borderRadius: 10, padding: "22px 24px", marginBottom: 12 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
+                    <span style={{ fontSize: 18 }}>🚫</span>
+                    <span style={{ fontSize: 14, fontWeight: 600, color: "#ef4444", fontFamily: T.mono, letterSpacing: "0.04em" }}>Site Blocking Automated Access</span>
+                  </div>
+                  <p style={{ fontSize: 14, color: T.text, lineHeight: 1.7, margin: "0 0 10px" }}>
+                    This site's server is actively rejecting non-browser requests. Our scraper tried multiple methods and was blocked each time.
+                  </p>
+                  <p style={{ fontSize: 13, color: "#cca700", lineHeight: 1.7, margin: "0 0 10px", background: "#1a1a00", border: "1px solid #3d3d00", borderRadius: 6, padding: "10px 14px" }}>
+                    <strong>Why this matters:</strong> AI search tools like ChatGPT, Perplexity, and Claude use similar automated requests to index content. If our scraper can't get through, there's a good chance theirs can't either — meaning this institution may be <strong>invisible to AI-powered search and discovery</strong>.
+                  </p>
+                  <p style={{ fontSize: 12, color: T.dim, lineHeight: 1.6, margin: 0 }}>
+                    This is a server configuration issue, not a content issue. It's fixable — the web team can whitelist AI crawlers or adjust bot-detection rules without compromising security. <a href="https://web.dev/articles/rendering-on-the-web" target="_blank" rel="noopener noreferrer" style={{ color: "#cca700", textDecoration: "underline" }}>Learn more →</a>
+                  </p>
+                </div>
+                {/* Paste text fallback */}
+                <div style={{ background: T.cardAlt, border: "1px solid " + T.border, borderRadius: 8, padding: "14px 18px", textAlign: "center" }}>
+                  <p style={{ fontSize: 13, color: T.muted, margin: "0 0 8px" }}>Want a Language & Voice score anyway? Copy your homepage text and paste it below.</p>
+                  <button onClick={() => { setMode("text"); setProgress([]); }}
+                    style={{ padding: "8px 18px", background: T.accent + "20", border: "1px solid " + T.accent + "40", borderRadius: 6, color: T.accent, fontSize: 12, fontFamily: T.mono, cursor: "pointer" }}>
+                    Switch to Paste Text
+                  </button>
+                </div>
               </div>
             )}
           </section>
