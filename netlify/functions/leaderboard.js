@@ -109,17 +109,44 @@ export async function handler(event) {
       const { data: rawData } = await readData(store);
       let data = rawData || {};
 
-      // Upsert
-      data[hostname] = {
-        name: name.substring(0, 100),
-        url: hostname,
-        overall: Math.max(0, Math.min(100, Math.round(overall))),
-        language: language != null ? Math.max(0, Math.min(100, Math.round(language))) : null,
-        strategy: strategy != null ? Math.max(0, Math.min(100, Math.round(strategy))) : null,
-        cliches: cliches != null ? Math.max(0, cliches) : null,
-        pagesAudited: pagesAudited || 1,
-        lastAudited: new Date().toISOString(),
-      };
+      // Upsert with rolling average (stabilizes scores across runs)
+      const existing = data[hostname];
+      const runs = (existing?.runs || 0) + 1;
+      const clampScore = (v) => v != null ? Math.max(0, Math.min(100, Math.round(v))) : null;
+
+      if (existing && runs > 1) {
+        // Weighted rolling average: new score gets 1/runs weight, capped at 40% influence
+        const newWeight = Math.min(1 / runs, 0.4);
+        const oldWeight = 1 - newWeight;
+        const avg = (oldVal, newVal) => {
+          if (oldVal == null || newVal == null) return newVal != null ? clampScore(newVal) : oldVal;
+          return clampScore(oldVal * oldWeight + newVal * newWeight);
+        };
+        data[hostname] = {
+          ...existing,
+          name: name.substring(0, 100),
+          overall: avg(existing.overall, overall),
+          language: avg(existing.language, language),
+          strategy: avg(existing.strategy, strategy),
+          cliches: cliches != null ? Math.round((existing.cliches || 0) * oldWeight + cliches * newWeight) : existing.cliches,
+          pagesAudited: Math.max(existing.pagesAudited || 1, pagesAudited || 1),
+          runs,
+          lastAudited: new Date().toISOString(),
+        };
+      } else {
+        // First audit for this school
+        data[hostname] = {
+          name: name.substring(0, 100),
+          url: hostname,
+          overall: clampScore(overall),
+          language: clampScore(language),
+          strategy: clampScore(strategy),
+          cliches: cliches != null ? Math.max(0, cliches) : null,
+          pagesAudited: pagesAudited || 1,
+          runs: 1,
+          lastAudited: new Date().toISOString(),
+        };
+      }
 
       // Persist
       await writeData(store, data);

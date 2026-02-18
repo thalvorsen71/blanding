@@ -258,12 +258,22 @@ CRITICAL GROUNDING RULES — READ CAREFULLY:
 RATIO ASSESSMENT — This is critical:
 Look at ALL the text on the page. What percentage is genuinely specific (names, dates, numbers, unique programs, real stories) vs. generic filler (platitudes, stock CTAs, boilerplate)? A page with one great story buried in 90% generic copy is NOT a specific page. A page that is 80% real content with a few stock CTAs IS specific. Score the RATIO, not the best moment.
 
+SCORING CALIBRATION — USE THE FULL RANGE:
+Do NOT cluster scores in the 4-7 range. Use the ENTIRE 1-10 scale. Here are anchors:
+- voice_score 9-10: A page so distinctive you could identify the school with the logo removed. Specific stories, named people, unique turns of phrase.
+- voice_score 5-6: Mix of institutional personality and generic marketing. Some distinctive moments buried in boilerplate.
+- voice_score 1-3: Could be ANY school. Pure stock phrases, no institutional personality whatsoever.
+- specificity_score 9-10: The page is overwhelmingly concrete — named professors, specific research, real numbers, dated events.
+- specificity_score 5-6: Some real content alongside significant generic filler.
+- specificity_score 1-3: Wall-to-wall platitudes. "World-class faculty committed to transformative excellence."
+If the page is genuinely excellent, score it 8-10. If it's genuinely bad, score it 1-3. Do not default to the middle.
+
 Return JSON only:
 {
-  "voice_score": 1-10 (1=no distinct voice, 10=unmistakably this institution. NOTE: specific stories, named events, and real news contribute to voice even if some generic language also exists),
-  "specificity_score": 1-10 (1=all vague platitudes, 10=concrete details, named people/events/programs, specific numbers. Give HIGH scores to pages with real news stories, named events, specific research, concrete facts — even if they also have some generic CTAs),
-  "specificity_ratio": 0-100 (what PERCENTAGE of the total page content is genuinely specific and distinctive? 0=entirely generic platitudes, 100=every word is concrete and unique to this institution. A page that is 90% boilerplate with one specific story = 10-15. A page that is mostly real news and details with some generic CTAs = 70-85. Be honest about the ratio.),
-  "consistency_score": 1-10 (1=scattered identity, 10=every element reinforces who they are),
+  "voice_score": 1-10 (USE FULL RANGE — 1=could be any school, 10=unmistakably this institution. Specific stories, named events, real news all contribute to voice),
+  "specificity_score": 1-10 (USE FULL RANGE — 1=all vague platitudes, 10=overwhelmingly concrete with named people, events, numbers, programs),
+  "specificity_ratio": 0-100 (what PERCENTAGE of total page content is genuinely specific? 0=entirely generic, 100=every word is concrete. A page that is 90% boilerplate = 10-15. A page that is mostly real content with a few stock CTAs = 70-85. Be honest.),
+  "consistency_score": 1-10 (USE FULL RANGE — 1=scattered identity, 10=every element reinforces who they are),
   "tone_diagnosis": "describe the brand personality based on ALL the content in the scraped text. As a person at a dinner party, 2 sentences, funny and specific. Reference actual phrases from the text.",
   "biggest_sin": "the biggest brand strategy failure — reference QUOTED phrases from the scraped text. 1-2 sentences.",
   "best_moment": "the most distinctive content, QUOTING actual phrases from the scraped text. If nothing distinctive, say so.",
