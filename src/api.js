@@ -205,7 +205,7 @@ export async function fetchSubPage(url) {
   return null; // Skip Claude for sub-pages to stay within rate limits
 }
 
-export async function deepAnalysis(url, text, allText) {
+export async function deepAnalysis(url, text, allText, h1s = [], h2s = [], metaDesc = "") {
   const combinedText = (text + " " + allText).trim();
   const wordCount = combinedText.split(/\s+/).length;
 
@@ -241,9 +241,15 @@ IMPORTANT: A homepage full of specific stories, named events, real research high
 Your job: What strategy is this page using? How well does it execute? Does a first-time visitor leave knowing what makes this institution DIFFERENT? Give credit where credit is due for specific, vivid, timely content.
 
 URL: ${url}
-=== SCRAPED TEXT (THIS IS THE ONLY CONTENT ON THE PAGE) ===
+=== HERO HEADLINE (H1 tags — this is the primary brand statement visitors see first) ===
+${h1s.length > 0 ? h1s.join(" | ") : "NONE FOUND — the page has no H1 tag, which is itself a brand problem."}
+=== KEY HEADINGS (H2 tags — these frame the page's content sections) ===
+${h2s.length > 0 ? h2s.slice(0, 15).join(" | ") : "NONE FOUND"}
+=== META DESCRIPTION (what search engines show) ===
+${metaDesc || "NONE FOUND"}
+=== FULL PAGE TEXT ===
 ${text.substring(0, 4000)}
-=== END OF SCRAPED TEXT ===
+=== END OF PAGE TEXT ===
 Other pages sampled: ${allText.substring(0, 800)}
 
 CRITICAL GROUNDING RULES — READ CAREFULLY:
@@ -259,8 +265,9 @@ RATIO ASSESSMENT — This is critical:
 Look at ALL the text on the page. What percentage is genuinely specific (names, dates, numbers, unique programs, real stories) vs. generic filler (platitudes, stock CTAs, boilerplate)? A page with one great story buried in 90% generic copy is NOT a specific page. A page that is 80% real content with a few stock CTAs IS specific. Score the RATIO, not the best moment.
 
 CONTENT TYPE HIERARCHY — NOT ALL CONTENT IS EQUAL:
-News items, event listings, and press releases should NOT boost scores as much as branded copy. Here's how to weight what you see:
-- H1s, H2s, hero text, taglines, value propositions → HIGHEST weight. This is the brand voice. If clichés appear here, it's a brand identity problem.
+The H1 and H2 tags are listed SEPARATELY above. These are the primary brand statements. Assess them FIRST before looking at body text.
+- H1 (hero headline/tagline) → HIGHEST weight. This is THE brand statement. A distinctive H1 like "Start Ahead. Stay There." or "Think Independently" is a major brand asset that should be called out in your analysis. A generic H1 like "Welcome to [School]" or "Transform Your Future" is a brand failure. ALWAYS reference the H1 in your biggest_sin or best_moment.
+- H2s (section headings) → HIGH weight. These frame the page's narrative. Generic H2s ("Academics," "Campus Life") vs. distinctive ones ("Not Everyone Is Built to Defy Limits") signal brand commitment.
 - Feature descriptions, program overviews, about-us copy → HIGH weight. This is core messaging.
 - News headlines, event announcements, press releases → LOW weight. Having specific news items (names, dates, achievements) shows a real institution exists, but it does NOT prove brand differentiation. A school can have great news and still have zero brand voice. News specificity should contribute modestly to specificity_score (cap its contribution at +1-2 points) but should NOT boost voice_score at all.
 - CTAs, navigation labels, footer boilerplate → IGNORE for scoring purposes.
@@ -288,6 +295,7 @@ Return JSON only:
   "rewrite": "rewrite with personality and strategic intent, or NO_CONTENT",
   "differentiation_killer": "why a visitor wouldn't know what makes this school different, referencing QUOTED text from above",
   "missed_opportunity": "what content in the scraped text COULD be a differentiator but isn't used that way. QUOTE the specific text.",
+  "hero_assessment": "1-2 sentences specifically assessing the H1 hero tagline. Is it distinctive or generic? Does the rest of the page support it or undermine it?",
   "rx_language": "fix the voice/language, 2 sentences",
   "rx_strategy": "fix the content strategy, 2 sentences"
 }`;
