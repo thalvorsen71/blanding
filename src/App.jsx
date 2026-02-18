@@ -803,7 +803,7 @@ export default function App() {
             </div>
           )}
           {/* LANDING LEADERBOARD PREVIEW — shows before any audit */}
-          {!result && !result2 && !analyzing && leaderboard.length >= 3 && (
+          {!result && !result2 && !analyzing && progress.length === 0 && leaderboard.length >= 3 && (
             <div style={{ marginTop: 32, background: T.card, border: "1px solid " + T.border, borderRadius: 12, padding: "22px 24px", overflow: "hidden" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
                 <div>
