@@ -85,7 +85,16 @@ export default function App() {
   const [staySent, setStaySent] = useState(false);
   const [leaderboard, setLeaderboard] = useState([]);
   const [lbLoading, setLbLoading] = useState(false);
+  const [auditCount, setAuditCount] = useState(0);
   const resultRef = useRef(null);
+
+  // Fetch audit count on mount for social proof
+  useEffect(() => {
+    fetch("/.netlify/functions/leaderboard").then(r => r.json()).then(d => {
+      if (d.count) setAuditCount(d.count);
+      if (d.schools?.length) setLeaderboard(d.schools);
+    }).catch(() => {});
+  }, []);
 
   const addProg = useCallback((msg, status = "loading") => {
     setProgress(p => [...p.map(i => i.status === "loading" ? { ...i, status: "done" } : i), { msg, status, id: Date.now() }]);
@@ -222,6 +231,8 @@ export default function App() {
     if (!stayEmail.includes("@")) return;
     await captureLead(stayEmail, result?.schoolName, result?.overall, stayName, stayTitle, "stay_in_touch");
     setStaySent(true);
+    // Bonus: auto-generate their PDF report as a thank-you
+    if (result) setTimeout(() => exportPDF(result), 800);
   };
 
   const handleCopy = () => {
@@ -285,6 +296,21 @@ export default function App() {
             </div>
           )}
         </div>
+        {!compact && leaderboard.length >= 3 && (() => {
+          const below = leaderboard.filter(s => s.overall < res.overall).length;
+          const pct = Math.round((below / leaderboard.length) * 100);
+          return (
+            <div style={{ marginTop: 12, position: "relative" }}>
+              <Pill color={scoreColor(res.overall)}>Better than {pct}% of {leaderboard.length} audited institutions</Pill>
+            </div>
+          );
+        })()}
+        {!compact && res.pagesAnalyzed?.length <= 1 && (res.bodyText || "").split(/\s+/).length < 400 && (
+          <div style={{ background: "#1a1a00", border: "1px solid #3d3d00", borderRadius: 8, padding: "10px 14px", marginTop: 10, display: "flex", alignItems: "center", gap: 8, position: "relative" }}>
+            <span style={{ fontSize: 14 }}>⚠</span>
+            <p style={{ fontSize: 11, color: "#cca700", margin: 0, fontFamily: T.mono, lineHeight: 1.4 }}>Limited content detected — this site may use heavy JavaScript. Score based on what we could extract; full picture may differ.</p>
+          </div>
+        )}
         {res.ai?.tone_diagnosis && (
           <div style={{ background: T.card, border: "1px solid " + T.border, borderRadius: 10, padding: "18px", marginTop: 12, position: "relative", overflow: "hidden" }}>
             <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 2, background: `linear-gradient(90deg, ${T.accent}, ${T.accentLight}, ${T.accent})` }} />
@@ -302,7 +328,7 @@ export default function App() {
     const labels = { overview: "Overview", language: "Clichés", highlighted: "Highlighted Text", strategy: "Strategy", leaderboard: "Leaderboard", prescriptions: "Rx: Fix It" };
     const avail = tabs.filter(t => {
       if (t === "strategy") return res.scores.strategy != null;
-      if (t === "highlighted") return !!res.bodyText;
+      if (t === "highlighted") return res.bodyText && res.bodyText.trim().length > 100;
       if (t === "prescriptions") return !!res.ai?.rx_language;
       return true;
     });
@@ -337,7 +363,7 @@ export default function App() {
             </div>
           )}
 
-          {/* CLICHÉS */}
+          {/* CLICHÉS — word cloud */}
           {activeTab === "language" && (
             <div style={{ background: T.card, border: "1px solid " + T.border, borderRadius: 10, padding: 20 }}>
               <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 12 }}>
@@ -345,7 +371,32 @@ export default function App() {
                 <span style={{ fontSize: 11, fontFamily: T.mono, color: T.dim }}>{res.totalCliches} total / {res.cliches.length} unique</span>
               </div>
               {res.cliches.length === 0 ? <p style={{ color: "#22c55e", fontSize: 13 }}>No common clichés detected.</p> :
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>{res.cliches.map((c, i) => <Pill key={i}>{c.phrase}{c.count > 1 && <span style={{ opacity: 0.6 }}> ×{c.count}</span>}</Pill>)}</div>}
+                (() => {
+                  const maxCount = Math.max(...res.cliches.map(c => c.count));
+                  const sorted = [...res.cliches].sort(() => Math.random() - 0.5); // shuffle for cloud feel
+                  return (
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 8, justifyContent: "center", padding: "10px 0" }}>
+                      {sorted.map((c, i) => {
+                        const weight = c.count / maxCount;
+                        const size = 12 + Math.round(weight * 16);
+                        const opacity = 0.45 + weight * 0.55;
+                        return (
+                          <span key={i} style={{
+                            fontSize: size, fontFamily: T.serif, fontStyle: "italic",
+                            color: `rgba(239, 68, 68, ${opacity})`,
+                            padding: "4px 10px", borderRadius: 6,
+                            background: `rgba(239, 68, 68, ${0.04 + weight * 0.08})`,
+                            border: `1px solid rgba(239, 68, 68, ${0.1 + weight * 0.15})`,
+                            whiteSpace: "nowrap", lineHeight: 1.3,
+                          }}>
+                            {c.phrase}{c.count > 1 && <span style={{ fontSize: 10, fontFamily: T.mono, opacity: 0.6, marginLeft: 4 }}>×{c.count}</span>}
+                          </span>
+                        );
+                      })}
+                    </div>
+                  );
+                })()
+              }
             </div>
           )}
 
@@ -492,6 +543,12 @@ export default function App() {
           <p style={{ fontSize: 15, lineHeight: 1.65, color: "#999", maxWidth: 540, marginTop: 16, fontWeight: 300 }}>
             How generic is your institution's website copy? Paste a URL and find out. We scan your homepage and landing pages for clichés, stock phrases, and the kind of language that makes every school sound the same.
           </p>
+          {auditCount > 0 && (
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 14 }}>
+              <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#22c55e", boxShadow: "0 0 6px #22c55e80" }} />
+              <span style={{ fontSize: 11, fontFamily: T.mono, color: T.dim }}>{auditCount} institutions audited and counting</span>
+            </div>
+          )}
         </header>
 
         {/* INPUT */}
@@ -705,7 +762,7 @@ export default function App() {
               {staySent ? (
                 <div style={{ textAlign: "center", padding: "12px 0" }}>
                   <div style={{ fontSize: 22, color: "#22c55e", marginBottom: 8 }}>✓</div>
-                  <p style={{ fontSize: 14, color: T.text, fontFamily: T.serif, fontStyle: "italic", margin: 0 }}>You're on the list. We'll be in touch.</p>
+                  <p style={{ fontSize: 14, color: T.text, fontFamily: T.serif, fontStyle: "italic", margin: 0 }}>You're on the list — and your full PDF report is downloading now.</p>
                 </div>
               ) : (
                 <>

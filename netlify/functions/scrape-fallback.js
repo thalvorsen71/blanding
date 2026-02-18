@@ -133,6 +133,15 @@ exports.handler = async (event) => {
       } catch {}
     });
 
+    // Fallback: if no internal links found, try common .edu sub-pages
+    if (linkedPages.length === 0) {
+      const fallbackPaths = ["/about", "/admissions", "/academics", "/student-life", "/about-us", "/why"];
+      for (const p of fallbackPaths) {
+        if (linkedPages.length >= 3) break;
+        linkedPages.push(base.origin + p);
+      }
+    }
+
     // Simple unique claims vs stock phrases extraction
     const uniqueClaims = [];
     const stockPhrases = [];

@@ -8,12 +8,16 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@fontsource/dm-mono": "^5.2.7",
+    "@fontsource/dm-sans": "^5.2.8",
+    "@fontsource/instrument-serif": "^5.2.8",
     "@netlify/blobs": "^10.7.0",
     "cheerio": "^1.2.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0"
   },
   "devDependencies": {
+    "@napi-rs/canvas": "^0.1.93",
     "@vitejs/plugin-react": "^4.2.0",
     "vite": "^5.0.0"
   }
