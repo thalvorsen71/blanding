@@ -7,18 +7,20 @@ import { generateBingoCard } from './bingo';
 import { AdeoLogo } from './logo.jsx';
 
 /* ═══ SMALL COMPONENTS ═══ */
+// Module-level tracker: once a score has animated, it never re-animates
+// (even if the component remounts from scrolling). Cleared on new audit.
+let _animatedScores = new Set();
 function AnimNum({ value, dur = 1400 }) {
-  const [d, setD] = useState(0);
+  const alreadyDone = _animatedScores.has(value);
+  const [d, setD] = useState(alreadyDone ? value : 0);
   const r = useRef(null);
-  const hasAnimated = useRef(null);
   useEffect(() => {
-    // Only animate when the value actually changes (new audit result)
-    if (hasAnimated.current === value) { setD(value); return; }
+    if (alreadyDone) { setD(value); return; }
     let s = null;
-    const go = ts => { if (!s) s = ts; const p = Math.min((ts - s) / dur, 1); setD(Math.round((1 - Math.pow(1 - p, 3)) * value)); if (p < 1) r.current = requestAnimationFrame(go); else hasAnimated.current = value; };
+    const go = ts => { if (!s) s = ts; const p = Math.min((ts - s) / dur, 1); setD(Math.round((1 - Math.pow(1 - p, 3)) * value)); if (p < 1) r.current = requestAnimationFrame(go); else _animatedScores.add(value); };
     r.current = requestAnimationFrame(go);
     return () => cancelAnimationFrame(r.current);
-  }, [value, dur]);
+  }, [value, dur, alreadyDone]);
   return <span>{d}</span>;
 }
 
@@ -234,13 +236,13 @@ export default function App() {
 
   const scrollToResult = () => setTimeout(() => resultRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 300);
 
-  const runSingle = async () => { setAnalyzing(true); setProgress([]); setResult(null); setResult2(null); setActiveTab("overview"); const r = await runAudit(url1); if (r) { setResult(r); submitToLeaderboard(r); } setProgress(p => p.map(i => ({ ...i, status: "done" }))); setAnalyzing(false); scrollToResult(); };
+  const runSingle = async () => { _animatedScores.clear(); setAnalyzing(true); setProgress([]); setResult(null); setResult2(null); setActiveTab("overview"); const r = await runAudit(url1); if (r) { setResult(r); submitToLeaderboard(r); } setProgress(p => p.map(i => ({ ...i, status: "done" }))); setAnalyzing(false); scrollToResult(); };
 
-  const runCompare = async () => { setAnalyzing(true); setProgress([]); setResult(null); setResult2(null); setActiveTab("overview"); addProg("Starting head-to-head audit..."); const r1 = await runAudit(url1, "A → "); const r2 = await runAudit(url2, "B → "); if (r1) { setResult(r1); submitToLeaderboard(r1); } if (r2) { setResult2(r2); submitToLeaderboard(r2); } setProgress(p => p.map(i => ({ ...i, status: "done" }))); setAnalyzing(false); scrollToResult(); };
+  const runCompare = async () => { _animatedScores.clear(); setAnalyzing(true); setProgress([]); setResult(null); setResult2(null); setActiveTab("overview"); addProg("Starting head-to-head audit..."); const r1 = await runAudit(url1, "A → "); const r2 = await runAudit(url2, "B → "); if (r1) { setResult(r1); submitToLeaderboard(r1); } if (r2) { setResult2(r2); submitToLeaderboard(r2); } setProgress(p => p.map(i => ({ ...i, status: "done" }))); setAnalyzing(false); scrollToResult(); };
 
   const runText = async () => {
     if (inputText.trim().length < 50) return;
-    setAnalyzing(true); setProgress([]); setResult(null); setResult2(null); setActiveTab("overview");
+    _animatedScores.clear(); setAnalyzing(true); setProgress([]); setResult(null); setResult2(null); setActiveTab("overview");
     addProg("Analyzing copy..."); const cl = countCliches(inputText); const tc = cl.reduce((s, c) => s + c.count, 0);
     addProg("Running AI analysis..."); const ai = await deepAnalysis("(pasted text)", inputText, "");
     let lang = 100 - Math.min(cl.length * 3, 50) - Math.min((tc / Math.max(inputText.split(/\s+/).length / 100, 1)) * 7, 30);
