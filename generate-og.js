@@ -2,21 +2,30 @@
  * Generate OG social card image (1200x630) for The Blanding Detector
  * Run: node generate-og.js
  */
-const { createCanvas, Path2D } = require("@napi-rs/canvas");
+const { createCanvas, Path2D, GlobalFonts } = require("@napi-rs/canvas");
 const fs = require("fs");
+const path = require("path");
+
+// ─── Register app fonts ───
+const fontDir = path.join(__dirname, "node_modules/@fontsource");
+GlobalFonts.register(fs.readFileSync(`${fontDir}/dm-sans/files/dm-sans-latin-400-normal.woff2`), "DM Sans");
+GlobalFonts.register(fs.readFileSync(`${fontDir}/dm-sans/files/dm-sans-latin-500-normal.woff2`), "DM Sans Medium");
+GlobalFonts.register(fs.readFileSync(`${fontDir}/dm-sans/files/dm-sans-latin-300-normal.woff2`), "DM Sans Light");
+GlobalFonts.register(fs.readFileSync(`${fontDir}/dm-mono/files/dm-mono-latin-400-normal.woff2`), "DM Mono");
+GlobalFonts.register(fs.readFileSync(`${fontDir}/instrument-serif/files/instrument-serif-latin-400-normal.woff2`), "Instrument Serif");
+GlobalFonts.register(fs.readFileSync(`${fontDir}/instrument-serif/files/instrument-serif-latin-400-italic.woff2`), "Instrument Serif Italic");
 
 const W = 1200;
 const H = 630;
 const canvas = createCanvas(W, H);
 const ctx = canvas.getContext("2d");
 
-// Colors matching the app
+// Colors
 const BG = "#0a0a0a";
 const ACCENT = "#c87840";
 const TEXT = "#e8e4df";
 const MUTED = "#888";
 const DIM = "#555";
-const BORDER = "#1a1a1a";
 const LAVENDER = "#E6BDED";
 
 // adeo logo SVG paths
@@ -36,120 +45,114 @@ function drawLogo(x, y, height, color, dotColor) {
   ctx.translate(x, y);
   ctx.scale(scale, scale);
   for (const key of ["a", "d", "e", "o"]) {
-    const p = new Path2D(LOGO_PATHS[key]);
     ctx.fillStyle = color;
-    ctx.fill(p);
+    ctx.fill(new Path2D(LOGO_PATHS[key]));
   }
-  const dotPath = new Path2D(LOGO_PATHS.dot);
   ctx.fillStyle = dotColor;
-  ctx.fill(dotPath);
+  ctx.fill(new Path2D(LOGO_PATHS.dot));
   ctx.restore();
   return (height / LOGO_VBH) * LOGO_VBW;
 }
 
-// Background
+// ═══════════════════════════════════════════
+// BACKGROUND
+// ═══════════════════════════════════════════
 ctx.fillStyle = BG;
 ctx.fillRect(0, 0, W, H);
 
-// Subtle gradient overlay at top
-const topGrad = ctx.createLinearGradient(0, 0, 0, 200);
-topGrad.addColorStop(0, "rgba(200, 120, 64, 0.08)");
-topGrad.addColorStop(1, "rgba(200, 120, 64, 0)");
-ctx.fillStyle = topGrad;
-ctx.fillRect(0, 0, W, 200);
+// Warm gradient wash — left side only, very subtle
+const warmGrad = ctx.createRadialGradient(0, H * 0.4, 0, 0, H * 0.4, W * 0.7);
+warmGrad.addColorStop(0, "rgba(200, 120, 64, 0.07)");
+warmGrad.addColorStop(1, "rgba(200, 120, 64, 0)");
+ctx.fillStyle = warmGrad;
+ctx.fillRect(0, 0, W, H);
 
 // Accent line at top
 const lineGrad = ctx.createLinearGradient(0, 0, W, 0);
-lineGrad.addColorStop(0, "transparent");
-lineGrad.addColorStop(0.2, ACCENT);
-lineGrad.addColorStop(0.8, ACCENT);
+lineGrad.addColorStop(0, ACCENT);
+lineGrad.addColorStop(0.6, ACCENT);
 lineGrad.addColorStop(1, "transparent");
 ctx.fillStyle = lineGrad;
 ctx.fillRect(0, 0, W, 3);
 
-// adeo logo top-left
-drawLogo(60, 44, 28, TEXT, LAVENDER);
+// ═══════════════════════════════════════════
+// LEFT COLUMN — text content
+// ═══════════════════════════════════════════
+const LX = 72; // left margin
 
-// "BRAND AUDIT TOOL" pill — top right
-ctx.fillStyle = ACCENT + "20";
-ctx.beginPath();
-ctx.roundRect(W - 280, 44, 220, 30, 15);
-ctx.fill();
-ctx.strokeStyle = ACCENT + "60";
-ctx.lineWidth = 1;
-ctx.beginPath();
-ctx.roundRect(W - 280, 44, 220, 30, 15);
-ctx.stroke();
-ctx.fillStyle = ACCENT;
-ctx.font = '500 11px "Helvetica Neue", Arial, sans-serif';
-ctx.textAlign = "center";
-ctx.fillText("FREE AI-POWERED BRAND AUDIT", W - 170, 64);
+// adeo logo
+drawLogo(LX, 50, 26, TEXT, LAVENDER);
 
 // Main title
 ctx.textAlign = "left";
 ctx.fillStyle = TEXT;
-ctx.font = 'italic 62px Georgia, "Times New Roman", serif';
-ctx.fillText("The Blanding", 60, 195);
-ctx.fillText("Detector", 60, 265);
+ctx.font = 'italic 68px "Instrument Serif Italic"';
+ctx.fillText("The Blanding", LX, 190);
+ctx.fillText("Detector", LX, 268);
 
 // Subtitle
-ctx.font = '400 22px "Helvetica Neue", Arial, sans-serif';
-ctx.fillStyle = MUTED;
-ctx.fillText("Higher Ed Edition", 64, 308);
+ctx.font = '400 20px "DM Sans"';
+ctx.fillStyle = DIM;
+ctx.fillText("Higher Ed Edition", LX + 4, 306);
 
-// Divider line
-ctx.fillStyle = BORDER;
-ctx.fillRect(60, 340, W - 120, 1);
+// Hook text — the compelling question
+ctx.font = 'italic 28px "Instrument Serif Italic"';
+ctx.fillStyle = "#b0aca6";
+ctx.fillText("Is your university website actually", LX, 382);
+ctx.fillText("saying anything?", LX, 418);
 
-// Hook text
-ctx.font = 'italic 26px Georgia, "Times New Roman", serif';
-ctx.fillStyle = "#bbb";
-ctx.fillText("Is your university website actually", 60, 395);
-ctx.fillText("saying anything?", 60, 430);
-
-// Feature pills
-const pills = ["Cliché Scanner", "Voice Analysis", "Live Leaderboard", "Shareable Report"];
-let pillX = 60;
-const pillY = 475;
-ctx.font = '500 13px "Helvetica Neue", Arial, sans-serif';
+// Feature pills row
+const pills = ["Cliché Scanner", "Voice Analysis", "Live Leaderboard"];
+let pillX = LX;
+const pillY = 462;
+ctx.font = '400 12px "DM Mono"';
 pills.forEach((label) => {
   const tw = ctx.measureText(label).width;
-  const pw = tw + 28;
-  // pill background
-  ctx.fillStyle = "#151515";
+  const pw = tw + 24;
+  ctx.fillStyle = "#141414";
   ctx.beginPath();
-  ctx.roundRect(pillX, pillY, pw, 32, 6);
+  ctx.roundRect(pillX, pillY, pw, 28, 14);
   ctx.fill();
-  ctx.strokeStyle = "#2a2a2a";
+  ctx.strokeStyle = "#252525";
   ctx.lineWidth = 1;
   ctx.beginPath();
-  ctx.roundRect(pillX, pillY, pw, 32, 6);
+  ctx.roundRect(pillX, pillY, pw, 28, 14);
   ctx.stroke();
-  // pill text
   ctx.fillStyle = MUTED;
   ctx.textAlign = "center";
-  ctx.fillText(label, pillX + pw / 2, pillY + 21);
+  ctx.fillText(label, pillX + pw / 2, pillY + 18);
   ctx.textAlign = "left";
-  pillX += pw + 10;
+  pillX += pw + 8;
 });
 
-// Score ring illustration — right side
-const ringX = W - 200;
-const ringY = 260;
-const ringR = 85;
-const ringStroke = 6;
+// ═══════════════════════════════════════════
+// RIGHT COLUMN — score ring (centered, no overlap)
+// ═══════════════════════════════════════════
+const ringX = W - 230;
+const ringY = 240;
+const ringR = 100;
+const ringStroke = 7;
 
-// Ring background
+// Subtle glow behind the ring
+const glowGrad = ctx.createRadialGradient(ringX, ringY, ringR * 0.3, ringX, ringY, ringR * 1.8);
+glowGrad.addColorStop(0, "rgba(200, 120, 64, 0.06)");
+glowGrad.addColorStop(1, "rgba(200, 120, 64, 0)");
+ctx.fillStyle = glowGrad;
+ctx.fillRect(ringX - ringR * 2, ringY - ringR * 2, ringR * 4, ringR * 4);
+
+// Ring background track
 ctx.beginPath();
 ctx.arc(ringX, ringY, ringR, 0, Math.PI * 2);
 ctx.strokeStyle = "#1a1a1a";
 ctx.lineWidth = ringStroke;
 ctx.stroke();
 
-// Ring progress (show ~42 score = mediocre)
+// Ring progress arc (42/100 — bad enough to be provocative)
 const score = 42;
 const startAngle = -Math.PI / 2;
 const endAngle = startAngle + (Math.PI * 2 * score) / 100;
+
+// Gradient on the arc
 ctx.beginPath();
 ctx.arc(ringX, ringY, ringR, startAngle, endAngle);
 ctx.strokeStyle = ACCENT;
@@ -160,25 +163,40 @@ ctx.lineCap = "butt";
 
 // Score number
 ctx.fillStyle = TEXT;
-ctx.font = 'italic 52px Georgia, "Times New Roman", serif';
+ctx.font = 'italic 60px "Instrument Serif Italic"';
 ctx.textAlign = "center";
-ctx.fillText(String(score), ringX, ringY + 16);
+ctx.fillText(String(score), ringX, ringY + 18);
 
-// Score label
-ctx.font = '400 12px "Helvetica Neue", Arial, sans-serif';
+// "/ 100"
+ctx.font = '400 13px "DM Sans"';
 ctx.fillStyle = DIM;
-ctx.fillText("/ 100", ringX, ringY + 38);
+ctx.fillText("/ 100", ringX, ringY + 42);
 
-// Label under ring
-ctx.font = 'italic 15px Georgia, "Times New Roman", serif';
+// Score label — italic, warm
+ctx.font = 'italic 18px "Instrument Serif Italic"';
 ctx.fillStyle = ACCENT;
-ctx.fillText("Suspiciously Vanilla", ringX, ringY + ringR + 30);
+ctx.fillText("Suspiciously Vanilla", ringX, ringY + ringR + 36);
 
-// URL at bottom
-ctx.font = '500 14px "Helvetica Neue", Arial, sans-serif';
+// ═══════════════════════════════════════════
+// BOTTOM BAR
+// ═══════════════════════════════════════════
+
+// Divider line
+const barY = H - 60;
+ctx.fillStyle = "#161616";
+ctx.fillRect(0, barY, W, 1);
+
+// helloadeo.com — left
+ctx.font = '400 13px "DM Mono"';
+ctx.fillStyle = LAVENDER;
+ctx.textAlign = "left";
+ctx.fillText("helloadeo.com", LX, barY + 32);
+
+// "Brand audit by adeo" — right, with small logo
+ctx.font = '400 13px "DM Sans"';
 ctx.fillStyle = DIM;
-ctx.textAlign = "center";
-ctx.fillText("blandingaudit.netlify.app", W / 2, H - 30);
+ctx.textAlign = "right";
+ctx.fillText("AI-powered brand audit", W - 72, barY + 32);
 
 // Save
 const buf = canvas.toBuffer("image/png");
