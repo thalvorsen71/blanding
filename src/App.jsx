@@ -4,7 +4,7 @@ import { fetchPage, fetchSubPage, deepAnalysis, captureLead } from './api';
 import { exportPDF } from './pdf';
 import { generateScorecard } from './scorecard';
 import { generateBingoCard } from './bingo';
-import { AdeoLogo } from './logo.jsx';
+// Logo import removed — tool is personal project, not company-branded
 
 /* ═══ SMALL COMPONENTS ═══ */
 // Module-level tracker: once a score has animated, it never re-animates
@@ -591,8 +591,7 @@ export default function App() {
                 </div>
               )}
               <div style={{ background: T.cardAlt, border: "1px solid " + T.border, borderRadius: 8, padding: "16px 20px", textAlign: "center" }}>
-                <p style={{ fontSize: 13, color: T.muted, margin: "0 0 6px", lineHeight: 1.6 }}>These are starting points — the kind of thing we think about a lot.</p>
-                <a href="https://helloadeo.com" target="_blank" rel="noopener noreferrer" style={{ fontSize: 13, color: T.accent, fontWeight: 600 }}>helloadeo.com</a>
+                <p style={{ fontSize: 13, color: T.muted, margin: 0, lineHeight: 1.6 }}>These are starting points — the kind of questions every institution should be asking about their web presence.</p>
               </div>
             </div>
           )}
@@ -701,8 +700,8 @@ export default function App() {
               </div>
 
               <div style={{ background: T.card, border: "1px solid " + T.border, borderRadius: 8, padding: "16px 20px", textAlign: "center" }}>
-                <p style={{ fontSize: 13, color: T.muted, margin: "0 0 8px", lineHeight: 1.6 }}>Questions about the methodology? Disagree with a score? We'd love to hear from you.</p>
-                <a href="https://www.helloadeo.com/contact" target="_blank" rel="noopener noreferrer" style={{ fontSize: 13, color: T.accent, fontWeight: 600, textDecoration: "none" }}>Get in touch →</a>
+                <p style={{ fontSize: 13, color: T.muted, margin: "0 0 8px", lineHeight: 1.6 }}>Questions about the methodology? Disagree with a score? I'd love to hear from you.</p>
+                <a href="mailto:th@helloadeo.com" style={{ fontSize: 13, color: T.accent, fontWeight: 600, textDecoration: "none" }}>th@helloadeo.com</a>
               </div>
             </div>
           )}
@@ -722,11 +721,7 @@ export default function App() {
 
         {/* HEADER */}
         <header style={{ paddingTop: 40, paddingBottom: 12 }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 40 }}>
-            <a href="https://helloadeo.com" target="_blank" rel="noopener noreferrer" style={{ display: "flex", alignItems: "center", gap: 12, textDecoration: "none" }}>
-              <AdeoLogo height={22} color="#fff" dotColor="#E6BDED" />
-            </a>
-          </div>
+          <div style={{ marginBottom: 40 }}></div>
           <span style={{ display: "inline-block", fontSize: 11, fontWeight: 500, letterSpacing: "0.12em", textTransform: "uppercase", color: T.accent, fontFamily: T.mono, marginBottom: 12 }}>Higher Ed Edition</span>
           <h1 style={{ fontSize: "clamp(38px, 6.5vw, 64px)", fontFamily: T.serif, fontWeight: 400, lineHeight: 1.0, margin: 0, letterSpacing: "-0.02em" }}>
             The Blanding<br /><span style={{ fontStyle: "italic", color: T.accent }}>Detector</span>
@@ -970,9 +965,11 @@ export default function App() {
                 onMouseLeave={e => { e.target.style.borderColor = T.borderLight; e.target.style.color = T.muted; }}>
                 Export PDF
               </button>
-              <a href="https://www.helloadeo.com/contact" target="_blank" rel="noopener noreferrer"
-                style={{ background: `linear-gradient(135deg, ${T.accent}, #b06830)`, borderRadius: 9, padding: "14px 12px", color: "#fff", fontSize: 11, fontWeight: 600, textAlign: "center", display: "flex", alignItems: "center", justifyContent: "center", textDecoration: "none" }}>
-                Get in Touch →
+              <a href="mailto:th@helloadeo.com"
+                style={{ background: T.card, border: "1px solid " + T.borderLight, borderRadius: 9, padding: "14px 12px", color: T.muted, fontSize: 11, fontWeight: 500, textAlign: "center", display: "flex", alignItems: "center", justifyContent: "center", textDecoration: "none" }}
+                onMouseEnter={e => { e.target.style.borderColor = T.accent; e.target.style.color = T.accent; }}
+                onMouseLeave={e => { e.target.style.borderColor = T.borderLight; e.target.style.color = T.muted; }}>
+                Feedback
               </a>
             </div>
 
@@ -1000,19 +997,14 @@ export default function App() {
 
             <div style={{ marginTop: 32, padding: "28px 24px", background: T.cardAlt, borderRadius: 10, border: "1px solid #161616", textAlign: "center" }}>
               <p style={{ fontSize: 13, color: T.muted, lineHeight: 1.65, margin: 0, maxWidth: 540, marginLeft: "auto", marginRight: "auto" }}>
-                This tool catches the surface-level sameness. Fixing it is a different conversation — one about brand strategy, not just word choice.
+                This tool catches the surface-level sameness. Fixing it takes a deeper conversation — one about brand strategy, not just word choice.
               </p>
-              <p style={{ fontSize: 15, fontFamily: T.serif, fontStyle: "italic", color: T.text, marginTop: 14, marginBottom: 0 }}>Curious what your institution could sound like instead?</p>
-              <a href="https://www.helloadeo.com/contact" target="_blank" rel="noopener noreferrer"
-                style={{ display: "inline-block", marginTop: 14, padding: "12px 28px", background: `linear-gradient(135deg, ${T.accent}, #b06830)`, borderRadius: 8, color: "#fff", fontSize: 13, fontWeight: 600, fontFamily: T.sans, textDecoration: "none" }}>
-                Get in Touch →
-              </a>
             </div>
           </section>
         )}
 
         <footer style={{ paddingTop: 32, paddingBottom: 24, borderTop: "1px solid #151515", marginTop: result ? 0 : 80, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <span style={{ fontSize: 10, color: T.faint, fontFamily: T.mono }}>© 2026 adeo</span>
+          <span style={{ fontSize: 10, color: T.faint, fontFamily: T.mono }}>© 2026 Tracey Halvorsen</span>
           <div style={{ display: "flex", gap: 16, alignItems: "center" }}>
             <button onClick={() => { setShowMethodology(m => !m); setShowDisclaimer(false); setTimeout(() => methRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 100); }}
               style={{ background: "none", border: "none", padding: 0, fontSize: 10, color: T.faint, fontFamily: T.mono, textDecoration: "none", cursor: "pointer" }}
@@ -1024,8 +1016,8 @@ export default function App() {
               onMouseEnter={e => { e.target.style.color = T.accent; }} onMouseLeave={e => { e.target.style.color = T.faint; }}>
               Disclaimer
             </button>
-            <a href="https://helloadeo.com" target="_blank" rel="noopener noreferrer" style={{ fontSize: 10, color: T.faint, fontFamily: T.mono, textDecoration: "none" }}
-              onMouseEnter={e => { e.target.style.color = T.accent; }} onMouseLeave={e => { e.target.style.color = T.faint; }}>helloadeo.com</a>
+            <a href="mailto:th@helloadeo.com" style={{ fontSize: 10, color: T.faint, fontFamily: T.mono, textDecoration: "none" }}
+              onMouseEnter={e => { e.target.style.color = T.accent; }} onMouseLeave={e => { e.target.style.color = T.faint; }}>th@helloadeo.com</a>
           </div>
         </footer>
 
@@ -1117,7 +1109,7 @@ export default function App() {
               <div style={{ background: T.cardAlt, border: "1px solid " + T.border, borderRadius: 10, padding: "18px 24px" }}>
                 <div style={{ fontSize: 12, fontFamily: T.mono, color: T.dim, fontWeight: 600, marginBottom: 10 }}>Limitation of Liability</div>
                 <p style={{ fontSize: 13, color: T.muted, lineHeight: 1.7, margin: 0 }}>
-                  This is an experimental tool provided "as is" for informational and entertainment purposes. Scores may vary between runs due to the AI analysis component. No warranties are made about the accuracy, completeness, or reliability of scores, and they should not be the basis for institutional decisions. If you believe your institution has been unfairly characterized, <a href="mailto:hello@helloadeo.com" style={{ color: T.accent }}>contact us</a>.
+                  This is an experimental tool provided "as is" for informational and entertainment purposes. Scores may vary between runs due to the AI analysis component. No warranties are made about the accuracy, completeness, or reliability of scores, and they should not be the basis for institutional decisions. If you believe your institution has been unfairly characterized, <a href="mailto:th@helloadeo.com" style={{ color: T.accent }}>reach out</a>.
                 </p>
               </div>
 
@@ -1130,7 +1122,7 @@ export default function App() {
 
               <div style={{ background: T.card, border: "1px solid " + T.border, borderRadius: 10, padding: "18px 24px" }}>
                 <p style={{ fontSize: 13, color: T.muted, lineHeight: 1.7, margin: 0 }}>
-                  Built by <a href="https://helloadeo.com" target="_blank" rel="noopener noreferrer" style={{ color: T.accent, textDecoration: "none", fontWeight: 600 }}>adeo</a>. Questions or concerns? <a href="mailto:hello@helloadeo.com" style={{ color: T.accent, textDecoration: "none" }}>hello@helloadeo.com</a>
+                  Built by Tracey Halvorsen as a personal experiment. Questions or concerns? <a href="mailto:th@helloadeo.com" style={{ color: T.accent, textDecoration: "none" }}>th@helloadeo.com</a>
                 </p>
               </div>
             </div>
@@ -1177,7 +1169,7 @@ export default function App() {
       {emailModal && (
         <div role="dialog" aria-modal="true" aria-label="Get your full report" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }} onClick={() => setEmailModal(false)}>
           <div style={{ background: "#151515", border: "1px solid " + T.borderLight, borderRadius: 16, padding: "36px 32px", maxWidth: 420, width: "100%", textAlign: "center" }} onClick={e => e.stopPropagation()}>
-            <div style={{ margin: "0 auto 20px", display: "flex", justifyContent: "center" }}><AdeoLogo height={28} color="#fff" dotColor="#E6BDED" /></div>
+            <div style={{ margin: "0 auto 20px", display: "flex", justifyContent: "center" }}><span style={{ fontSize: 24, fontFamily: T.serif, fontWeight: 400 }}>📊</span></div>
             <h3 style={{ fontFamily: T.serif, fontSize: 22, fontWeight: 400, margin: "0 0 8px" }}>Get Your <span style={{ fontStyle: "italic", color: T.accent }}>Full Report</span></h3>
             <p style={{ fontSize: 13, color: T.muted, margin: "0 0 24px", lineHeight: 1.6 }}>Enter your email and we'll generate a branded PDF audit you can share with your team.</p>
             {emailSent ? (
