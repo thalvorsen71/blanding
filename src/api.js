@@ -240,6 +240,11 @@ IMPORTANT: A homepage full of specific stories, named events, real research high
 
 Your job: What strategy is this page using? How well does it execute? Does a first-time visitor leave knowing what makes this institution DIFFERENT? Give credit where credit is due for specific, vivid, timely content.
 
+BRAND THEATRE DETECTION — This is critical in the age of AI search:
+"Brand theatre" is the appearance of meaning without the discipline of solving. It's language that SOUNDS branded but doesn't actually tell a prospective student what specific problem this institution solves for them. Examples: "We Push What's Possible" — sounds distinctive, but what does it MEAN for a student choosing a school? "Where Leaders Are Made" — branded-sounding but functionally empty.
+AI search engines (ChatGPT, Perplexity, Gemini) are now decision engines, not browsing tools. They don't reward institutions for being attractive — they reward them for being DEPENDABLE and SPECIFIC. If a student asks an AI "which school is best for marine biology research?" — does this page give the AI anything concrete to work with? Or is it all aspiration and no substance?
+Evaluate: Does the content answer "why HERE instead of somewhere else?" with something a machine could actually index and recommend? Or is it just performing a brand identity without delivering one?
+
 URL: ${url}
 === HOMEPAGE H1 (the hero tagline — this is THE primary brand statement visitors see first) ===
 ${homepageH1s.length > 0 ? homepageH1s.join(" | ") : "NONE FOUND — the homepage has no H1 tag, which is itself a brand problem."}
@@ -284,6 +289,16 @@ Do NOT cluster scores in the 4-7 range. Use the ENTIRE 1-10 scale. Here are anch
 - specificity_score 1-3: Wall-to-wall platitudes. "World-class faculty committed to transformative excellence."
 If the page is genuinely excellent, score it 8-10. If it's genuinely bad, score it 1-3. Do not default to the middle.
 
+BRAND THEATRE SCORING:
+- brand_theatre_score 1-3: Content answers real questions — a student (or an AI) could explain WHY this school in concrete terms based on this page alone.
+- brand_theatre_score 4-6: Mix of substance and performance. Some real answers buried under aspirational language.
+- brand_theatre_score 7-10: Pure theatre. Language that sounds branded but a student couldn't answer "what specific problem does this school solve for me?" after reading it. Slogans that feel distinctive but are functionally empty.
+
+AI SEARCH READINESS:
+- ai_readiness_score 8-10: An AI search engine could confidently recommend this school for specific queries. Content has concrete claims, named programs, real outcomes, verifiable facts.
+- ai_readiness_score 4-7: Partial — some indexable content but too much vagueness for AI to differentiate from competitors.
+- ai_readiness_score 1-3: An AI would have nothing specific to cite. This school is invisible to AI-powered discovery.
+
 Return JSON only:
 {
   "voice_score": 1-10 (USE FULL RANGE — 1=could be any school, 10=unmistakably this institution. Specific stories, named events, real news all contribute to voice),
@@ -298,8 +313,13 @@ Return JSON only:
   "differentiation_killer": "why a visitor wouldn't know what makes this school different, referencing QUOTED text from above",
   "missed_opportunity": "what content in the scraped text COULD be a differentiator but isn't used that way. QUOTE the specific text.",
   "hero_assessment": "1-2 sentences specifically assessing the H1 hero tagline. Is it distinctive or generic? Does the rest of the page support it or undermine it?",
+  "brand_theatre_score": 1-10 (1=zero theatre, content solves real questions; 10=pure performance, sounds branded but says nothing actionable),
+  "brand_theatre_diagnosis": "1-2 sentences: Is this page performing a brand or delivering one? QUOTE the most theatrical language. Would a student know why to choose this school after reading it?",
+  "ai_readiness_score": 1-10 (1=invisible to AI search, 10=AI could confidently recommend this school for specific queries based on this content alone),
+  "ai_readiness_diagnosis": "1-2 sentences: If a student asked ChatGPT 'which school is best for X?' — could an AI cite anything specific from this page? What's missing?",
   "rx_language": "fix the voice/language, 2 sentences",
-  "rx_strategy": "fix the content strategy, 2 sentences"
+  "rx_strategy": "fix the content strategy, 2 sentences",
+  "rx_ai_readiness": "what this institution should change so AI search engines can actually recommend them, 2 sentences"
 }`;
 
   const raw = await callAPI([{ role: "user", content: prompt }], false, "claude-haiku-4-5-20251001");

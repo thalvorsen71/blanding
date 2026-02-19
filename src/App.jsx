@@ -254,6 +254,17 @@ export default function App() {
       const ratioCeiling = Math.max(0, Math.min(100, ai.specificity_ratio)) + 20;
       if (strat > ratioCeiling) strat = Math.round(strat * 0.6 + ratioCeiling * 0.4);
     }
+    // Brand theatre penalty: language that sounds branded but solves nothing
+    // High theatre score (7-10) means the page performs a brand instead of delivering one
+    if (ai?.brand_theatre_score && ai.brand_theatre_score >= 5) {
+      const theatrePenalty = Math.min((ai.brand_theatre_score - 4) * 3, 18);
+      strat -= theatrePenalty;
+    }
+    // AI readiness boost/penalty: does content give AI search something to work with?
+    if (ai?.ai_readiness_score) {
+      if (ai.ai_readiness_score <= 3) strat -= 8; // invisible to AI = strategy failure
+      else if (ai.ai_readiness_score >= 8) strat += 5; // highly indexable = strategy win
+    }
     strat = Math.max(0, Math.min(100, Math.round(strat)));
 
     const overall = Math.round(lang * 0.55 + strat * 0.45);
@@ -422,6 +433,23 @@ export default function App() {
                   </div>
                 ))}
               </div>
+              {/* BRAND THEATRE & AI READINESS */}
+              {(res.ai.brand_theatre_diagnosis || res.ai.ai_readiness_diagnosis) && (
+                <div className="overview-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                  {res.ai.brand_theatre_diagnosis && (
+                    <div style={{ background: T.card, border: "1px solid " + T.border, borderRadius: 10, padding: 16 }}>
+                      <div style={{ fontSize: 12, fontFamily: T.mono, color: "#a855f7", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6 }}>Brand Theatre {res.ai.brand_theatre_score ? <span style={{ opacity: 0.7 }}>({res.ai.brand_theatre_score}/10)</span> : ""}</div>
+                      <p style={{ fontSize: 14, color: T.text, lineHeight: 1.55, margin: 0 }}>{res.ai.brand_theatre_diagnosis}</p>
+                    </div>
+                  )}
+                  {res.ai.ai_readiness_diagnosis && (
+                    <div style={{ background: T.card, border: "1px solid " + T.border, borderRadius: 10, padding: 16 }}>
+                      <div style={{ fontSize: 12, fontFamily: T.mono, color: "#8b5cf6", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6 }}>AI Search Readiness {res.ai.ai_readiness_score ? <span style={{ opacity: 0.7 }}>({res.ai.ai_readiness_score}/10)</span> : ""}</div>
+                      <p style={{ fontSize: 14, color: T.text, lineHeight: 1.55, margin: 0 }}>{res.ai.ai_readiness_diagnosis}</p>
+                    </div>
+                  )}
+                </div>
+              )}
               {res.ai.weak_sentence && res.ai.rewrite && res.ai.weak_sentence !== "NO_CONTENT" && !res.ai.weak_sentence.toLowerCase().includes("no clear example") && !res.ai.rewrite.toLowerCase().includes("cannot rewrite") && !res.ai.rewrite.includes("NO_CONTENT") && (
                 <div style={{ background: T.cardAlt, borderRadius: 10, overflow: "hidden", border: "1px solid " + T.border }}>
                   <div style={{ padding: "8px 16px", borderBottom: "1px solid " + T.border, fontSize: 12, fontFamily: T.mono, color: T.accent, textTransform: "uppercase" }}>What If You Actually Said Something?</div>
@@ -573,6 +601,7 @@ export default function App() {
               {[
                 { l: "Language & Voice", t: res.ai.rx_language, c: T.accent },
                 { l: "Content Strategy", t: res.ai.rx_strategy, c: "#22c55e" },
+                { l: "AI Search Readiness", t: res.ai.rx_ai_readiness, c: "#8b5cf6" },
               ].filter(r => r.t).map((r, i) => (
                 <div key={i} style={{ background: T.card, border: "1px solid " + T.border, borderRadius: 10, padding: "18px 20px", borderLeft: "3px solid " + r.c }}>
                   <div style={{ fontSize: 12, fontFamily: T.mono, color: r.c, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6 }}>Rx: {r.l}</div>
