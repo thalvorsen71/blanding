@@ -289,15 +289,20 @@ Do NOT cluster scores in the 4-7 range. Use the ENTIRE 1-10 scale. Here are anch
 - specificity_score 1-3: Wall-to-wall platitudes. "World-class faculty committed to transformative excellence."
 If the page is genuinely excellent, score it 8-10. If it's genuinely bad, score it 1-3. Do not default to the middle.
 
-BRAND THEATRE SCORING:
-- brand_theatre_score 1-3: Content answers real questions — a student (or an AI) could explain WHY this school in concrete terms based on this page alone.
-- brand_theatre_score 4-6: Mix of substance and performance. Some real answers buried under aspirational language.
-- brand_theatre_score 7-10: Pure theatre. Language that sounds branded but a student couldn't answer "what specific problem does this school solve for me?" after reading it. Slogans that feel distinctive but are functionally empty.
+BRAND THEATRE SCORING — BE HARSH:
+A page full of news items and event listings is NOT the same as a page with clear brand positioning. Specific content ≠ strategic content. A school can name every Fulbright scholar and still never answer "why should I come HERE instead of a comparable school?"
+- brand_theatre_score 1-2: Rare. Content directly answers "why here?" with concrete differentiators a student could act on.
+- brand_theatre_score 3-4: Mostly substance. Clear positioning with only minor aspirational fluff.
+- brand_theatre_score 5-6: The page has real content but avoids making a strategic claim. News, events, and achievements are listed but never framed as "this is what makes us different." A student would leave informed but not persuaded.
+- brand_theatre_score 7-8: Aspiration without evidence. Slogans, taglines, and emotional language that sound branded but don't solve a student's decision. "We Push What's Possible" territory.
+- brand_theatre_score 9-10: Pure theatre. Every sentence could belong to any school. Brand performance with zero substance.
 
-AI SEARCH READINESS:
-- ai_readiness_score 8-10: An AI search engine could confidently recommend this school for specific queries. Content has concrete claims, named programs, real outcomes, verifiable facts.
-- ai_readiness_score 4-7: Partial — some indexable content but too much vagueness for AI to differentiate from competitors.
-- ai_readiness_score 1-3: An AI would have nothing specific to cite. This school is invisible to AI-powered discovery.
+AI SEARCH READINESS — MOST SCHOOLS WILL SCORE LOW:
+The bar is: if a student asks ChatGPT "which school should I attend for X?" — can the AI cite THIS page with a specific, differentiated answer? Having news items isn't enough. The AI needs clear claims: "Bowdoin has X that makes it different from Colby/Middlebury because Y."
+- ai_readiness_score 8-10: AI could confidently recommend this school for specific queries with concrete evidence from the page.
+- ai_readiness_score 5-7: Some indexable content but AI couldn't differentiate this school from competitors. Generic achievements any school could claim.
+- ai_readiness_score 3-4: Mostly vague. AI would lump this school in with dozens of similar institutions.
+- ai_readiness_score 1-2: Nothing for AI to work with. Invisible to AI-powered discovery.
 
 Return JSON only:
 {
