@@ -48,11 +48,11 @@ function Spinner({ size = 14 }) {
 const SITE_URL = "https://blandingaudit.netlify.app";
 
 function getShareText(res) {
-  return `Our higher ed website just scored ${res.overall}/100 on the Blanding Detector.\n\n"${scoreLabel(res.overall)}" — ${scoreVerdict(res.overall)}\n\n${res.totalCliches} clichés across ${res.pagesAnalyzed.length} page${res.pagesAnalyzed.length > 1 ? "s" : ""}.\n\nHow generic is YOUR institution? Try it free:\n${SITE_URL}\n\n#HigherEd #Branding #BlandingDetector`;
+  return `Our higher ed website just scored ${res.overall}/100 on the Blanding Detector.\n\n"${scoreLabel(res.overall)}" — ${scoreVerdict(res.overall)}\n\n${res.totalCliches} clichés across ${res.pagesAnalyzed.length} page${res.pagesAnalyzed.length > 1 ? "s" : ""}.\n\nDoes YOUR .edu actually say anything — or just sound like it does?\n${SITE_URL}\n\n#HigherEd #Branding #BlandingDetector`;
 }
 
 function shareTwitter(res) {
-  const text = `Our higher ed site scored ${res.overall}/100 on the Blanding Detector — "${scoreLabel(res.overall)}"\n\n${res.totalCliches} clichés found. How generic is YOUR institution?\n\n${SITE_URL}\n\n#HigherEd #BlandingDetector`;
+  const text = `Our higher ed site scored ${res.overall}/100 on the Blanding Detector — "${scoreLabel(res.overall)}"\n\n${res.totalCliches} clichés found. Does YOUR .edu say anything — or just sound like it?\n\n${SITE_URL}\n\n#HigherEd #BlandingDetector`;
   window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, "_blank", "width=550,height=420");
 }
 
@@ -760,7 +760,7 @@ export default function App() {
             The Blanding<br /><span style={{ fontStyle: "italic", color: T.accent }}>Detector</span>
           </h1>
           <p style={{ fontSize: 16, lineHeight: 1.65, color: "#aaa", maxWidth: 540, marginTop: 16, fontWeight: 300 }}>
-            How generic is your institution's website copy? Paste a URL and find out. We scan your homepage and landing pages for clichés, stock phrases, and the kind of language that makes every school sound the same.
+            Does your .edu actually say anything — or just sound like it does? We audit your homepage for clichés, brand theatre, and the kind of copy that makes every school invisible to students <em>and</em> the AI tools they're using to find one.
           </p>
           {auditCount > 0 && (
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 14 }}>
@@ -1030,7 +1030,7 @@ export default function App() {
 
             <div style={{ marginTop: 32, padding: "28px 24px", background: T.cardAlt, borderRadius: 10, border: "1px solid #161616", textAlign: "center" }}>
               <p style={{ fontSize: 13, color: T.muted, lineHeight: 1.65, margin: 0, maxWidth: 540, marginLeft: "auto", marginRight: "auto" }}>
-                This tool catches the surface-level sameness. Fixing it takes a deeper conversation — one about brand strategy, not just word choice.
+                This tool catches the sameness — in your language, your strategy, and how AI sees you. Fixing it takes a deeper conversation — one about brand, not just words.
               </p>
             </div>
           </section>
