@@ -788,7 +788,7 @@ export default function App() {
             The Blanding<br /><span style={{ fontStyle: "italic", color: T.accent }}>Detector</span>
           </h1>
           <p style={{ fontSize: 16, lineHeight: 1.65, color: "#aaa", maxWidth: 540, marginTop: 16, fontWeight: 300 }}>
-            Does your .edu actually say anything — or just sound like it does? We audit your homepage for clichés, brand theatre, and the kind of copy that makes every school invisible to students <em>and</em> the AI tools they're using to find one.
+            Does your .edu actually say anything — or just sound like it does? We audit your homepage and key landing pages for clichés, brand theatre, and the kind of copy that makes every school invisible to students <em>and</em> the AI tools they're using to find one.
           </p>
           {auditCount > 0 && (
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 14 }}>
