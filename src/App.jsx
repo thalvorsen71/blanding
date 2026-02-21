@@ -231,13 +231,22 @@ export default function App() {
     if (richness > 10 && cliches.length > 3) lang -= Math.min(cliches.length * 2, 15);
     // Thin content penalty: saying nothing isn't the same as being distinctive.
     if (wc < 300) lang -= Math.round((300 - wc) / 25);
-    // AI voice score blended at 40% AI / 60% mechanical (was 50/50)
-    if (ai?.voice_score) lang = Math.round(lang * 0.6 + ai.voice_score * 10 * 0.4);
+    // AI voice score blended at 50% AI / 50% mechanical
+    // AI catches what mechanical scoring misses: a page can have low cliché density
+    // (lots of news text diluting the clichés) while still having zero brand voice.
+    if (ai?.voice_score) lang = Math.round(lang * 0.5 + ai.voice_score * 10 * 0.5);
     lang = Math.max(0, Math.min(100, Math.round(lang)));
 
     // Strategy score: mechanical base from content signals, then one-step AI blend.
     // All AI inputs are combined in a single weighted average to avoid cascading dilution.
-    let mechStrat = 30 + uniq.length * 5 - stock.length * 4 + Math.min(richness * 0.7, 15) + Math.min(headlineQuality, 8);
+    // Unique claims have diminishing returns: first 3 = full value (5pts each),
+    // next 3 = half value (2.5pts each), beyond 6 = minimal (1pt each, cap 5).
+    // This prevents news-feed-heavy pages from inflating strategy through volume alone.
+    const uniqBase = Math.min(uniq.length, 3) * 5;
+    const uniqMid = Math.min(Math.max(uniq.length - 3, 0), 3) * 2.5;
+    const uniqTail = Math.min(Math.max(uniq.length - 6, 0), 5) * 1;
+    const uniqContrib = uniqBase + uniqMid + uniqTail; // max ~27.5 (was unlimited at 5 per)
+    let mechStrat = 30 + uniqContrib - stock.length * 4 + Math.min(richness * 0.5, 10) + Math.min(headlineQuality, 8);
     mechStrat = Math.max(0, Math.min(100, mechStrat));
     let strat;
     if (ai?.specificity_score && ai?.consistency_score) {
