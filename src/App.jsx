@@ -657,7 +657,7 @@ export default function App() {
                     { label: "Density penalty", desc: "Clichés per 100 words. A high density of generic language signals the copy wasn't written — it was assembled from templates.", weight: "up to −30" },
                     { label: '"You know better" penalty', desc: "If your content is rich with specific details but still uses clichés, the penalty is steeper — you've proven you can do better.", weight: "up to −15" },
                     { label: "Thin content penalty", desc: "Pages with very little text get dinged. Saying nothing isn't the same as being distinctive.", weight: "variable" },
-                    { label: "AI voice assessment", desc: "An AI evaluator reads the full text and scores how distinctive the voice feels — blended at 40% with the mechanical score above.", weight: "40% blend" },
+                    { label: "AI voice assessment", desc: "An AI evaluator reads the full text and scores how distinctive the voice feels — blended 50/50 with the mechanical score above.", weight: "50% blend" },
                   ].map((item, i) => (
                     <div key={i} style={{ background: T.bg, borderRadius: 6, padding: "10px 14px" }}>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 3 }}>
@@ -678,12 +678,34 @@ export default function App() {
                 </p>
                 <div style={{ display: "grid", gap: 8 }}>
                   {[
-                    { label: "Unique claims bonus", desc: "Named programs, specific numbers, real people, concrete details that only your institution could say.", weight: "+5 each" },
+                    { label: "Unique claims bonus", desc: "Named programs, specific numbers, real people, concrete details that only your institution could say. Diminishing returns: first few claims count most; a page with 20 news items doesn't get 20x credit.", weight: "+5 → +1 each" },
                     { label: "Stock phrase penalty", desc: "Generic structural phrases ('Learn More,' 'Apply Now,' 'Explore Our Programs') that could appear on any site.", weight: "−4 each" },
-                    { label: "Content richness bonus", desc: "Specific dates, proper nouns, data points, direct quotes, diverse section headings — signals of real, timely content.", weight: "up to +15" },
+                    { label: "Content richness bonus", desc: "Specific dates, proper nouns, data points, direct quotes, diverse section headings — signals of real, timely content.", weight: "up to +10" },
                     { label: "AI specificity score", desc: "How concrete and specific is the content? Named events, real research, actual numbers vs. vague platitudes.", weight: "20% of blend" },
                     { label: "AI consistency score", desc: "Does every element reinforce a coherent identity, or does the messaging scatter?", weight: "15% of blend" },
                     { label: "Specificity ratio", desc: "What percentage of the total page content is genuinely specific vs. generic filler? One good story in a sea of boilerplate won't save the score.", weight: "10% of blend" },
+                  ].map((item, i) => (
+                    <div key={i} style={{ background: T.bg, borderRadius: 6, padding: "10px 14px" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 3 }}>
+                        <span style={{ fontSize: 13, color: T.text, fontWeight: 500 }}>{item.label}</span>
+                        <span style={{ fontSize: 12, fontFamily: T.mono, color: T.dim }}>{item.weight}</span>
+                      </div>
+                      <p style={{ fontSize: 13, color: T.dim, lineHeight: 1.55, margin: 0 }}>{item.desc}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* BRAND THEATRE & AI READINESS */}
+              <div style={{ background: T.card, border: "1px solid " + T.border, borderRadius: 10, padding: "22px 24px", borderLeft: "3px solid #a855f7" }}>
+                <div style={{ fontSize: 12, fontFamily: T.mono, color: "#a855f7", fontWeight: 600, marginBottom: 10 }}>Score Modifiers — Brand Theatre & AI Search Readiness</div>
+                <p style={{ fontSize: 13, color: T.muted, lineHeight: 1.7, margin: "0 0 12px" }}>
+                  On top of the two core scores, we evaluate two additional dimensions that gently nudge your strategy score up or down. These aren't primary scoring factors — they're context checks that reward schools doing the work and flag those coasting on vibes.
+                </p>
+                <div style={{ display: "grid", gap: 8 }}>
+                  {[
+                    { label: "Brand Theatre detection", desc: "\"Brand theatre\" is language that sounds branded but doesn't solve anything — aspirational slogans, emotional taglines, and personality-driven copy that never tells a student what specific problem this school solves for them. A high theatre score (4+) penalizes strategy.", weight: "up to −15 strategy" },
+                    { label: "AI Search Readiness", desc: "AI search engines (ChatGPT, Perplexity, Gemini) are now decision engines. They don't reward schools for being attractive — they reward being specific and dependable. Can an AI cite your page when a student asks 'which school should I attend for X?' A low score nudges strategy down; a high score nudges it up.", weight: "±10 strategy" },
                   ].map((item, i) => (
                     <div key={i} style={{ background: T.bg, borderRadius: 6, padding: "10px 14px" }}>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 3 }}>
@@ -720,7 +742,7 @@ export default function App() {
               <div style={{ background: T.card, border: "1px solid " + T.border, borderRadius: 10, padding: "22px 24px" }}>
                 <div style={{ fontSize: 12, fontFamily: T.mono, color: T.text, fontWeight: 600, marginBottom: 10 }}>What We Scan</div>
                 <p style={{ fontSize: 13, color: T.muted, lineHeight: 1.7, margin: "0 0 8px" }}>
-                  We scrape your homepage plus up to 3 linked sub-pages (About, Admissions, Academics). We extract all visible text, headings, and meta descriptions. An AI model then reads the full content as a "brand critic" — evaluating voice, specificity, and consistency independent of the mechanical scoring.
+                  We scrape your homepage plus up to 3 linked sub-pages (About, Admissions, Academics). We extract all visible text, headings, and meta descriptions. An AI model then reads the full content as a "brand critic" — evaluating voice, specificity, consistency, brand theatre, and AI search readiness independent of the mechanical scoring.
                 </p>
                 <p style={{ fontSize: 13, color: T.muted, lineHeight: 1.7, margin: 0 }}>
                   The final score blends mechanical analysis (cliché matching, content signals) with AI evaluation (voice, specificity, consistency). Mechanical signals are weighted more heavily because they're deterministic and reproducible — the AI layer adds qualitative judgment about how the whole page <em>feels</em>, but can't override what the data shows.
@@ -731,7 +753,7 @@ export default function App() {
               <div style={{ background: T.cardAlt, border: "1px solid " + T.border, borderRadius: 10, padding: "22px 24px" }}>
                 <div style={{ fontSize: 12, fontFamily: T.mono, color: T.dim, fontWeight: 600, marginBottom: 10 }}>Honest Limitations</div>
                 <p style={{ fontSize: 13, color: T.muted, lineHeight: 1.7, margin: "0 0 8px" }}>
-                  This tool measures <em>language differentiation</em> — whether your website copy sounds like you or sounds like everyone. It doesn't measure brand strategy effectiveness, enrollment outcomes, or whether your messaging resonates with your specific audience. A school can score well here and still have the wrong message; a school can score poorly and still enroll students. But if you sound like everyone else, you're making your marketing team's job harder than it needs to be.
+                  This tool measures <em>language differentiation</em> and <em>strategic specificity</em> — whether your website copy sounds like you or sounds like everyone, and whether it says something concrete enough for both humans and AI to act on. It doesn't measure brand strategy effectiveness, enrollment outcomes, or whether your messaging resonates with your specific audience. A school can score well here and still have the wrong message; a school can score poorly and still enroll students. But if you sound like everyone else, you're making your marketing team's job harder than it needs to be — and increasingly invisible to the AI tools students use to find you.
                 </p>
                 <p style={{ fontSize: 13, color: T.muted, lineHeight: 1.7, margin: 0 }}>
                   Scores may vary slightly between runs due to the AI evaluation component. JS-heavy sites that don't render HTML may not be fully scrapable. The cliché dictionary, while extensive, focuses on North American higher education language patterns.
@@ -1070,21 +1092,21 @@ export default function App() {
                   <button onClick={() => setShowMethodology(false)} style={{ background: "none", border: "none", color: T.dim, fontSize: 11, fontFamily: T.mono, cursor: "pointer" }}>Close ✕</button>
                 </div>
                 <p style={{ fontSize: 13, color: T.muted, lineHeight: 1.7, margin: "12px 0 0" }}>
-                  Every audit produces two sub-scores that combine into your overall rating. The score is a blend of deterministic text analysis (cliché matching, content signals, structural patterns) and AI-powered qualitative evaluation. Mechanical signals are weighted more heavily because they're reproducible — the AI layer adds judgment about how the whole page feels, but can't override what the data shows.
+                  Every audit produces two sub-scores — Language & Voice and Content Strategy — that combine into your overall rating. The score blends deterministic text analysis (cliché matching, content signals) with AI-powered evaluation (voice, specificity, brand theatre, AI search readiness). Mechanical signals anchor the score; the AI layer adds qualitative judgment that can nudge but not override what the data shows.
                 </p>
               </div>
 
               <div style={{ background: T.card, border: "1px solid " + T.border, borderRadius: 10, padding: "22px 24px", borderLeft: "3px solid " + T.accent }}>
                 <div style={{ fontSize: 12, fontFamily: T.mono, color: T.accent, fontWeight: 600, marginBottom: 10 }}>Language & Voice — 55% of overall</div>
                 <p style={{ fontSize: 13, color: T.muted, lineHeight: 1.7, margin: 0 }}>
-                  Starts at 100, then penalizes for cliché usage. We match against a curated dictionary of 200+ higher ed clichés. Penalties scale with both the number of unique clichés found and their density per 100 words. Sites that show they <em>can</em> be specific (rich content) but still fall back on clichés get a steeper penalty. An AI voice assessment blends in at 40% to capture the qualitative feel that pure pattern-matching misses.
+                  Starts at 100, then penalizes for cliché usage. We match against a curated dictionary of 200+ higher ed clichés. Penalties scale with both the number of unique clichés found and their density per 100 words. Sites that show they <em>can</em> be specific (rich content) but still fall back on clichés get a steeper penalty. An AI voice assessment blends in at 50% to capture the qualitative feel that pure pattern-matching misses.
                 </p>
               </div>
 
               <div style={{ background: T.card, border: "1px solid " + T.border, borderRadius: 10, padding: "22px 24px", borderLeft: "3px solid #22c55e" }}>
                 <div style={{ fontSize: 12, fontFamily: T.mono, color: "#22c55e", fontWeight: 600, marginBottom: 10 }}>Content Strategy — 45% of overall</div>
                 <p style={{ fontSize: 13, color: T.muted, lineHeight: 1.7, margin: 0 }}>
-                  Builds upward from a base of 30, rewarding unique claims, concrete details, and rich content signals (named people, specific dates, data points, direct quotes). Stock phrases and generic CTAs pull the score down. AI evaluation — covering specificity, consistency, and the ratio of specific-to-generic content — blends in a single weighted step at 45%. One good story buried in boilerplate won't save the score; the specificity ratio ensures the proportion of real content matters.
+                  Builds upward from a base of 30, rewarding unique claims (with diminishing returns — the first few count most), concrete details, and rich content signals. Stock phrases pull the score down. Two modifiers then adjust the strategy score: <em>brand theatre detection</em> penalizes language that sounds branded but never tells a student what problem you solve; <em>AI search readiness</em> nudges the score based on whether AI engines could cite your page with a specific answer. AI evaluation blends in a single weighted step at 45%.
                 </p>
               </div>
 
@@ -1106,7 +1128,7 @@ export default function App() {
               <div style={{ background: T.cardAlt, border: "1px solid " + T.border, borderRadius: 10, padding: "18px 24px" }}>
                 <div style={{ fontSize: 11, fontFamily: T.mono, color: T.dim, fontWeight: 600, marginBottom: 8 }}>What this tool doesn't measure</div>
                 <p style={{ fontSize: 13, color: T.muted, lineHeight: 1.7, margin: 0 }}>
-                  This scores <em>language differentiation</em> — whether your website copy sounds like you or sounds like everyone else. It doesn't measure brand strategy effectiveness, enrollment outcomes, or audience resonance. Scores may vary slightly between runs due to the AI component. JS-heavy sites may not be fully scrapable.
+                  This scores <em>language differentiation</em> and <em>strategic specificity</em> — whether your website copy sounds like you or sounds like everyone else, and whether it gives humans and AI something concrete to act on. It doesn't measure brand strategy effectiveness, enrollment outcomes, or audience resonance. Scores may vary slightly between runs due to the AI component. JS-heavy sites may not be fully scrapable.
                 </p>
               </div>
             </div>
