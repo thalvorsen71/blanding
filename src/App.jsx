@@ -254,22 +254,19 @@ export default function App() {
       const ratioCeiling = Math.max(0, Math.min(100, ai.specificity_ratio)) + 20;
       if (strat > ratioCeiling) strat = Math.round(strat * 0.6 + ratioCeiling * 0.4);
     }
-    // Brand theatre penalty: language that sounds branded but solves nothing
-    // Even moderate theatre (4+) should hurt — performing a brand ≠ having one
-    if (ai?.brand_theatre_score && ai.brand_theatre_score >= 3) {
-      const theatrePenalty = Math.min((ai.brand_theatre_score - 2) * 4, 30);
+    // Brand theatre penalty: strategy-only modifier (theatre is a positioning problem, not a language one)
+    // Kicks in at 4+, gentle curve, caps at -15. This is a supporting signal, not a primary dimension.
+    if (ai?.brand_theatre_score && ai.brand_theatre_score >= 4) {
+      const theatrePenalty = Math.min((ai.brand_theatre_score - 3) * 2.5, 15);
       strat -= theatrePenalty;
-      // Theatre also drags language score — theatrical voice isn't real voice
-      if (ai.brand_theatre_score >= 5) lang = Math.round(lang - Math.min((ai.brand_theatre_score - 4) * 3, 12));
     }
-    // AI readiness: continuous impact, not just extremes
-    // 5 is neutral; below 5 penalizes, above 5 rewards
+    // AI readiness: gentle nudge on strategy only
+    // 5 is neutral; each point away from 5 = ±2 points (range: -8 to +10)
     if (ai?.ai_readiness_score) {
-      const aiReadinessImpact = (ai.ai_readiness_score - 5) * 4; // range: -16 to +20
-      strat += Math.max(-16, Math.min(12, aiReadinessImpact));
+      const aiReadinessImpact = (ai.ai_readiness_score - 5) * 2;
+      strat += Math.max(-8, Math.min(10, aiReadinessImpact));
     }
     strat = Math.max(0, Math.min(100, Math.round(strat)));
-    lang = Math.max(0, Math.min(100, Math.round(lang))); // re-clamp after theatre penalty
 
     const overall = Math.round(lang * 0.55 + strat * 0.45);
     return {
