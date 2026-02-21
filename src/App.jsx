@@ -220,21 +220,30 @@ export default function App() {
       ? Math.round(((h1Total + h2Total - h1Cliches - h2Cliches) / (h1Total + h2Total)) * 10)
       : 0;
 
-    // Language score: penalizes cliché usage with severity + placement weighting.
-    // weightedTotal accounts for both severity tier (severe=1.5x, normal=1x, mild=0.5x)
-    // and placement (H1=3x, H2=2x, meta=2x, body=1x).
-    let lang = 100 - Math.min(cliches.length * 2.5, 45) - Math.min((weighted.weightedTotal / Math.max(wc / 100, 1)) * 5, 35) - (uniq.length < 2 ? 10 : 0);
+    // Language score: penalizes cliché usage with logarithmic curve.
+    // Logarithmic penalty: first few clichés hurt a lot, diminishing pain after that.
+    // log(1+1)*14=9.7, log(5+1)*14=25.1, log(10+1)*14=33.5, log(20+1)*14=42.6, log(40+1)*14=52
+    const countPenalty = Math.min(Math.log(cliches.length + 1) * 14, 50);
+    // Density penalty: clichés per 100 words, weighted by severity + placement.
+    const densityPenalty = Math.min((weighted.weightedTotal / Math.max(wc / 100, 1)) * 4, 35);
+    // Non-additive: take the WORSE of count vs density, then add 30% of the other.
+    // This prevents double-punishing — a page shouldn't lose -45 AND -35.
+    const primaryPenalty = Math.max(countPenalty, densityPenalty);
+    const secondaryPenalty = Math.min(countPenalty, densityPenalty);
+    let lang = 100 - primaryPenalty - (secondaryPenalty * 0.3) - (uniq.length < 2 ? 8 : 0);
     // H1 cliché penalty: using platitudes in your headline is a brand crime
     if (weighted.h1Count > 0) lang -= Math.min(weighted.h1Count * 5, 15);
-    // "You know better" penalty: if content is rich but you still use clichés,
-    // it proves you CAN be specific but chose platitudes in spots.
-    if (richness > 10 && cliches.length > 3) lang -= Math.min(cliches.length * 2, 15);
+    // "Rich content bonus": if you have strong specific content, give partial credit back.
+    // Previously this was a PENALTY for having rich content + clichés — that's backwards.
+    // Now: rich content earns back some of what clichés took away.
+    if (richness > 12) lang += Math.min(Math.round(richness * 0.4), 8);
     // Thin content penalty: saying nothing isn't the same as being distinctive.
     if (wc < 300) lang -= Math.round((300 - wc) / 25);
-    // AI voice score blended at 50% AI / 50% mechanical
-    // AI catches what mechanical scoring misses: a page can have low cliché density
-    // (lots of news text diluting the clichés) while still having zero brand voice.
-    if (ai?.voice_score) lang = Math.round(lang * 0.5 + ai.voice_score * 10 * 0.5);
+    // AI voice score: dynamic blend based on mechanical score confidence.
+    // High mechanical scores (lots of data) = trust mechanical more.
+    // Low mechanical scores (thin data) = lean on AI more.
+    const mechWeight = 0.4 + (Math.min(lang, 80) / 100) * 0.25; // range: 0.4 to 0.6
+    if (ai?.voice_score) lang = Math.round(lang * mechWeight + ai.voice_score * 10 * (1 - mechWeight));
     lang = Math.max(0, Math.min(100, Math.round(lang)));
 
     // Strategy score: mechanical base from content signals, then one-step AI blend.
@@ -653,11 +662,11 @@ export default function App() {
                 </p>
                 <div style={{ display: "grid", gap: 8 }}>
                   {[
-                    { label: "Cliché count penalty", desc: "Each unique cliché phrase found costs 3 points (capped at 50). More clichés = lower score.", weight: "up to −50" },
-                    { label: "Density penalty", desc: "Clichés per 100 words. A high density of generic language signals the copy wasn't written — it was assembled from templates.", weight: "up to −30" },
-                    { label: '"You know better" penalty', desc: "If your content is rich with specific details but still uses clichés, the penalty is steeper — you've proven you can do better.", weight: "up to −15" },
+                    { label: "Cliché penalty (logarithmic)", desc: "Clichés hurt on a curve: the first few matter most, diminishing after that. Going from 5→10 clichés hurts more than 15→20. This rewards schools that have mostly cleaned up their language.", weight: "up to −50" },
+                    { label: "Density penalty", desc: "Clichés per 100 words, weighted by severity and placement. Count and density don't stack — we take the worse of the two, then add a fraction of the other.", weight: "non-additive" },
+                    { label: "Rich content bonus", desc: "If your page has strong specific content (names, dates, data, quotes), you earn back some of what clichés took away. Having good stuff matters.", weight: "up to +8" },
                     { label: "Thin content penalty", desc: "Pages with very little text get dinged. Saying nothing isn't the same as being distinctive.", weight: "variable" },
-                    { label: "AI voice assessment", desc: "An AI evaluator reads the full text and scores how distinctive the voice feels — blended 50/50 with the mechanical score above.", weight: "50% blend" },
+                    { label: "AI voice assessment", desc: "An AI evaluator reads the full text and scores how distinctive the voice feels. The blend adapts: pages with strong mechanical data lean more on the numbers; thin pages lean more on AI judgment.", weight: "40–60% blend" },
                   ].map((item, i) => (
                     <div key={i} style={{ background: T.bg, borderRadius: 6, padding: "10px 14px" }}>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 3 }}>
@@ -1099,7 +1108,7 @@ export default function App() {
               <div style={{ background: T.card, border: "1px solid " + T.border, borderRadius: 10, padding: "22px 24px", borderLeft: "3px solid " + T.accent }}>
                 <div style={{ fontSize: 12, fontFamily: T.mono, color: T.accent, fontWeight: 600, marginBottom: 10 }}>Language & Voice — 55% of overall</div>
                 <p style={{ fontSize: 13, color: T.muted, lineHeight: 1.7, margin: 0 }}>
-                  Starts at 100, then penalizes for cliché usage. We match against a curated dictionary of 200+ higher ed clichés. Penalties scale with both the number of unique clichés found and their density per 100 words. Sites that show they <em>can</em> be specific (rich content) but still fall back on clichés get a steeper penalty. An AI voice assessment blends in at 50% to capture the qualitative feel that pure pattern-matching misses.
+                  Starts at 100, then penalizes for cliché usage on a logarithmic curve — the first few clichés hurt the most, with diminishing impact after that. Count and density penalties don't fully stack; we use the worse of the two, then add a fraction of the other. Pages with rich, specific content earn partial credit back. An AI voice assessment blends in dynamically (40–60%) to capture the qualitative feel that pure pattern-matching misses.
                 </p>
               </div>
 
