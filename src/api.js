@@ -127,8 +127,8 @@ Return ONLY a JSON object (no markdown, no backticks, no preamble):
   "ctas": ["CTA button/link texts exactly as written"],
   "page_type": "homepage|admissions|about|academics|student-life|other",
   "linked_pages": ["up to 6 internal section URLs found on this page"],
-  "unique_claims": ["specific concrete claims with numbers, dates, names, or facts from the page"],
-  "stock_phrases": ["generic marketing phrases literally on the page"]
+  "unique_claims": ["ONLY verifiable facts unique to THIS institution — must contain a number, percentage, dollar amount, ranking, named program, named person, specific date, or named place. Examples: 'student-faculty ratio is 7:1', '94% of students live on campus', 'free tuition for families earning under $100K'. Do NOT include taglines, slogans, marketing copy, section headers, or aspirational language. Max 15 items."],
+  "stock_phrases": ["generic CTA or structural phrases that could appear on ANY university site verbatim — e.g. 'Learn More', 'Apply Now', 'Request Info', 'Schedule a Visit', 'Explore Our Programs', 'Why Choose Us', 'What Makes Us Different'. Do NOT duplicate clichés already in the body text. Only short phrases (under 8 words), not full sentences."]
 }`
   }], true); // Sonnet: only model that actually executes web_search tool
   const result = parseJSON(raw);
