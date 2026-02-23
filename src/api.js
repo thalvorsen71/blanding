@@ -121,11 +121,6 @@ UNIQUE_CLAIMS RULES (read carefully):
 - BAD (do NOT include): taglines ("Daring scholarship, caring community"), section headers ("Majors & Minors"), marketing copy ("The Adventure is in the Opportunities"), aspirational language ("Imagine the Possibilities"), navigation labels ("Admissions & Financial Aid")
 - Maximum 15 items. If in doubt, leave it out.
 
-STOCK_PHRASES RULES:
-- Short generic CTA or structural phrases (under 8 words) that could appear on ANY university site verbatim.
-- GOOD examples: "Learn More", "Apply Now", "Request Info", "Schedule a Visit", "Explore Our Programs", "Why Choose Us"
-- Do NOT include full sentences or clichés already captured in body_text.
-
 Return ONLY a JSON object (no markdown, no backticks, no preamble):
 {
   "title": "exact page <title> tag",
@@ -137,8 +132,7 @@ Return ONLY a JSON object (no markdown, no backticks, no preamble):
   "ctas": ["CTA button/link texts exactly as written"],
   "page_type": "homepage|admissions|about|academics|student-life|other",
   "linked_pages": ["up to 6 internal section URLs found on this page"],
-  "unique_claims": ["verifiable facts with numbers/percentages/names only — see rules above"],
-  "stock_phrases": ["short generic CTAs under 8 words — see rules above"]
+  "unique_claims": ["verifiable facts with numbers/percentages/names only — see rules above"]
 }`
   }], true); // Sonnet: only model that actually executes web_search tool
   const result = parseJSON(raw);

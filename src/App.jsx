@@ -201,7 +201,6 @@ export default function App() {
     // Prefer AI-curated unique claims (from deep analysis) over Cheerio regex guesses
     const cheerioUniq = [...new Set(pages.flatMap(p => p.data.unique_claims || []))].slice(0, 10);
     const uniq = (ai?.verified_unique_claims?.length > 0) ? ai.verified_unique_claims : cheerioUniq;
-    const stock = [...new Set(pages.flatMap(p => p.data.stock_phrases || []))];
     const cliches = countCliches(allBody + " " + allH1.join(" ") + " " + allH2.join(" "));
     const totalC = cliches.reduce((s, c) => s + c.count, 0);
     const wc = allBody.split(/\s+/).length;
@@ -257,7 +256,7 @@ export default function App() {
     const uniqMid = Math.min(Math.max(uniq.length - 3, 0), 3) * 2.5;
     const uniqTail = Math.min(Math.max(uniq.length - 6, 0), 5) * 1;
     const uniqContrib = uniqBase + uniqMid + uniqTail; // max ~27.5 (was unlimited at 5 per)
-    let mechStrat = 30 + uniqContrib - stock.length * 4 + Math.min(richness * 0.5, 10) + Math.min(headlineQuality, 8);
+    let mechStrat = 30 + uniqContrib + Math.min(richness * 0.5, 10) + Math.min(headlineQuality, 8);
     mechStrat = Math.max(0, Math.min(100, mechStrat));
     let strat;
     if (ai?.specificity_score && ai?.consistency_score) {
@@ -293,7 +292,7 @@ export default function App() {
       url, schoolName: hp.title || url, pagesAnalyzed: pages, overall,
       scores: { language: lang, strategy: strat },
       cliches, totalCliches: totalC,
-      uniqueClaims: uniq, stockPhrases: stock,
+      uniqueClaims: uniq,
       homepageH1: hp.h1 || [], allH1, allH2, metaDesc: hp.meta_description || "", bodyText: allBody, ai,
       scrapeSource,
     };
@@ -313,7 +312,7 @@ export default function App() {
     let lang = 100 - Math.min(cl.length * 3, 50) - Math.min((tc / Math.max(inputText.split(/\s+/).length / 100, 1)) * 7, 30);
     if (ai?.voice_score) lang = Math.round(lang * 0.6 + ai.voice_score * 10 * 0.4);
     lang = Math.max(0, Math.min(100, lang));
-    setResult({ url: null, schoolName: "Your Copy", pagesAnalyzed: [{ type: "text" }], overall: lang, scores: { language: lang, strategy: null }, cliches: cl, totalCliches: tc, uniqueClaims: [], stockPhrases: [], allH1: [], allH2: [], metaDesc: "", bodyText: inputText, ai });
+    setResult({ url: null, schoolName: "Your Copy", pagesAnalyzed: [{ type: "text" }], overall: lang, scores: { language: lang, strategy: null }, cliches: cl, totalCliches: tc, uniqueClaims: [], allH1: [], allH2: [], metaDesc: "", bodyText: inputText, ai });
     setProgress(p => p.map(i => i.status === "error" ? i : { ...i, status: "done" })); setAnalyzing(false); scrollToResult();
   };
 
@@ -552,15 +551,9 @@ export default function App() {
 
           {/* STRATEGY */}
           {activeTab === "strategy" && (
-            <div className="strategy-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-              <div style={{ background: T.card, border: "1px solid " + T.border, borderRadius: 10, padding: 18 }}>
-                <div style={{ fontSize: 12, fontFamily: T.mono, color: "#22c55e", textTransform: "uppercase", marginBottom: 8 }}>Unique Claims ({res.uniqueClaims.length})</div>
-                {res.uniqueClaims.length ? res.uniqueClaims.map((c, i) => <p key={i} style={{ fontSize: 13, color: T.text, lineHeight: 1.5, margin: "0 0 6px", padding: "4px 0", borderBottom: i < res.uniqueClaims.length - 1 ? "1px solid " + T.border : "none" }}>{c}</p>) : <p style={{ fontSize: 13, color: "#ef4444" }}>No ownable claims found.</p>}
-              </div>
-              <div style={{ background: T.card, border: "1px solid " + T.border, borderRadius: 10, padding: 18 }}>
-                <div style={{ fontSize: 12, fontFamily: T.mono, color: "#ef4444", textTransform: "uppercase", marginBottom: 8 }}>Stock Phrases ({res.stockPhrases.length})</div>
-                {res.stockPhrases.length ? res.stockPhrases.map((c, i) => <p key={i} style={{ fontSize: 13, color: T.muted, lineHeight: 1.5, margin: "0 0 6px", fontStyle: "italic" }}>"{c}"</p>) : <p style={{ fontSize: 13, color: "#22c55e" }}>Clean.</p>}
-              </div>
+            <div style={{ background: T.card, border: "1px solid " + T.border, borderRadius: 10, padding: 18 }}>
+              <div style={{ fontSize: 12, fontFamily: T.mono, color: "#22c55e", textTransform: "uppercase", marginBottom: 8 }}>Unique Claims ({res.uniqueClaims.length})</div>
+              {res.uniqueClaims.length ? res.uniqueClaims.map((c, i) => <p key={i} style={{ fontSize: 13, color: T.text, lineHeight: 1.5, margin: "0 0 6px", padding: "4px 0", borderBottom: i < res.uniqueClaims.length - 1 ? "1px solid " + T.border : "none" }}>{c}</p>) : <p style={{ fontSize: 13, color: "#ef4444" }}>No ownable claims found.</p>}
             </div>
           )}
 
@@ -697,8 +690,7 @@ export default function App() {
                 <div style={{ display: "grid", gap: 8 }}>
                   {[
                     { label: "Unique claims bonus", desc: "Institutional facts that differentiate you from peers — verified by AI analysis. Must contain specific numbers, percentages, named programs, or concrete outcomes (e.g. 'student-faculty ratio is 7:1,' '94% of students live on campus'). Taglines, news headlines, and marketing copy don't count. Three tiers with diminishing returns: first 3 claims earn 5 pts each, next 3 earn 2.5 pts each, beyond that 1 pt each (capped).", weight: "up to ~27 pts" },
-                    { label: "Stock phrase penalty", desc: "Generic CTAs and structural phrases ('Learn More,' 'Apply Now,' 'Contact Us,' 'Request Information') that could appear on any university site verbatim.", weight: "−4 each" },
-                    { label: "Content richness bonus", desc: "Specific dates, proper nouns, data points, direct quotes, diverse section headings — signals of real, timely content.", weight: "up to +10" },
+{ label: "Content richness bonus", desc: "Specific dates, proper nouns, data points, direct quotes, diverse section headings — signals of real, timely content.", weight: "up to +10" },
                     { label: "Headline quality bonus", desc: "H1 and H2 tags that avoid clichés are rewarded. The percentage of non-cliché headlines boosts your strategy score — clear, specific headings signal brand intentionality.", weight: "up to +8" },
                     { label: "AI specificity score", desc: "How concrete and specific is the content? Named events, real research, actual numbers vs. vague platitudes. Part of the 45% AI evaluation blend.", weight: "20% of AI blend" },
                     { label: "AI consistency score", desc: "Does every element reinforce a coherent identity, or does the messaging scatter? Part of the 45% AI evaluation blend.", weight: "15% of AI blend" },
