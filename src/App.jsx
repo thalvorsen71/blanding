@@ -198,8 +198,10 @@ export default function App() {
     const allBody = pages.map(p => p.data.body_text || "").join(" ");
     let ai;
     try { ai = await deepAnalysis(url, hp.body_text || JSON.stringify(hp), allBody, allH1, allH2, hp.meta_description || "", hp.h1 || []); } catch (e) { addProg(prefix + "AI analysis timed out — using cliché data only", "error"); ai = null; }
-    const uniq = pages.flatMap(p => p.data.unique_claims || []);
-    const stock = pages.flatMap(p => p.data.stock_phrases || []);
+    // Prefer AI-curated unique claims (from deep analysis) over Cheerio regex guesses
+    const cheerioUniq = pages.flatMap(p => p.data.unique_claims || []);
+    const uniq = (ai?.verified_unique_claims?.length > 0) ? ai.verified_unique_claims : cheerioUniq;
+    const stock = [...new Set(pages.flatMap(p => p.data.stock_phrases || []))];
     const cliches = countCliches(allBody + " " + allH1.join(" ") + " " + allH2.join(" "));
     const totalC = cliches.reduce((s, c) => s + c.count, 0);
     const wc = allBody.split(/\s+/).length;

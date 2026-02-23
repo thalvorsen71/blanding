@@ -334,7 +334,8 @@ Return JSON only:
   "ai_readiness_diagnosis": "1-2 sentences: If a student asked ChatGPT 'which school is best for X?' — could an AI cite anything specific from this page? What's missing?",
   "rx_language": "fix the voice/language, 2 sentences",
   "rx_strategy": "fix the content strategy, 2 sentences",
-  "rx_ai_readiness": "what this institution should change so AI search engines can actually recommend them, 2 sentences"
+  "rx_ai_readiness": "what this institution should change so AI search engines can actually recommend them, 2 sentences",
+  "verified_unique_claims": ["ONLY institutional facts that differentiate THIS school from peers. Each must be a short factual statement (under 120 chars) containing a number, percentage, named program, or concrete outcome. Examples: 'Student-faculty ratio is 7:1', '94% of students live on campus all four years', '3-2 engineering program with Caltech'. Do NOT include: news headlines, fundraising campaigns, event listings, press mentions, taglines, slogans, or marketing copy. Max 10 items. If fewer than 3 real differentiators exist on the page, return fewer."]
 }`;
 
   const raw = await callAPI([{ role: "user", content: prompt }], false, "claude-haiku-4-5-20251001");
