@@ -114,7 +114,17 @@ ABSOLUTE RULES:
 3. Do NOT include information from your training data.
 4. If a field has no content on this page, return empty string or empty array.
 5. For body_text: Be EXHAUSTIVE. Include the hero/banner text, ALL featured story headlines and descriptions, ALL news headlines, event names, research highlights, statistics, pull quotes, and any institutional copy. Copy the text from EVERY section of the page. Aim for 3000-5000 characters. The MORE text you capture, the better.
-6. For unique_claims and stock_phrases: ONLY phrases verbatim on THIS page.
+
+UNIQUE_CLAIMS RULES (read carefully):
+- Each claim MUST contain at least one: number, percentage, dollar amount, ranking, named program, named person, or specific date.
+- GOOD examples: "student-faculty ratio is 7:1", "94% of students live on campus", "free tuition for families earning under $100K", "6,000+ students across the Claremont Colleges", "class size averages 13"
+- BAD (do NOT include): taglines ("Daring scholarship, caring community"), section headers ("Majors & Minors"), marketing copy ("The Adventure is in the Opportunities"), aspirational language ("Imagine the Possibilities"), navigation labels ("Admissions & Financial Aid")
+- Maximum 15 items. If in doubt, leave it out.
+
+STOCK_PHRASES RULES:
+- Short generic CTA or structural phrases (under 8 words) that could appear on ANY university site verbatim.
+- GOOD examples: "Learn More", "Apply Now", "Request Info", "Schedule a Visit", "Explore Our Programs", "Why Choose Us"
+- Do NOT include full sentences or clichés already captured in body_text.
 
 Return ONLY a JSON object (no markdown, no backticks, no preamble):
 {
@@ -127,8 +137,8 @@ Return ONLY a JSON object (no markdown, no backticks, no preamble):
   "ctas": ["CTA button/link texts exactly as written"],
   "page_type": "homepage|admissions|about|academics|student-life|other",
   "linked_pages": ["up to 6 internal section URLs found on this page"],
-  "unique_claims": ["ONLY verifiable facts unique to THIS institution — must contain a number, percentage, dollar amount, ranking, named program, named person, specific date, or named place. Examples: 'student-faculty ratio is 7:1', '94% of students live on campus', 'free tuition for families earning under $100K'. Do NOT include taglines, slogans, marketing copy, section headers, or aspirational language. Max 15 items."],
-  "stock_phrases": ["generic CTA or structural phrases that could appear on ANY university site verbatim — e.g. 'Learn More', 'Apply Now', 'Request Info', 'Schedule a Visit', 'Explore Our Programs', 'Why Choose Us', 'What Makes Us Different'. Do NOT duplicate clichés already in the body text. Only short phrases (under 8 words), not full sentences."]
+  "unique_claims": ["verifiable facts with numbers/percentages/names only — see rules above"],
+  "stock_phrases": ["short generic CTAs under 8 words — see rules above"]
 }`
   }], true); // Sonnet: only model that actually executes web_search tool
   const result = parseJSON(raw);
