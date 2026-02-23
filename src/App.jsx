@@ -482,6 +482,11 @@ export default function App() {
               )}
             </div>
           )}
+          {activeTab === "overview" && !res.ai && (
+            <div style={{ background: T.card, border: "1px solid " + T.border, borderRadius: 10, padding: "24px 20px", textAlign: "center" }}>
+              <p style={{ color: T.muted, fontSize: 14, lineHeight: 1.6, margin: 0 }}>AI brand analysis wasn't available for this scan — this can happen with JavaScript-heavy sites or when the analysis times out. The cliché and strategy scores above are still based on what we could extract. Try scanning again, or check the <strong>Clichés</strong> and <strong>Strategy</strong> tabs for details.</p>
+            </div>
+          )}
 
           {/* CLICHÉS — word cloud */}
           {activeTab === "language" && (
