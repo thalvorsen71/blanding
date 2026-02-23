@@ -48,11 +48,11 @@ function Spinner({ size = 14 }) {
 const SITE_URL = "https://blandingaudit.netlify.app";
 
 function getShareText(res) {
-  return `Our higher ed website just scored ${res.overall}/100 on the Blanding Detector.\n\n"${scoreLabel(res.overall)}" — ${scoreVerdict(res.overall)}\n\n${res.totalCliches} clichés across ${res.pagesAnalyzed.length} page${res.pagesAnalyzed.length > 1 ? "s" : ""}.\n\nDoes YOUR .edu actually say anything — or just sound like it does?\n${SITE_URL}\n\n#HigherEd #Branding #BlandingDetector`;
+  return `Our higher ed website just scored ${res.overall}/100 on Blanding.\n\n"${scoreLabel(res.overall)}" — ${scoreVerdict(res.overall)}\n\n${res.totalCliches} clichés across ${res.pagesAnalyzed.length} page${res.pagesAnalyzed.length > 1 ? "s" : ""}.\n\nDoes YOUR .edu actually say anything — or just sound like it does?\n${SITE_URL}\n\n#HigherEd #Branding #Blanding`;
 }
 
 function shareTwitter(res) {
-  const text = `Our higher ed site scored ${res.overall}/100 on the Blanding Detector — "${scoreLabel(res.overall)}"\n\n${res.totalCliches} clichés found. Does YOUR .edu say anything — or just sound like it?\n\n${SITE_URL}\n\n#HigherEd #BlandingDetector`;
+  const text = `Our higher ed site scored ${res.overall}/100 on Blanding — "${scoreLabel(res.overall)}"\n\n${res.totalCliches} clichés found. Does YOUR .edu say anything — or just sound like it?\n\n${SITE_URL}\n\n#HigherEd #Blanding`;
   window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, "_blank", "width=550,height=420");
 }
 
@@ -648,7 +648,7 @@ export default function App() {
           {activeTab === "methodology" && (
             <div style={{ display: "grid", gap: 14 }}>
               <div style={{ background: T.card, border: "1px solid " + T.border, borderRadius: 10, padding: "22px 24px" }}>
-                <div style={{ fontSize: 12, fontFamily: T.mono, color: T.accent, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 12 }}>How the Blanding Detector Scores Your Site</div>
+                <div style={{ fontSize: 12, fontFamily: T.mono, color: T.accent, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 12 }}>How Blanding Scores Your Site</div>
                 <p style={{ fontSize: 13, color: T.muted, lineHeight: 1.7, margin: "0 0 14px" }}>
                   Every audit produces two sub-scores that combine into your overall rating. Here's exactly what we measure and how.
                 </p>
@@ -797,10 +797,10 @@ export default function App() {
           <div style={{ marginBottom: 40 }}></div>
           <span style={{ display: "inline-block", fontSize: 11, fontWeight: 500, letterSpacing: "0.12em", textTransform: "uppercase", color: T.accent, fontFamily: T.mono, marginBottom: 12 }}>Higher Ed Edition</span>
           <h1 style={{ fontSize: "clamp(38px, 6.5vw, 64px)", fontFamily: T.serif, fontWeight: 400, lineHeight: 1.0, margin: 0, letterSpacing: "-0.02em" }}>
-            The Blanding<br /><span style={{ fontStyle: "italic", color: T.accent }}>Detector</span>
+            Blanding<span style={{ fontStyle: "italic", color: T.accent, fontSize: "0.45em", verticalAlign: "middle", marginLeft: 12 }}>Audit</span>
           </h1>
           <p style={{ fontSize: 16, lineHeight: 1.65, color: "#aaa", maxWidth: 540, marginTop: 16, fontWeight: 300 }}>
-            Does your .edu actually say anything — or just sound like it does? We audit your homepage and key landing pages for clichés, brand theatre, and the kind of copy that makes every school invisible to students <em>and</em> the AI tools they're using to find one.
+            An AI-powered brand audit for higher ed websites. We scan your homepage and key landing pages for clichés, brand theatre, and the kind of copy that makes every school invisible to students <em>and</em> the AI tools they're using to find one.
           </p>
           {auditCount > 0 && (
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 14 }}>
@@ -1100,7 +1100,7 @@ export default function App() {
             <div style={{ display: "grid", gap: 14 }}>
               <div style={{ background: T.card, border: "1px solid " + T.border, borderRadius: 10, padding: "22px 24px" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <div style={{ fontSize: 18, fontFamily: T.serif, color: T.text }}>How the Blanding Detector <span style={{ fontStyle: "italic", color: T.accent }}>Scores</span></div>
+                  <div style={{ fontSize: 18, fontFamily: T.serif, color: T.text }}>How Blanding <span style={{ fontStyle: "italic", color: T.accent }}>Scores</span></div>
                   <button onClick={() => setShowMethodology(false)} style={{ background: "none", border: "none", color: T.dim, fontSize: 11, fontFamily: T.mono, cursor: "pointer" }}>Close ✕</button>
                 </div>
                 <p style={{ fontSize: 13, color: T.muted, lineHeight: 1.7, margin: "12px 0 0" }}>
@@ -1161,7 +1161,7 @@ export default function App() {
               <div style={{ background: T.cardAlt, border: "1px solid " + T.border, borderRadius: 10, padding: "18px 24px" }}>
                 <div style={{ fontSize: 12, fontFamily: T.mono, color: T.dim, fontWeight: 600, marginBottom: 10 }}>What This Tool Does</div>
                 <p style={{ fontSize: 13, color: T.muted, lineHeight: 1.7, margin: 0 }}>
-                  The Blanding Detector reads publicly accessible web pages — the same content any visitor sees in a browser. It does not access password-protected areas, bypass authentication, extract private data, or circumvent any technical restrictions. The tool respects robots.txt directives and standard web access protocols.
+                  Blanding reads publicly accessible web pages — the same content any visitor sees in a browser. It does not access password-protected areas, bypass authentication, extract private data, or circumvent any technical restrictions. The tool respects robots.txt directives and standard web access protocols.
                 </p>
               </div>
 

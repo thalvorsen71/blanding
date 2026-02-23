@@ -40,7 +40,7 @@ export function exportPDF(res) {
   <span style="font-size:11px;text-transform:uppercase;letter-spacing:0.08em;color:#888;border-left:1px solid #ddd;padding-left:12px">brand audit</span>
   <span style="margin-left:auto;font-size:11px;color:#bbb;font-family:monospace">${new Date().toLocaleDateString()}</span>
 </div>
-<h1 style="font-family:'Instrument Serif',Georgia,serif;font-weight:400;font-size:36px;margin:0 0 4px">Blanding Detector<span style="color:#c87840;font-style:italic"> Report</span></h1>
+<h1 style="font-family:'Instrument Serif',Georgia,serif;font-weight:400;font-size:36px;margin:0 0 4px">Blanding<span style="color:#c87840;font-style:italic"> Report</span></h1>
 <p style="color:#888;font-size:14px;margin:0 0 ${res.pagesAnalyzed.length <= 1 && (res.bodyText || "").split(/\s+/).length < 400 ? "12px" : "32px"}">${res.url || "Text analysis"} — ${res.pagesAnalyzed.length} page${res.pagesAnalyzed.length > 1 ? "s" : ""} audited</p>
 ${res.pagesAnalyzed.length <= 1 && (res.bodyText || "").split(/\s+/).length < 400 ? `<div style="background:#fffde6;border:1px solid #e6d500;border-radius:8px;padding:12px 16px;margin-bottom:28px;font-size:12px;color:#665c00;line-height:1.5">
   <strong>Limited content detected.</strong> This site likely uses heavy JavaScript rendering. Score based on what we could extract. Worth noting: if our scraper can't read this site, neither can AI search tools like ChatGPT, Perplexity, or Claude — prospective students using AI to research schools may not see this content at all. <a href="https://web.dev/articles/rendering-on-the-web" style="color:#665c00">Learn how to fix this →</a>
