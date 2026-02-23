@@ -175,13 +175,20 @@ exports.handler = async (event) => {
       /\b(january|february|march|april|may|june|july|august|september|october|november|december)\s+\d/i, // news dates: "February 3, 2026"
       /\b(monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b/i, // day names in news
       /\b(prof\.|professor)\s/i, // faculty news bylines
-      /\b\d{3}[-).\s]\d{3}[-.]\d{4}\b/, // phone numbers
+      /\(?\d{3}\)?[\s.-]\d{3}[\s.-]\d{4}/, // phone numbers: (800) 543-5317, 800-543-5317
       /\bgift|giving|donat|fundrais|campaign|contribut/i, // fundraising content
       /\bin\s+(the\s+)?news\b/i, // "In the News" sections
       /\b(la\s+opinión|washington post|new york times|nbc|cnn|forbes|reuters)\b/i, // press mentions
       /\bwant to know what/i, // "Want to know what's coming up?"
       /\bfeatured events?\b/i, // event calendar headers
       /\bfinancial\.\s*$/i, // truncated contact info
+      /open\s+post\s+by\b/i, // Instagram/social media embeds
+      /\b\d{10,}\b/, // Very long numeric IDs (Instagram, social media)
+      /\b(instagram|facebook|twitter|tiktok|youtube)\b/i, // Social media references
+      /\boffice\s+hours\b/i, // Office hours/contact info
+      /\b(EST|CST|MST|PST)\b/, // Timezone references (contact info)
+      /\bvisit\s+our\s+campus\b/i, // Generic CTA mixed with numbers
+      /\bstill\s+not\s+sure\b/i, // Indecision prompts
     ];
     const sentences = bodyText.match(/[^.!?]+[.!?]+/g) || [];
     for (const sent of sentences.slice(0, 50)) {
