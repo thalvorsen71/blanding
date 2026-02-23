@@ -15,7 +15,7 @@ function checkPostRate(ip) {
 const headers = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "Content-Type",
-  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+  "Access-Control-Allow-Methods": "GET, POST, DELETE, OPTIONS",
   "Content-Type": "application/json",
 };
 
@@ -79,6 +79,16 @@ export async function handler(event) {
       headers,
       body: JSON.stringify({ schools: sorted, count: sorted.length }),
     };
+  }
+
+  // DELETE — clear leaderboard (admin only, requires secret)
+  if (event.httpMethod === "DELETE") {
+    const { secret } = JSON.parse(event.body || "{}");
+    if (secret !== "blanding2026") {
+      return { statusCode: 403, headers, body: JSON.stringify({ error: "Unauthorized" }) };
+    }
+    const { ok, err } = await writeData(store, {});
+    return { statusCode: ok ? 200 : 500, headers, body: JSON.stringify({ cleared: ok, error: err }) };
   }
 
   // POST — submit or update a score
