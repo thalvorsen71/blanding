@@ -83,8 +83,21 @@ exports.handler = async (event) => {
     bodyClone.find("footer").remove();
     // Remove nav elements but preserve their parent sections
     bodyClone.find("nav").remove();
+    // Remove search widgets, autocomplete, keyword dumps, form options
+    bodyClone.find("select, datalist, [role='listbox'], .autocomplete, .search-results, .search-suggestions").remove();
+    // Remove hidden/collapsed elements that often contain keyword lists
+    bodyClone.find("[aria-hidden='true'], [hidden], .visually-hidden, .sr-only").remove();
 
-    let bodyText = bodyClone.text().replace(/\s+/g, " ").trim().substring(0, 6000);
+    let bodyText = bodyClone.text().replace(/\s+/g, " ").trim();
+    // Strip keyword dumps: sequences of 15+ short items (1-2 words each) that aren't sentences
+    bodyText = bodyText.replace(/(?:\b[A-Za-z&'-]{2,20}\b\s+){15,}/g, (match) => {
+      // If this run has almost no sentence structure (very few words >15 chars), it's a keyword dump
+      const words = match.trim().split(/\s+/);
+      const longWords = words.filter(w => w.length > 15);
+      if (longWords.length < words.length * 0.1) return " "; // <10% long words = keyword dump
+      return match;
+    });
+    bodyText = bodyText.replace(/\s+/g, " ").trim().substring(0, 6000);
 
     // If main content area was too sparse, try the full body minus just nav/footer
     if (bodyText.length < 300) {

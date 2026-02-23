@@ -265,9 +265,9 @@ ${h2s.length > 0 ? h2s.slice(0, 15).join(" | ") : "NONE FOUND"}
 === META DESCRIPTION (what search engines show) ===
 ${metaDesc || "NONE FOUND"}
 === FULL PAGE TEXT ===
-${text.substring(0, 4000)}
+${text.substring(0, 6000)}
 === END OF PAGE TEXT ===
-Other pages sampled: ${allText.substring(0, 800)}
+Other pages sampled: ${allText.substring(0, 2000)}
 
 CRITICAL GROUNDING RULES — READ CAREFULLY:
 1. You may ONLY reference text that literally appears in the SCRAPED TEXT above. If a phrase isn't in the text above, you CANNOT mention it.
