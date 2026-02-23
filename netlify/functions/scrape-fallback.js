@@ -160,24 +160,40 @@ exports.handler = async (event) => {
       }
     }
 
-    // Unique claims: sentences with real numbers that indicate concrete facts
-    // Must have a number AND not be a generic marketing sentence
+    // Unique claims: institutional facts that differentiate this school
+    // Must have a meaningful number AND describe the institution itself
     const numberPattern = /\b\d[\d,.]*%?(?:\s*(?:to|[-–])\s*\d[\d,.]*%?)?\b/;
+    // Generic marketing language filter
     const genericFilters = [
       /world-class/i, /cutting-edge/i, /state-of-the-art/i, /transforming/i,
       /vibrant/i, /holistic/i, /innovative/i, /tradition of/i, /empower/i,
       /inclusive/i, /beautiful campus/i, /pushing boundaries/i, /make a difference/i,
       /unlock/i, /imagine the/i, /explore this section/i, /jump to/i,
     ];
+    // News/press/events noise filter — these have numbers but aren't brand facts
+    const noiseFilters = [
+      /\b(january|february|march|april|may|june|july|august|september|october|november|december)\s+\d/i, // news dates: "February 3, 2026"
+      /\b(monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b/i, // day names in news
+      /\b(prof\.|professor)\s/i, // faculty news bylines
+      /\b\d{3}[-).\s]\d{3}[-.]\d{4}\b/, // phone numbers
+      /\bgift|giving|donat|fundrais|campaign|contribut/i, // fundraising content
+      /\bin\s+(the\s+)?news\b/i, // "In the News" sections
+      /\b(la\s+opinión|washington post|new york times|nbc|cnn|forbes|reuters)\b/i, // press mentions
+      /\bwant to know what/i, // "Want to know what's coming up?"
+      /\bfeatured events?\b/i, // event calendar headers
+      /\bfinancial\.\s*$/i, // truncated contact info
+    ];
     const sentences = bodyText.match(/[^.!?]+[.!?]+/g) || [];
     for (const sent of sentences.slice(0, 50)) {
       const trimmed = sent.trim();
       if (trimmed.length < 20 || trimmed.length > 200) continue;
-      // Must contain an actual number (not just any digit)
+      // Must contain an actual number
       if (!numberPattern.test(trimmed)) continue;
-      // Skip generic marketing sentences that happen to contain numbers
+      // Skip generic marketing language
       if (genericFilters.some(p => p.test(trimmed))) continue;
-      // Skip navigation-style text (all caps, very short, etc.)
+      // Skip news, press, fundraising, contact info noise
+      if (noiseFilters.some(p => p.test(trimmed))) continue;
+      // Skip navigation-style text
       if (trimmed.split(/\s+/).length < 5) continue;
       if (uniqueClaims.length < 15) uniqueClaims.push(trimmed.substring(0, 150));
     }
@@ -193,7 +209,7 @@ exports.handler = async (event) => {
       page_type: pageType,
       linked_pages: linkedPages.slice(0, 6),
       unique_claims: uniqueClaims,
-      stock_phrases: stockCTAs,
+      stock_phrases: [...new Set(stockCTAs)],
     };
 
     return { statusCode: 200, headers, body: JSON.stringify(result) };
