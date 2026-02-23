@@ -658,14 +658,16 @@ export default function App() {
               <div style={{ background: T.card, border: "1px solid " + T.border, borderRadius: 10, padding: "22px 24px", borderLeft: "3px solid " + T.accent }}>
                 <div style={{ fontSize: 12, fontFamily: T.mono, color: T.accent, fontWeight: 600, marginBottom: 10 }}>Language & Voice — 55% of overall</div>
                 <p style={{ fontSize: 13, color: T.muted, lineHeight: 1.7, margin: "0 0 12px" }}>
-                  Starts at 100 and penalizes downward. We scan every page for matches against a dictionary of 200+ higher ed clichés — phrases like "world-class," "transformative experience," and "leaders of tomorrow" that appear on virtually every college website.
+                  Starts at 100 and penalizes downward. We scan every page for matches against a dictionary of 300+ higher ed clichés — phrases like "world-class," "transformative experience," and "leaders of tomorrow" that appear on virtually every college website.
                 </p>
                 <div style={{ display: "grid", gap: 8 }}>
                   {[
                     { label: "Cliché penalty (logarithmic)", desc: "Clichés hurt on a curve: the first few matter most, diminishing after that. Going from 5→10 clichés hurts more than 15→20. This rewards schools that have mostly cleaned up their language.", weight: "up to −50" },
                     { label: "Density penalty", desc: "Clichés per 100 words, weighted by severity and placement. Count and density don't stack — we take the worse of the two, then add a fraction of the other.", weight: "non-additive" },
+                    { label: "H1 cliché penalty", desc: "Using clichés in your primary headline is a brand crime worth extra punishment. Your H1 is the first thing students and AI see — filling it with platitudes costs you.", weight: "up to −15" },
                     { label: "Rich content bonus", desc: "If your page has strong specific content (names, dates, data, quotes), you earn back some of what clichés took away. Having good stuff matters.", weight: "up to +8" },
-                    { label: "Thin content penalty", desc: "Pages with very little text get dinged. Saying nothing isn't the same as being distinctive.", weight: "variable" },
+                    { label: "Thin content penalty", desc: "Pages under 300 words get dinged — every 25 missing words costs a point. Saying nothing isn't the same as being distinctive.", weight: "up to −12" },
+                    { label: "Unique content minimum", desc: "Pages with fewer than 2 concrete, institution-specific claims lose additional points. Generic pages with no proof of life get flagged.", weight: "−8 if missing" },
                     { label: "AI voice assessment", desc: "An AI evaluator reads the full text and scores how distinctive the voice feels. The blend adapts: pages with strong mechanical data lean more on the numbers; thin pages lean more on AI judgment.", weight: "40–60% blend" },
                   ].map((item, i) => (
                     <div key={i} style={{ background: T.bg, borderRadius: 6, padding: "10px 14px" }}>
@@ -683,16 +685,17 @@ export default function App() {
               <div style={{ background: T.card, border: "1px solid " + T.border, borderRadius: 10, padding: "22px 24px", borderLeft: "3px solid #22c55e" }}>
                 <div style={{ fontSize: 12, fontFamily: T.mono, color: "#22c55e", fontWeight: 600, marginBottom: 10 }}>Content Strategy — 45% of overall</div>
                 <p style={{ fontSize: 13, color: T.muted, lineHeight: 1.7, margin: "0 0 12px" }}>
-                  Starts at a base of 30 and builds upward from content signals, then blends with AI evaluation in a single weighted step.
+                  Starts at a base of 30 and builds upward from content signals. Mechanical signals make up 55% of the strategy score; the remaining 45% comes from AI evaluation blended in a single weighted step.
                 </p>
                 <div style={{ display: "grid", gap: 8 }}>
                   {[
-                    { label: "Unique claims bonus", desc: "Named programs, specific numbers, real people, concrete details that only your institution could say. Diminishing returns: first few claims count most; a page with 20 news items doesn't get 20x credit.", weight: "+5 → +1 each" },
-                    { label: "Stock phrase penalty", desc: "Generic structural phrases ('Learn More,' 'Apply Now,' 'Explore Our Programs') that could appear on any site.", weight: "−4 each" },
+                    { label: "Unique claims bonus", desc: "Named programs, specific numbers, real people, concrete details that only your institution could say. Three tiers with diminishing returns: first 3 claims earn 5 pts each, next 3 earn 2.5 pts each, beyond that 1 pt each (capped). Volume alone won't save a generic page.", weight: "up to ~27 pts" },
+                    { label: "Stock phrase penalty", desc: "Generic structural phrases ('Learn More,' 'Apply Now,' 'Explore Our Programs') that could appear on any site. Identified by an AI evaluator reading the page content.", weight: "−4 each" },
                     { label: "Content richness bonus", desc: "Specific dates, proper nouns, data points, direct quotes, diverse section headings — signals of real, timely content.", weight: "up to +10" },
-                    { label: "AI specificity score", desc: "How concrete and specific is the content? Named events, real research, actual numbers vs. vague platitudes.", weight: "20% of blend" },
-                    { label: "AI consistency score", desc: "Does every element reinforce a coherent identity, or does the messaging scatter?", weight: "15% of blend" },
-                    { label: "Specificity ratio", desc: "What percentage of the total page content is genuinely specific vs. generic filler? One good story in a sea of boilerplate won't save the score.", weight: "10% of blend" },
+                    { label: "Headline quality bonus", desc: "H1 and H2 tags that avoid clichés are rewarded. The percentage of non-cliché headlines boosts your strategy score — clear, specific headings signal brand intentionality.", weight: "up to +8" },
+                    { label: "AI specificity score", desc: "How concrete and specific is the content? Named events, real research, actual numbers vs. vague platitudes. Part of the 45% AI evaluation blend.", weight: "20% of AI blend" },
+                    { label: "AI consistency score", desc: "Does every element reinforce a coherent identity, or does the messaging scatter? Part of the 45% AI evaluation blend.", weight: "15% of AI blend" },
+                    { label: "Specificity ratio + ceiling", desc: "What percentage of the total page content is genuinely specific vs. generic filler? This also enforces a reality ceiling — a mostly-generic page can't score above its actual specificity level, no matter how well other signals perform.", weight: "10% of AI blend" },
                   ].map((item, i) => (
                     <div key={i} style={{ background: T.bg, borderRadius: 6, padding: "10px 14px" }}>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 3 }}>
@@ -714,7 +717,7 @@ export default function App() {
                 <div style={{ display: "grid", gap: 8 }}>
                   {[
                     { label: "Brand Theatre detection", desc: "\"Brand theatre\" is language that sounds branded but doesn't solve anything — aspirational slogans, emotional taglines, and personality-driven copy that never tells a student what specific problem this school solves for them. A high theatre score (4+) penalizes strategy.", weight: "up to −15 strategy" },
-                    { label: "AI Search Readiness", desc: "AI search engines (ChatGPT, Perplexity, Gemini) are now decision engines. They don't reward schools for being attractive — they reward being specific and dependable. Can an AI cite your page when a student asks 'which school should I attend for X?' A low score nudges strategy down; a high score nudges it up.", weight: "±10 strategy" },
+                    { label: "AI Search Readiness", desc: "AI search engines (ChatGPT, Perplexity, Gemini) are now decision engines. They don't reward schools for being attractive — they reward being specific and dependable. Can an AI cite your page when a student asks 'which school should I attend for X?' A low score nudges strategy down; a high score nudges it up.", weight: "−8 to +10 strategy" },
                   ].map((item, i) => (
                     <div key={i} style={{ background: T.bg, borderRadius: 6, padding: "10px 14px" }}>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 3 }}>
@@ -1108,14 +1111,14 @@ export default function App() {
               <div style={{ background: T.card, border: "1px solid " + T.border, borderRadius: 10, padding: "22px 24px", borderLeft: "3px solid " + T.accent }}>
                 <div style={{ fontSize: 12, fontFamily: T.mono, color: T.accent, fontWeight: 600, marginBottom: 10 }}>Language & Voice — 55% of overall</div>
                 <p style={{ fontSize: 13, color: T.muted, lineHeight: 1.7, margin: 0 }}>
-                  Starts at 100, then penalizes for cliché usage on a logarithmic curve — the first few clichés hurt the most, with diminishing impact after that. Count and density penalties don't fully stack; we use the worse of the two, then add a fraction of the other. Pages with rich, specific content earn partial credit back. An AI voice assessment blends in dynamically (40–60%) to capture the qualitative feel that pure pattern-matching misses.
+                  Starts at 100, then penalizes for cliché usage on a logarithmic curve — the first few clichés hurt the most, with diminishing impact after that. We scan against 300+ higher ed clichés. Count and density penalties don't fully stack; we use the worse of the two, then add a fraction of the other. Clichés in your H1 headline cost extra (up to −15). Pages under 300 words lose points for thin content. Pages with rich, specific content earn partial credit back. An AI voice assessment blends in dynamically (40–60%) to capture the qualitative feel that pure pattern-matching misses.
                 </p>
               </div>
 
               <div style={{ background: T.card, border: "1px solid " + T.border, borderRadius: 10, padding: "22px 24px", borderLeft: "3px solid #22c55e" }}>
                 <div style={{ fontSize: 12, fontFamily: T.mono, color: "#22c55e", fontWeight: 600, marginBottom: 10 }}>Content Strategy — 45% of overall</div>
                 <p style={{ fontSize: 13, color: T.muted, lineHeight: 1.7, margin: 0 }}>
-                  Builds upward from a base of 30, rewarding unique claims (with diminishing returns — the first few count most), concrete details, and rich content signals. Stock phrases pull the score down. Two modifiers then adjust the strategy score: <em>brand theatre detection</em> penalizes language that sounds branded but never tells a student what problem you solve; <em>AI search readiness</em> nudges the score based on whether AI engines could cite your page with a specific answer. AI evaluation blends in a single weighted step at 45%.
+                  Builds upward from a base of 30, rewarding unique claims in three tiers with diminishing returns (first 3 claims earn the most, then less). Concrete details, rich content signals, and cliché-free headlines add points; stock phrases pull the score down. Mechanical signals make up 55% of strategy; the remaining 45% comes from AI evaluation (specificity, consistency, and a specificity ratio that enforces a reality ceiling). Two modifiers then adjust the final strategy score: <em>brand theatre detection</em> (up to −15) penalizes language that sounds branded but never tells a student what problem you solve; <em>AI search readiness</em> (−8 to +10) nudges the score based on whether AI engines could cite your page with a specific answer.
                 </p>
               </div>
 
