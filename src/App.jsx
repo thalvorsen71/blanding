@@ -797,7 +797,7 @@ export default function App() {
           <div style={{ marginBottom: 40 }}></div>
           <span style={{ display: "inline-block", fontSize: 11, fontWeight: 500, letterSpacing: "0.12em", textTransform: "uppercase", color: T.accent, fontFamily: T.mono, marginBottom: 12 }}>Higher Ed Edition</span>
           <h1 style={{ fontSize: "clamp(38px, 6.5vw, 64px)", fontFamily: T.serif, fontWeight: 400, lineHeight: 1.0, margin: 0, letterSpacing: "-0.02em" }}>
-            Blanding<span style={{ fontStyle: "italic", color: T.accent, fontSize: "0.45em", verticalAlign: "middle", marginLeft: 12 }}>Audit</span>
+            Blanding
           </h1>
           <p style={{ fontSize: 16, lineHeight: 1.65, color: "#aaa", maxWidth: 540, marginTop: 16, fontWeight: 300 }}>
             An AI-powered brand audit for higher ed websites. We scan your homepage and key landing pages for clichés, brand theatre, and the kind of copy that makes every school invisible to students <em>and</em> the AI tools they're using to find one.
