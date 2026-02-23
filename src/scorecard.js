@@ -1,5 +1,4 @@
 import { scoreColor, scoreLabel, scoreVerdict } from './constants';
-import { drawAdeoLogo } from './logo';
 
 /**
  * Generate a branded 1200x630 scorecard PNG for social sharing.
@@ -55,11 +54,11 @@ export async function generateScorecard(result) {
   // ─── Right side content ───
   const textX = 480;
 
-  // "BLANDING DETECTOR" header
+  // "BLANDING" header
   ctx.fillStyle = '#c87840';
   ctx.font = '11px monospace';
   ctx.textAlign = 'left';
-  ctx.fillText('THE BLANDING DETECTOR', textX, 80);
+  ctx.fillText('BLANDING', textX, 80);
 
   // School name
   ctx.fillStyle = '#e8e4df';
@@ -107,8 +106,10 @@ export async function generateScorecard(result) {
   ctx.fillStyle = '#c87840';
   ctx.fillRect(0, H - 50, W, 2);
 
-  // adeo logo (real SVG paths)
-  drawAdeoLogo(ctx, 28, H - 42, 24, '#ffffff', '#E6BDED');
+  ctx.textAlign = 'left';
+  ctx.fillStyle = '#e8e4df';
+  ctx.font = 'italic 14px Georgia, serif';
+  ctx.fillText('Blanding', 28, H - 19);
 
   ctx.textAlign = 'right';
   ctx.fillStyle = '#c87840';
@@ -118,7 +119,7 @@ export async function generateScorecard(result) {
   // Hashtag
   ctx.fillStyle = '#444';
   ctx.font = '11px monospace';
-  ctx.fillText('#BlandingDetector  #HigherEd', W - 30, 30);
+  ctx.fillText('#Blanding  #HigherEd', W - 30, 30);
 
   return canvas;
 }

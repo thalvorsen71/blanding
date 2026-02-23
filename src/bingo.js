@@ -19,7 +19,7 @@ export async function generateBingoCard(result) {
   ctx.fillStyle = '#c87840';
   ctx.font = '11px monospace';
   ctx.textAlign = 'center';
-  ctx.fillText('THE BLANDING DETECTOR', W / 2, 35);
+  ctx.fillText('BLANDING', W / 2, 35);
 
   ctx.fillStyle = '#e8e4df';
   ctx.font = 'italic 32px Georgia, serif';
@@ -125,9 +125,9 @@ export async function generateBingoCard(result) {
   // Branding
   ctx.fillStyle = '#333';
   ctx.font = '10px monospace';
-  ctx.fillText('blandingaudit.netlify.app  |  adeo — strategic communications', W / 2, H - 20);
+  ctx.fillText('blandingaudit.netlify.app', W / 2, H - 20);
   ctx.fillStyle = '#c87840';
-  ctx.fillText('#BlandingDetector', W / 2, H - 40);
+  ctx.fillText('#Blanding', W / 2, H - 40);
 
   return canvas;
 }

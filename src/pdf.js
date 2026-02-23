@@ -1,5 +1,4 @@
 import { scoreColor, scoreLabel, scoreVerdict } from './constants';
-import { adeoLogoSVG } from './logo';
 
 export function exportPDF(res) {
   const dims = [
@@ -36,7 +35,7 @@ export function exportPDF(res) {
 <style>body{font-family:"DM Sans",sans-serif;color:#1a1a1a;max-width:720px;margin:0 auto;padding:40px 32px}@media print{body{padding:20px}@page{margin:0.6in;size:letter}}</style>
 </head><body>
 <div style="display:flex;align-items:center;gap:12px;margin-bottom:32px">
-  ${adeoLogoSVG(20, '#1a1a1a', '#E6BDED')}
+  <span style="font-family:'Instrument Serif',Georgia,serif;font-size:18px;color:#1a1a1a;font-style:italic">Blanding</span>
   <span style="font-size:11px;text-transform:uppercase;letter-spacing:0.08em;color:#888;border-left:1px solid #ddd;padding-left:12px">brand audit</span>
   <span style="margin-left:auto;font-size:11px;color:#bbb;font-family:monospace">${new Date().toLocaleDateString()}</span>
 </div>
@@ -65,8 +64,8 @@ ${res.ai?.weak_sentence ? `<div style="margin-bottom:28px;border:1px solid #eee;
 </div>` : ""}
 <div style="text-align:center;padding:24px;background:#1a1a1a;color:#fff;border-radius:10px;margin-top:32px">
   <p style="margin:0 0 12px;font-size:14px;color:#999">This audit catches surface-level sameness. Fixing the deeper problem requires strategic partnership.</p>
-  <div style="display:flex;justify-content:center;align-items:center;gap:12px;margin-bottom:4px">${adeoLogoSVG(18, '#ffffff', '#E6BDED')}</div>
-  <p style="margin:0;font-size:12px;color:#666;font-family:monospace">helloadeo.com</p>
+  <div style="margin-bottom:4px"><span style="font-family:'Instrument Serif',Georgia,serif;font-size:18px;color:#fff;font-style:italic">Blanding</span></div>
+  <p style="margin:0;font-size:12px;color:#666;font-family:monospace">blandingaudit.netlify.app</p>
 </div>
 <p style="text-align:center;font-size:9px;color:#999;margin-top:16px;line-height:1.5;font-family:system-ui,sans-serif">Scores reflect editorial analysis of website language patterns and do not represent judgments about institutional quality, educational outcomes, or value. This tool reads only publicly accessible content. Not affiliated with or endorsed by any institution analyzed. Full disclaimer at blandingaudit.netlify.app.</p>
 </body></html>`;
