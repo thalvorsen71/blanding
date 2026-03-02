@@ -20,7 +20,7 @@ class RateLimitError extends Error {
 }
 
 async function callAPI(messages, useSearch = false, model = "claude-sonnet-4-20250514") {
-  const body = { model, max_tokens: useSearch ? 3000 : 2000, messages };
+  const body = { model, max_tokens: useSearch ? 3000 : 4000, messages };
   if (useSearch) body.tools = [{ type: "web_search_20250305", name: "web_search" }];
 
   const controller = new AbortController();
