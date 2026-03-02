@@ -10,7 +10,7 @@ function checkRate(ip) {
     return true;
   }
   rateLimits[ip].count++;
-  return rateLimits[ip].count <= 12; // 12 requests per minute per IP
+  return rateLimits[ip].count <= 30; // 30 requests per minute per IP
 }
 
 exports.handler = async (event) => {

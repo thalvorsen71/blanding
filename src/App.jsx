@@ -197,7 +197,21 @@ export default function App() {
     addProg(prefix + "Running AI brand analysis...");
     const allBody = pages.map(p => p.data.body_text || "").join(" ");
     let ai;
-    try { ai = await deepAnalysis(url, hp.body_text || JSON.stringify(hp), allBody, allH1, allH2, hp.meta_description || "", hp.h1 || []); } catch (e) { addProg(prefix + "AI analysis timed out — using cliché data only", "error"); ai = null; }
+    try {
+      ai = await deepAnalysis(url, hp.body_text || JSON.stringify(hp), allBody, allH1, allH2, hp.meta_description || "", hp.h1 || []);
+    } catch (e) {
+      console.warn("[Blanding] Deep analysis attempt 1 failed:", e.message);
+      // Retry once after a short delay
+      try {
+        await new Promise(r => setTimeout(r, 3000));
+        addProg(prefix + "Retrying AI analysis...");
+        ai = await deepAnalysis(url, hp.body_text || JSON.stringify(hp), allBody, allH1, allH2, hp.meta_description || "", hp.h1 || []);
+      } catch (e2) {
+        console.warn("[Blanding] Deep analysis attempt 2 failed:", e2.message);
+        addProg(prefix + "AI analysis unavailable — using cliché data only", "error");
+        ai = null;
+      }
+    }
     // Prefer AI-curated unique claims (from deep analysis) over Cheerio regex guesses
     const cheerioUniq = [...new Set(pages.flatMap(p => p.data.unique_claims || []))].slice(0, 10);
     const uniq = (ai?.verified_unique_claims?.length > 0) ? ai.verified_unique_claims : cheerioUniq;
