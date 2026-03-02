@@ -124,39 +124,21 @@ export async function handler(event) {
       const runs = (existing?.runs || 0) + 1;
       const clampScore = (v) => v != null ? Math.max(0, Math.min(100, Math.round(v))) : null;
 
-      if (existing && runs > 1) {
-        // Weighted rolling average: new score gets 1/runs weight, capped at 40% influence
-        const newWeight = Math.min(1 / runs, 0.4);
-        const oldWeight = 1 - newWeight;
-        const avg = (oldVal, newVal) => {
-          if (oldVal == null || newVal == null) return newVal != null ? clampScore(newVal) : oldVal;
-          return clampScore(oldVal * oldWeight + newVal * newWeight);
-        };
-        data[hostname] = {
-          ...existing,
-          name: name.substring(0, 100),
-          overall: avg(existing.overall, overall),
-          language: avg(existing.language, language),
-          strategy: avg(existing.strategy, strategy),
-          cliches: cliches != null ? Math.round((existing.cliches || 0) * oldWeight + cliches * newWeight) : existing.cliches,
-          pagesAudited: Math.max(existing.pagesAudited || 1, pagesAudited || 1),
-          runs,
-          lastAudited: new Date().toISOString(),
-        };
-      } else {
-        // First audit for this school
-        data[hostname] = {
-          name: name.substring(0, 100),
-          url: hostname,
-          overall: clampScore(overall),
-          language: clampScore(language),
-          strategy: clampScore(strategy),
-          cliches: cliches != null ? Math.max(0, cliches) : null,
-          pagesAudited: pagesAudited || 1,
-          runs: 1,
-          lastAudited: new Date().toISOString(),
-        };
-      }
+      // Always use the most recent score — no rolling average.
+      // Previous approach blended scores across runs, but it created a confusing
+      // mismatch: the audit page showed one score, the leaderboard showed another.
+      data[hostname] = {
+        ...(existing || {}),
+        name: name.substring(0, 100),
+        url: hostname,
+        overall: clampScore(overall),
+        language: clampScore(language),
+        strategy: clampScore(strategy),
+        cliches: cliches != null ? Math.max(0, cliches) : (existing?.cliches ?? null),
+        pagesAudited: pagesAudited || (existing?.pagesAudited || 1),
+        runs,
+        lastAudited: new Date().toISOString(),
+      };
 
       // Persist
       await writeData(store, data);
