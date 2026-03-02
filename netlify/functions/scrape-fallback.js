@@ -46,22 +46,23 @@ exports.handler = async (event) => {
     const html = await resp.text();
     const $ = cheerio.load(html);
 
-    // Strip noise
-    $("script, style, noscript, iframe, svg, [hidden], .sr-only").remove();
+    // Extract H1s and H2s BEFORE stripping noise — many schools use
+    // sr-only H1s as an accessibility pattern (visual hero is a logo/video,
+    // semantic H1 is hidden for screen readers). We need to capture these.
+    const h1 = [];
+    $("h1").each((_, el) => { const t = $(el).text().trim(); if (t) h1.push(t); });
 
-    // Title
+    const h2s = [];
+    $("h2").each((_, el) => { const t = $(el).text().trim(); if (t && h2s.length < 12) h2s.push(t); });
+
+    // Title (also before noise removal, lives in <head>)
     const title = $("title").first().text().trim() || "";
 
     // Meta description
     const metaDesc = $('meta[name="description"]').attr("content") || $('meta[property="og:description"]').attr("content") || "";
 
-    // H1s
-    const h1 = [];
-    $("h1").each((_, el) => { const t = $(el).text().trim(); if (t) h1.push(t); });
-
-    // H2s (first 12)
-    const h2s = [];
-    $("h2").each((_, el) => { const t = $(el).text().trim(); if (t && h2s.length < 12) h2s.push(t); });
+    // NOW strip noise for body text extraction
+    $("script, style, noscript, iframe, svg, [hidden], .sr-only").remove();
 
     // Nav items
     const navItems = [];
