@@ -6,16 +6,6 @@
 [functions]
   node_bundler = "esbuild"
 
-# Extend function timeout for AI analysis calls (default is 10s, max 26s on free plan)
-[functions."analyze"]
-  timeout = 26
-
-[functions."scrape-fallback"]
-  timeout = 26
-
-[functions."leaderboard"]
-  timeout = 15
-
 [[headers]]
   for = "/*"
   [headers.values]
