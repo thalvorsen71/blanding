@@ -60,11 +60,16 @@ export async function handler(event) {
 
   const store = initStore();
 
-  // GET — return full leaderboard
+  // GET — return leaderboard
+  // ?full=true returns everything including AI analysis (for reports)
+  // Default returns slim data only (scores, names) to keep payload small
   if (event.httpMethod === "GET") {
     const { data } = await readData(store);
+    const params = event.queryStringParameters || {};
+    const wantFull = params.full === "true";
+    // Optional: fetch a single school's full data
+    const wantSchool = params.school || null;
 
-    // Only return schools that were actually audited — no seed data
     if (!data || Object.keys(data).length === 0) {
       return {
         statusCode: 200,
@@ -73,11 +78,25 @@ export async function handler(event) {
       };
     }
 
+    // Single school lookup — return full data for that school
+    if (wantSchool) {
+      const entry = data[wantSchool] || null;
+      return {
+        statusCode: entry ? 200 : 404,
+        headers,
+        body: JSON.stringify(entry ? { school: entry } : { error: "School not found" }),
+      };
+    }
+
     const sorted = Object.values(data).sort((a, b) => b.overall - a.overall);
+
+    // Slim response: strip AI analysis to keep leaderboard payload small
+    const schools = wantFull ? sorted : sorted.map(({ ai, homepageH1, metaDesc, uniqueClaims, scrapeSource, ...slim }) => slim);
+
     return {
       statusCode: 200,
       headers,
-      body: JSON.stringify({ schools: sorted, count: sorted.length }),
+      body: JSON.stringify({ schools, count: sorted.length }),
     };
   }
 
@@ -98,7 +117,8 @@ export async function handler(event) {
       return { statusCode: 429, headers, body: JSON.stringify({ error: "Too many submissions — please wait" }) };
     }
     try {
-      const { name, url, overall, language, strategy, cliches, pagesAudited } = JSON.parse(event.body);
+      const { name, url, overall, language, strategy, cliches, pagesAudited,
+              ai, homepageH1, metaDesc, uniqueClaims, scrapeSource } = JSON.parse(event.body);
 
       if (!url || !name || overall == null) {
         return { statusCode: 400, headers, body: JSON.stringify({ error: "Missing required fields" }) };
@@ -138,6 +158,14 @@ export async function handler(event) {
         pagesAudited: pagesAudited || (existing?.pagesAudited || 1),
         runs,
         lastAudited: new Date().toISOString(),
+        // Full AI analysis findings — stored for reports and historical tracking
+        ...(ai ? {
+          ai,
+          homepageH1: homepageH1 || [],
+          metaDesc: metaDesc || "",
+          uniqueClaims: uniqueClaims || [],
+          scrapeSource: scrapeSource || "unknown",
+        } : {}),
       };
 
       // Persist
