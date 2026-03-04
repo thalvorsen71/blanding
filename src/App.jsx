@@ -184,11 +184,25 @@ export default function App() {
           } : null,
           // Additional context for reports
           homepageH1: res.homepageH1,
+          allH1: res.allH1 || [],
+          allH2: (res.allH2 || []).slice(0, 15),
           metaDesc: res.metaDesc,
           uniqueClaims: res.uniqueClaims,
           scrapeSource: res.scrapeSource,
           pagesScraped: res.pagesScraped || [],
           contentHash: res.contentHash || "",
+          wordCount: res.bodyText ? res.bodyText.split(/\s+/).length : 0,
+          // Top clichés with severity + placement (for cross-school reporting)
+          topCliches: (res.cliches || []).slice(0, 15).map(c => ({
+            phrase: c.phrase, count: c.count, severity: c.severity,
+          })),
+          clicheBreakdown: res.weighted ? {
+            h1Count: res.weighted.h1Count,
+            h2Count: res.weighted.h2Count,
+            weightedTotal: res.weighted.weightedTotal,
+            h1Phrases: (res.weighted.h1Cliches || []).map(c => c.phrase),
+            h2Phrases: (res.weighted.h2Cliches || []).map(c => c.phrase),
+          } : null,
         }),
       });
       // Re-fetch leaderboard after successful submit so new entries appear immediately
@@ -364,7 +378,7 @@ export default function App() {
       cliches, totalCliches: totalC,
       uniqueClaims: uniq,
       homepageH1: hp.h1 || [], allH1, allH2, metaDesc: hp.meta_description || "", bodyText: allBody, ai,
-      scrapeSource,
+      scrapeSource, weighted,
       pagesScraped: pages.map(p => p.url), // actual URLs scraped for transparency
       contentHash: contentHash(allBody),   // fingerprint for change detection
     };

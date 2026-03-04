@@ -133,19 +133,53 @@ exports.handler = async (event) => {
     else if (urlLower.includes("student") || urlLower.includes("campus-life")) pageType = "student-life";
 
     // Internal links (for sub-page discovery)
-    const linkedPages = [];
+    // Strategy: collect ALL internal links, then prioritize brand-relevant pages.
+    // A random /news/2024/faculty-award page tells us nothing about brand voice;
+    // /about, /admissions, /academics are where brand messaging lives.
+    const allLinks = [];
     const base = new URL(url);
     $("a[href]").each((_, el) => {
       try {
         const href = $(el).attr("href");
         if (!href || href.startsWith("#") || href.startsWith("mailto:") || href.startsWith("tel:")) return;
         const resolved = new URL(href, url);
-        if (resolved.hostname === base.hostname && resolved.pathname !== base.pathname && linkedPages.length < 6) {
-          const full = resolved.origin + resolved.pathname;
-          if (!linkedPages.includes(full)) linkedPages.push(full);
+        if (resolved.hostname === base.hostname && resolved.pathname !== base.pathname) {
+          const full = resolved.origin + resolved.pathname.replace(/\/+$/, "");
+          if (!allLinks.includes(full)) allLinks.push(full);
         }
       } catch {}
     });
+
+    // Priority tiers for sub-page selection (highest value for brand audit first)
+    const priorityPatterns = [
+      // Tier 1: Core brand pages — where the real messaging lives
+      /\/(about|about-us|who-we-are|our-story|our-mission|mission|at-a-glance)\b/i,
+      /\/(admissions?|apply|undergraduate-admissions?|future-students?|prospective)\b/i,
+      /\/(academics?|programs?|majors|areas-of-study|schools?-and-colleges)\b/i,
+      // Tier 2: Differentiator pages — why-us, student experience, outcomes
+      /\/(why|why-us|why-[a-z]+|student-life|campus-life|experience|outcomes?|results)\b/i,
+      /\/(discover|explore|visit|welcome|overview)\b/i,
+      // Tier 3: Identity pages — values, diversity, research
+      /\/(research|innovation|values|diversity|community|tradition|history)\b/i,
+    ];
+
+    // Score each link by priority tier (lower = better)
+    const scored = allLinks.map(link => {
+      const path = new URL(link).pathname.toLowerCase();
+      // Skip deep paths (3+ segments are usually news articles, events, profiles)
+      const segments = path.split("/").filter(Boolean);
+      if (segments.length > 2) return { link, score: 100 };
+      // Skip obvious non-brand pages
+      if (/\/(news|events?|calendar|directory|library|login|search|map|careers?|jobs?|hr|faculty|staff|giving|donate|alumni|athletics|sports|store|shop|parking|it-help|help-desk|policy|policies|privacy|terms|sitemap|feed|rss|api|wp-|tag|category)(\b|\/)/i.test(path)) return { link, score: 100 };
+      for (let i = 0; i < priorityPatterns.length; i++) {
+        if (priorityPatterns[i].test(path)) return { link, score: i };
+      }
+      return { link, score: 50 }; // unmatched but not excluded
+    });
+
+    // Sort by priority, take top 6
+    scored.sort((a, b) => a.score - b.score);
+    const linkedPages = scored.filter(s => s.score < 100).slice(0, 6).map(s => s.link);
 
     // Fallback: if no internal links found, try common .edu sub-pages
     if (linkedPages.length === 0) {
