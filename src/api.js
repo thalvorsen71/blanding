@@ -61,7 +61,11 @@ async function callAPI(messages, useSearch = false, model = "claude-sonnet-4-202
   } catch (err) {
     clearTimeout(timeout);
     if (err.name === "RateLimitError") throw err;
-    if (err.name === "AbortError") throw new Error("Request timed out — try again");
+    if (err.name === "AbortError") {
+      console.warn(`[Blanding] API call timed out after ${timeoutMs / 1000}s (model: ${model})`);
+      throw new Error(`Request timed out after ${timeoutMs / 1000}s — try again`);
+    }
+    console.warn("[Blanding] API call error:", err.message);
     throw err;
   }
 }
@@ -333,7 +337,12 @@ Return JSON only:
 }`;
 
   const raw = await callAPI([{ role: "user", content: prompt }], false, "claude-haiku-4-5-20251001");
-  try { return parseJSON(raw); } catch { return null; }
+  try {
+    return parseJSON(raw);
+  } catch (e) {
+    console.error("[Blanding] deepAnalysis JSON parse failed:", e.message, "| Raw response (first 500 chars):", (raw || "").substring(0, 500));
+    return null;
+  }
 }
 
 export async function captureLead(email, schoolName, score, name = "", title = "", source = "pdf_export") {
