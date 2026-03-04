@@ -6,6 +6,14 @@ import { generateScorecard } from './scorecard';
 import { generateBingoCard } from './bingo';
 // Logo import removed — tool is personal project, not company-branded
 
+// Simple djb2 hash for content fingerprinting (not cryptographic — just change detection)
+function contentHash(str) {
+  const s = (str || "").substring(0, 5000);
+  let h = 5381;
+  for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) | 0;
+  return (h >>> 0).toString(36); // unsigned, base-36 for compactness
+}
+
 /* ═══ SMALL COMPONENTS ═══ */
 // Module-level tracker: once a score has animated, it never re-animates
 // (even if the component remounts from scrolling). Cleared on new audit.
@@ -179,6 +187,8 @@ export default function App() {
           metaDesc: res.metaDesc,
           uniqueClaims: res.uniqueClaims,
           scrapeSource: res.scrapeSource,
+          pagesScraped: res.pagesScraped || [],
+          contentHash: res.contentHash || "",
         }),
       });
       // Re-fetch leaderboard after successful submit so new entries appear immediately
@@ -355,6 +365,8 @@ export default function App() {
       uniqueClaims: uniq,
       homepageH1: hp.h1 || [], allH1, allH2, metaDesc: hp.meta_description || "", bodyText: allBody, ai,
       scrapeSource,
+      pagesScraped: pages.map(p => p.url), // actual URLs scraped for transparency
+      contentHash: contentHash(allBody),   // fingerprint for change detection
     };
   }
 
@@ -623,6 +635,14 @@ export default function App() {
                   </span>
                 )}
               </div>
+              {res.pagesScraped?.length > 0 && (
+                <div style={{ fontSize: 11, fontFamily: T.mono, color: T.dim, margin: "6px 0 10px", lineHeight: 1.6 }}>
+                  <span style={{ color: T.muted }}>Pages scanned:</span>{" "}
+                  {res.pagesScraped.map((u, i) => (
+                    <span key={i}>{i > 0 && " · "}<a href={u.startsWith("http") ? u : "https://" + u} target="_blank" rel="noopener noreferrer" style={{ color: T.accent, textDecoration: "none", borderBottom: "1px solid " + T.accent + "40" }}>{u.replace(/^https?:\/\/(www\.)?/, "")}</a></span>
+                  ))}
+                </div>
+              )}
               <p style={{ fontSize: 13, fontFamily: T.mono, color: T.dim, marginBottom: 14 }}>
                 {res.scrapeSource === "cheerio"
                   ? <>This is the <strong style={{ color: "#22c55e" }}>exact text</strong> extracted from the page HTML. Every <span style={{ background: "#ef444425", color: "#ef4444", padding: "1px 4px", borderRadius: 3 }}>highlighted phrase</span> could appear on any college website.</>

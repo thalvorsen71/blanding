@@ -44,6 +44,7 @@ exports.handler = async (event) => {
     const body = {
       model: req.model || "claude-sonnet-4-20250514",
       max_tokens: Math.min(req.max_tokens || 2000, 4000),
+      temperature: 0, // Deterministic: same content → same scores between runs
       messages: req.messages,
     };
     if (req.tools) body.tools = req.tools;

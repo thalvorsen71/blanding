@@ -118,7 +118,8 @@ export async function handler(event) {
     }
     try {
       const { name, url, overall, language, strategy, cliches, pagesAudited,
-              ai, homepageH1, metaDesc, uniqueClaims, scrapeSource } = JSON.parse(event.body);
+              ai, homepageH1, metaDesc, uniqueClaims, scrapeSource,
+              pagesScraped, contentHash } = JSON.parse(event.body);
 
       if (!url || !name || overall == null) {
         return { statusCode: 400, headers, body: JSON.stringify({ error: "Missing required fields" }) };
@@ -165,6 +166,8 @@ export async function handler(event) {
           metaDesc: metaDesc || "",
           uniqueClaims: uniqueClaims || [],
           scrapeSource: scrapeSource || "unknown",
+          pagesScraped: pagesScraped || [],
+          contentHash: contentHash || "",
         } : {}),
       };
 
