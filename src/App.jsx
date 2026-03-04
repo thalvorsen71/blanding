@@ -351,6 +351,8 @@ export default function App() {
   };
 
   const runSingle = async () => {
+    // Clear previous results so UI resets
+    setResult(null); setResult2(null); setProgress([]);
     // Check for cached leaderboard entry before burning API calls
     const cached = findCachedEntry(url1);
     if (cached) {
