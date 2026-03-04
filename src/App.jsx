@@ -93,6 +93,7 @@ export default function App() {
   const [auditCount, setAuditCount] = useState(0);
   const [showMethodology, setShowMethodology] = useState(false);
   const [showDisclaimer, setShowDisclaimer] = useState(false);
+  const [cachedPrompt, setCachedPrompt] = useState(null); // { entry, url } when a domain has a cached score
   const resultRef = useRef(null);
   const methRef = useRef(null);
   const disclaimerRef = useRef(null);
@@ -201,10 +202,13 @@ export default function App() {
       ai = await deepAnalysis(url, hp.body_text || JSON.stringify(hp), allBody, allH1, allH2, hp.meta_description || "", hp.h1 || []);
     } catch (e) {
       console.warn("[Blanding] Deep analysis attempt 1 failed:", e.message);
-      // Retry once after a short delay
+      // Rate-limit-aware retry: wait longer for 429s, short wait for other errors
+      const isRateLimit = e.name === "RateLimitError" || /rate.?limit|429|too many/i.test(e.message);
+      const waitSec = isRateLimit ? Math.min(e.retryAfter || 30, 90) : 3;
       try {
-        await new Promise(r => setTimeout(r, 3000));
-        addProg(prefix + "Retrying AI analysis...");
+        if (isRateLimit) addProg(prefix + `Rate limited — waiting ${waitSec}s before retry...`);
+        else addProg(prefix + "Retrying AI analysis...");
+        await new Promise(r => setTimeout(r, waitSec * 1000));
         ai = await deepAnalysis(url, hp.body_text || JSON.stringify(hp), allBody, allH1, allH2, hp.meta_description || "", hp.h1 || []);
       } catch (e2) {
         console.warn("[Blanding] Deep analysis attempt 2 failed:", e2.message);
@@ -314,7 +318,33 @@ export default function App() {
 
   const scrollToResult = () => setTimeout(() => resultRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 300);
 
-  const runSingle = async () => { _animatedScores.clear(); setAnalyzing(true); setProgress([]); setResult(null); setResult2(null); setActiveTab("overview"); const r = await runAudit(url1); if (r) { setResult(r); submitToLeaderboard(r); } setProgress(p => p.map(i => i.status === "error" ? i : { ...i, status: "done" })); setAnalyzing(false); if (r) scrollToResult(); else setTimeout(() => progressRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 300); };
+  // Check if a domain already has a cached leaderboard entry
+  const findCachedEntry = (inputUrl) => {
+    try {
+      const hostname = new URL(norm(inputUrl)).hostname.replace(/^www\./, "");
+      return leaderboard.find(e => e.url === hostname);
+    } catch { return null; }
+  };
+
+  const runFreshAudit = async () => {
+    setCachedPrompt(null);
+    _animatedScores.clear(); setAnalyzing(true); setProgress([]); setResult(null); setResult2(null); setActiveTab("overview");
+    const r = await runAudit(url1);
+    if (r) { setResult(r); submitToLeaderboard(r); }
+    setProgress(p => p.map(i => i.status === "error" ? i : { ...i, status: "done" }));
+    setAnalyzing(false);
+    if (r) scrollToResult(); else setTimeout(() => progressRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 300);
+  };
+
+  const runSingle = async () => {
+    // Check for cached leaderboard entry before burning API calls
+    const cached = findCachedEntry(url1);
+    if (cached) {
+      setCachedPrompt(cached);
+      return; // Show cached prompt UI instead of running audit
+    }
+    runFreshAudit();
+  };
 
   const runCompare = async () => { _animatedScores.clear(); setAnalyzing(true); setProgress([]); setResult(null); setResult2(null); setActiveTab("overview"); addProg("Starting head-to-head audit..."); const r1 = await runAudit(url1, "A → "); const r2 = await runAudit(url2, "B → "); if (r1) { setResult(r1); submitToLeaderboard(r1); } if (r2) { setResult2(r2); submitToLeaderboard(r2); } setProgress(p => p.map(i => i.status === "error" ? i : { ...i, status: "done" })); setAnalyzing(false); if (r1 || r2) scrollToResult(); else setTimeout(() => progressRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 300); };
 
@@ -827,7 +857,7 @@ export default function App() {
         <section style={{ marginTop: 32 }}>
           <div style={{ display: "flex", gap: 2, marginBottom: 16, background: T.card, borderRadius: 8, padding: 3, width: "fit-content" }}>
             {[{ l: "Single Audit", v: "single" }, { l: "Head-to-Head", v: "compare" }, { l: "Paste Text", v: "text" }].map(m => (
-              <button key={m.v} onClick={() => { setMode(m.v); setResult(null); setResult2(null); setProgress([]); }}
+              <button key={m.v} onClick={() => { setMode(m.v); setResult(null); setResult2(null); setProgress([]); setCachedPrompt(null); }}
                 style={{ padding: "7px 16px", borderRadius: 6, border: "none", background: mode === m.v ? T.accent : "transparent", color: mode === m.v ? "#fff" : T.dim, fontSize: 13, fontFamily: T.mono, fontWeight: 500 }}>{m.l}</button>
             ))}
           </div>
@@ -941,6 +971,56 @@ export default function App() {
             </div>
           )}
         </section>
+
+        {/* CACHED RESULT PROMPT — domain already audited */}
+        {cachedPrompt && !analyzing && !result && (
+          <section style={{ marginTop: 28 }}>
+            <div style={{ background: T.card, border: `1px solid ${T.accent}40`, borderRadius: 12, padding: "22px 24px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+                <span style={{ fontSize: 18 }}>📋</span>
+                <span style={{ fontSize: 14, fontFamily: T.mono, color: T.accent }}>Previously Audited</span>
+              </div>
+              <p style={{ fontSize: 14, color: T.text, lineHeight: 1.6, margin: "0 0 4px" }}>
+                <strong style={{ color: T.text }}>{cachedPrompt.name}</strong> was already audited{cachedPrompt.lastAudited ? ` on ${new Date(cachedPrompt.lastAudited).toLocaleDateString()}` : ""}.
+              </p>
+              <div style={{ display: "flex", gap: 16, alignItems: "center", margin: "14px 0" }}>
+                <div style={{ textAlign: "center" }}>
+                  <div style={{ fontSize: 32, fontWeight: 700, color: scoreColor(cachedPrompt.overall), fontFamily: T.mono }}>{cachedPrompt.overall}</div>
+                  <div style={{ fontSize: 11, color: T.dim, fontFamily: T.mono }}>Overall</div>
+                </div>
+                {cachedPrompt.language != null && (
+                  <div style={{ textAlign: "center" }}>
+                    <div style={{ fontSize: 20, fontWeight: 600, color: scoreColor(cachedPrompt.language), fontFamily: T.mono }}>{cachedPrompt.language}</div>
+                    <div style={{ fontSize: 10, color: T.dim, fontFamily: T.mono }}>Language</div>
+                  </div>
+                )}
+                {cachedPrompt.strategy != null && (
+                  <div style={{ textAlign: "center" }}>
+                    <div style={{ fontSize: 20, fontWeight: 600, color: scoreColor(cachedPrompt.strategy), fontFamily: T.mono }}>{cachedPrompt.strategy}</div>
+                    <div style={{ fontSize: 10, color: T.dim, fontFamily: T.mono }}>Strategy</div>
+                  </div>
+                )}
+                <div style={{ textAlign: "center" }}>
+                  <div style={{ fontSize: 14, fontWeight: 600, color: scoreColor(cachedPrompt.overall), fontFamily: T.mono }}>{scoreLabel(cachedPrompt.overall)}</div>
+                  <div style={{ fontSize: 10, color: T.dim, fontFamily: T.mono }}>Verdict</div>
+                </div>
+              </div>
+              <div style={{ display: "flex", gap: 10, marginTop: 14 }}>
+                <button onClick={runFreshAudit}
+                  style={{ padding: "10px 20px", background: `linear-gradient(135deg, ${T.accent}, #b06830)`, border: "none", borderRadius: 8, color: "#fff", fontSize: 13, fontWeight: 600, fontFamily: T.sans }}>
+                  Re-audit Fresh
+                </button>
+                <button onClick={() => setCachedPrompt(null)}
+                  style={{ padding: "10px 20px", background: "transparent", border: "1px solid " + T.borderLight, borderRadius: 8, color: T.dim, fontSize: 13, fontFamily: T.sans }}>
+                  Dismiss
+                </button>
+              </div>
+              <p style={{ fontSize: 11, color: T.dim, fontFamily: T.mono, margin: "12px 0 0" }}>
+                This is the cached score from the leaderboard. Hit "Re-audit Fresh" to run a new analysis (uses API credits).
+              </p>
+            </div>
+          </section>
+        )}
 
         {/* PROGRESS */}
         {progress.length > 0 && !result && (
