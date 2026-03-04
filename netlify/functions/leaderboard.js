@@ -111,8 +111,8 @@ export async function handler(event) {
         return { statusCode: 400, headers, body: JSON.stringify({ error: "Invalid URL" }) };
       }
 
-      if (!hostname.endsWith(".edu")) {
-        return { statusCode: 403, headers, body: JSON.stringify({ error: "Only .edu domains" }) };
+      if (!hostname.endsWith(".edu") && !hostname.endsWith(".ca")) {
+        return { statusCode: 403, headers, body: JSON.stringify({ error: "Only .edu and .ca domains" }) };
       }
 
       // Load current data from store (starts empty — no seed data)

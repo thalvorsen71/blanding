@@ -111,7 +111,7 @@ export default function App() {
   }, []);
 
   const norm = u => { let x = u.trim(); if (!x.match(/^https?:\/\//)) x = "https://" + x; return x; };
-  const isEdu = u => { try { return new URL(norm(u)).hostname.endsWith(".edu"); } catch { return false; } };
+  const isEdu = u => { try { const h = new URL(norm(u)).hostname; return h.endsWith(".edu") || h.endsWith(".ca"); } catch { return false; } };
 
   const fetchLeaderboard = useCallback(async () => {
     if (lbLoading) return;
@@ -150,7 +150,7 @@ export default function App() {
   async function runAudit(inputUrl, prefix = "") {
     const url = norm(inputUrl);
     if (!isEdu(url)) {
-      addProg(prefix + "Only .edu domains are supported — this tool is built for higher education.", "error");
+      addProg(prefix + "Only .edu and .ca domains are supported — this tool is built for higher education.", "error");
       return null;
     }
     addProg(prefix + "Fetching: " + url);
@@ -844,7 +844,7 @@ export default function App() {
                   {analyzing ? <span style={{ display: "flex", alignItems: "center", gap: 8 }}><Spinner />Auditing...</span> : "Audit Site"}
                 </button>
               </div>
-              {url1.trim() && !isEdu(url1) && <p id="edu-error" role="alert" style={{ margin: "8px 0 0", fontSize: 12, fontFamily: T.mono, color: "#ef4444" }}>Only .edu domains — this tool is built for higher education sites.</p>}
+              {url1.trim() && !isEdu(url1) && <p id="edu-error" role="alert" style={{ margin: "8px 0 0", fontSize: 12, fontFamily: T.mono, color: "#ef4444" }}>Only .edu and .ca domains — this tool is built for higher education sites.</p>}
             </div>
           )}
 
@@ -861,7 +861,7 @@ export default function App() {
                   style={{ background: T.card, border: "1px solid " + (url2.trim() && !isEdu(url2) ? "#ef4444" : T.borderLight), borderRadius: 10, padding: "15px 18px", color: T.text, fontSize: 14, fontFamily: T.sans, outline: "none" }}
                   onFocus={e => e.target.style.borderColor = T.accent} onBlur={e => e.target.style.borderColor = T.borderLight} />
               </div>
-              {((url1.trim() && !isEdu(url1)) || (url2.trim() && !isEdu(url2))) && <p style={{ margin: 0, fontSize: 12, fontFamily: T.mono, color: "#ef4444" }}>Only .edu domains — this tool is built for higher education sites.</p>}
+              {((url1.trim() && !isEdu(url1)) || (url2.trim() && !isEdu(url2))) && <p style={{ margin: 0, fontSize: 12, fontFamily: T.mono, color: "#ef4444" }}>Only .edu and .ca domains — this tool is built for higher education sites.</p>}
               <button onClick={runCompare} disabled={analyzing || !url1.trim() || !url2.trim() || !isEdu(url1) || !isEdu(url2)}
                 style={{ padding: "15px", background: (!url1.trim() || !url2.trim()) ? "#1a1a1a" : `linear-gradient(135deg, ${T.accent}, #b06830)`, border: "none", borderRadius: 10, color: (!url1.trim() || !url2.trim()) ? "#444" : "#fff", fontSize: 14, fontWeight: 600, fontFamily: T.sans }}>
                 {analyzing ? "Running Head-to-Head..." : "Compare These Schools"}
@@ -1068,7 +1068,7 @@ export default function App() {
                 </div>
                 <div className="audit-input-row" style={{ display: "flex", gap: 8 }}>
                   <input value={challengeUrl} onChange={e => setChallengeUrl(e.target.value)}
-                    placeholder="Enter rival school .edu URL..." onKeyDown={e => e.key === "Enter" && challengeUrl.trim() && isEdu(challengeUrl) && handleChallenge()}
+                    placeholder="Enter rival school URL..." onKeyDown={e => e.key === "Enter" && challengeUrl.trim() && isEdu(challengeUrl) && handleChallenge()}
                     aria-label="Rival school URL" aria-invalid={challengeUrl.trim() && !isEdu(challengeUrl) ? "true" : undefined}
                     style={{ flex: 1, background: T.bg, border: "1px solid " + (challengeUrl.trim() && !isEdu(challengeUrl) ? "#ef4444" : T.borderLight), borderRadius: 8, padding: "10px 14px", color: T.text, fontSize: 13, fontFamily: T.sans, outline: "none" }}
                     onFocus={e => e.target.style.borderColor = challengeUrl.trim() && !isEdu(challengeUrl) ? "#ef4444" : T.accent} onBlur={e => e.target.style.borderColor = challengeUrl.trim() && !isEdu(challengeUrl) ? "#ef4444" : T.borderLight} />
@@ -1077,7 +1077,7 @@ export default function App() {
                     Head-to-Head →
                   </button>
                 </div>
-                {challengeUrl.trim() && !isEdu(challengeUrl) && <p role="alert" style={{ margin: "6px 0 0", fontSize: 11, fontFamily: T.mono, color: "#ef4444" }}>Only .edu domains supported.</p>}
+                {challengeUrl.trim() && !isEdu(challengeUrl) && <p role="alert" style={{ margin: "6px 0 0", fontSize: 11, fontFamily: T.mono, color: "#ef4444" }}>Only .edu and .ca domains supported.</p>}
               </div>
             )}
 

@@ -17,11 +17,11 @@ exports.handler = async (event) => {
     const { url } = JSON.parse(event.body);
     if (!url) return { statusCode: 400, headers, body: JSON.stringify({ error: "URL required" }) };
 
-    // Only allow .edu domains
+    // Only allow .edu and .ca domains (higher education)
     try {
       const hostname = new URL(url).hostname;
-      if (!hostname.endsWith(".edu")) {
-        return { statusCode: 403, headers, body: JSON.stringify({ error: "Only .edu domains are supported" }) };
+      if (!hostname.endsWith(".edu") && !hostname.endsWith(".ca")) {
+        return { statusCode: 403, headers, body: JSON.stringify({ error: "Only .edu and .ca domains are supported" }) };
       }
     } catch { return { statusCode: 400, headers, body: JSON.stringify({ error: "Invalid URL" }) }; }
 
