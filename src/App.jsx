@@ -130,6 +130,20 @@ export default function App() {
 
   const submitToLeaderboard = useCallback(async (res) => {
     if (!res?.url || !res?.schoolName) return;
+    // Only submit to leaderboard if AI analysis succeeded.
+    // Without AI, scores are mechanical-only and significantly lower —
+    // we don't want a degraded audit to overwrite a good one.
+    if (!res.ai) {
+      console.warn("[Blanding] Skipping leaderboard submit — AI analysis was unavailable, score would be degraded");
+      // Still re-fetch the leaderboard to show current data
+      try {
+        const r = await fetch("/.netlify/functions/leaderboard");
+        const d = await r.json();
+        if (d.schools?.length) setLeaderboard(d.schools);
+        if (d.count) setAuditCount(d.count);
+      } catch {}
+      return;
+    }
     try {
       await fetch("/.netlify/functions/leaderboard", {
         method: "POST", headers: { "Content-Type": "application/json" },
