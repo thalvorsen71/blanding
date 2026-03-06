@@ -29,17 +29,45 @@ exports.handler = async (event) => {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 15000);
 
-    const resp = await fetch(url, {
+    // Full browser-like headers to pass WAF checks (many .edu sites block
+    // requests missing Sec-Fetch-* or Connection headers — this fixes ~14 schools
+    // that were returning 403 and getting degraded audits)
+    const browserHeaders = {
+      "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+      "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+      "Accept-Language": "en-US,en;q=0.9",
+      "Accept-Encoding": "gzip, deflate, br, zstd",
+      "Cache-Control": "no-cache",
+      "Pragma": "no-cache",
+      "Connection": "keep-alive",
+      "Upgrade-Insecure-Requests": "1",
+      "Sec-Fetch-Dest": "document",
+      "Sec-Fetch-Mode": "navigate",
+      "Sec-Fetch-Site": "none",
+      "Sec-Fetch-User": "?1",
+      "Sec-CH-UA": '"Chromium";v="131", "Not_A Brand";v="24"',
+      "Sec-CH-UA-Mobile": "?0",
+      "Sec-CH-UA-Platform": '"macOS"',
+      "DNT": "1",
+    };
+
+    let resp = await fetch(url, {
       signal: controller.signal,
-      headers: {
-        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-        "Accept-Language": "en-US,en;q=0.9",
-        "Accept-Encoding": "gzip, deflate, br",
-        "Cache-Control": "no-cache",
-      },
+      headers: browserHeaders,
       redirect: "follow",
     });
+
+    // If blocked (403/406), retry with a slightly different User-Agent
+    if (resp.status === 403 || resp.status === 406) {
+      const retryHeaders = { ...browserHeaders };
+      retryHeaders["User-Agent"] = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36";
+      retryHeaders["Sec-CH-UA-Platform"] = '"Windows"';
+      resp = await fetch(url, {
+        signal: controller.signal,
+        headers: retryHeaders,
+        redirect: "follow",
+      });
+    }
     clearTimeout(timeout);
 
     if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
