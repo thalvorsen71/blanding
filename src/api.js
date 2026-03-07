@@ -108,8 +108,10 @@ async function fetchPageViaClaude(url) {
   // Only extract core fields needed for scoring. Skip nice-to-haves.
   const raw = await callAPI([{
     role: "user",
-    content: `Visit ${url} and extract its text content. Return ONLY JSON:
-{"title":"page title","meta_description":"meta desc or empty","h1":["H1 texts"],"h2s":["first 8 H2s"],"body_text":"all visible text, max 3000 chars, skip nav/footer","ctas":["CTA button texts"],"page_type":"homepage|admissions|about|academics|other","linked_pages":["up to 4 internal URLs"],"nav_items":[],"unique_claims":[]}`
+    content: `Search for and visit this EXACT URL: ${url}
+
+Extract the visible text content from this page. ONLY text that literally appears on this URL right now. Return ONLY a JSON object (no markdown, no backticks):
+{"title":"page title tag","meta_description":"meta desc or empty","h1":["H1 texts"],"h2s":["first 8 H2s"],"body_text":"all visible page text, max 3000 chars, skip nav links and footer","ctas":["CTA button texts"],"page_type":"homepage|admissions|about|academics|other","linked_pages":["up to 4 internal URLs"],"nav_items":[],"unique_claims":[]}`
   }], true, "claude-sonnet-4-20250514"); // Sonnet: only model that executes web_search
   const result = parseJSON(raw);
   result._source = "claude_websearch"; // tag source
