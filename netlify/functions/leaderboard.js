@@ -118,7 +118,7 @@ export async function handler(event) {
     }
     try {
       const { name, url, overall, language, strategy, cliches, pagesAudited,
-              ai, homepageH1, allH1, allH2, metaDesc, uniqueClaims, scrapeSource,
+              ai, homepageH1, allH1, allH2, metaDesc, uniqueClaims, scrapeSource, scrapeQuality,
               pagesScraped, contentHash, wordCount, topCliches, clicheBreakdown } = JSON.parse(event.body);
 
       if (!url || !name || overall == null) {
@@ -168,6 +168,7 @@ export async function handler(event) {
           metaDesc: metaDesc || "",
           uniqueClaims: uniqueClaims || [],
           scrapeSource: scrapeSource || "unknown",
+          scrapeQuality: scrapeQuality || "unknown",
           pagesScraped: pagesScraped || [],
           contentHash: contentHash || "",
           wordCount: wordCount || 0,

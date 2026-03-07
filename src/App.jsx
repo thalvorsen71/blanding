@@ -189,6 +189,7 @@ export default function App() {
           metaDesc: res.metaDesc,
           uniqueClaims: res.uniqueClaims,
           scrapeSource: res.scrapeSource,
+          scrapeQuality: res.scrapeQuality,
           pagesScraped: res.pagesScraped || [],
           contentHash: res.contentHash || "",
           wordCount: res.bodyText ? res.bodyText.split(/\s+/).length : 0,
@@ -241,6 +242,7 @@ export default function App() {
     addProg(prefix + 'Loaded: "' + (hp.title || "Untitled") + '"');
 
     const scrapeSource = hp._source || "unknown"; // "cheerio" or "claude_websearch"
+    const scrapeQuality = hp._scrapeQuality || "unknown"; // "full", "partial", or "degraded"
     const pages = [{ url, data: hp, type: "homepage" }];
     const linked = (hp.linked_pages || []).slice(0, 3);
 
@@ -378,7 +380,7 @@ export default function App() {
       cliches, totalCliches: totalC,
       uniqueClaims: uniq,
       homepageH1: hp.h1 || [], allH1, allH2, metaDesc: hp.meta_description || "", bodyText: allBody, ai,
-      scrapeSource, weighted,
+      scrapeSource, scrapeQuality, weighted,
       pagesScraped: pages.map(p => p.url), // actual URLs scraped for transparency
       contentHash: contentHash(allBody),   // fingerprint for change detection
     };
@@ -711,6 +713,7 @@ export default function App() {
                       <div style={{ minWidth: 0 }}>
                         <div style={{ fontSize: 13, color: isYou ? T.accent : T.text, fontWeight: isYou ? 600 : 400, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                           {s.name}{isYou && <span style={{ fontSize: 12, marginLeft: 6, color: T.accent, fontFamily: T.mono }}>← YOU</span>}
+                          {s.scrapeQuality && s.scrapeQuality !== "full" && <span title="This site blocked our scraper — score is based on limited data and may be lower than actual" style={{ fontSize: 10, marginLeft: 6, color: "#e6a817", fontFamily: T.mono, cursor: "help" }}>⚠ partial data</span>}
                         </div>
                         <div style={{ fontSize: 11, fontFamily: T.mono, color: T.dim }}>{s.url}</div>
                       </div>

@@ -108,16 +108,16 @@ async function fetchPageViaClaude(url) {
     role: "user",
     content: `Search for and visit this EXACT URL: ${url}
 
-YOUR ONLY JOB: Extract ALL the literal text content visible on THIS page. You are a copy machine — be EXHAUSTIVE.
+YOUR ONLY JOB: Extract ALL the literal text content visible on THIS page. You are a copy machine — be EXHAUSTIVE. Capture EVERYTHING.
 
-CRITICAL: Many university homepages have MULTIPLE content sections: hero text, featured stories, news items, event highlights, research spotlights, statistics, and institutional copy. You MUST capture text from ALL sections — not just the first paragraph. Scroll through the entire page.
+CRITICAL: Many university homepages have MULTIPLE content sections that load as you scroll: hero text, featured stories, news items, event highlights, research spotlights, statistics, institutional copy, diversity statements, sustainability sections, athletics, student life, and more. You MUST capture text from ALL sections — scroll to the very bottom. Do NOT stop at the first few sections.
 
 ABSOLUTE RULES:
 1. ONLY return text that literally appears on THIS specific URL right now.
 2. Do NOT include text from sub-pages or other URLs.
 3. Do NOT include information from your training data.
 4. If a field has no content on this page, return empty string or empty array.
-5. For body_text: Be EXHAUSTIVE. Include the hero/banner text, ALL featured story headlines and descriptions, ALL news headlines, event names, research highlights, statistics, pull quotes, and any institutional copy. Copy the text from EVERY section of the page. Aim for 3000-5000 characters. The MORE text you capture, the better.
+5. For body_text: Be MAXIMALLY EXHAUSTIVE. Include the hero/banner text, ALL section headings, ALL featured story headlines and descriptions, ALL news headlines, event names, research highlights, statistics, pull quotes, course names, program descriptions, and any institutional copy. Copy the text from EVERY section of the page top to bottom. Aim for 4000-5000 characters minimum. The MORE text you capture, the better. If you capture less than 2000 characters, you have probably missed sections — go back and get more.
 
 UNIQUE_CLAIMS RULES (read carefully):
 - Each claim MUST contain at least one: number, percentage, dollar amount, ranking, named program, named person, or specific date.
@@ -162,7 +162,8 @@ export async function fetchPage(url, onProgress) {
     const bodyLen = (data.body_text || "").trim().length;
 
     if (bodyLen >= MIN_BODY_CHARS) {
-      return data; // Cheerio got enough content — use it
+      data._scrapeQuality = "full"; // Cheerio got solid content
+      return data;
     }
 
     // Cheerio got SOME content but below threshold — save as fallback
@@ -171,7 +172,7 @@ export async function fetchPage(url, onProgress) {
     // Try Claude for richer extraction
     if (onProgress) onProgress("Page uses dynamic content, trying AI scraper...");
   } catch (err) {
-    // Cheerio failed entirely — try Claude
+    // Cheerio failed entirely (403, timeout, etc.) — try Claude
     if (onProgress) onProgress("Retrying with AI scraper...");
   }
 
@@ -179,7 +180,10 @@ export async function fetchPage(url, onProgress) {
   for (let i = 0; i < 2; i++) {
     try {
       if (onProgress && i > 0) onProgress("AI scraper retry...");
-      return await fetchPageViaClaude(url);
+      const claudeResult = await fetchPageViaClaude(url);
+      // Claude fallback always gets less content than a full Cheerio scrape
+      claudeResult._scrapeQuality = "partial";
+      return claudeResult;
     } catch (err) {
       if (err.name === "RateLimitError") {
         if (i === 0) {
@@ -191,13 +195,16 @@ export async function fetchPage(url, onProgress) {
         }
         // Already retried once after rate limit — use whatever cheerio got
         if (onProgress) onProgress("AI scraper unavailable (rate limited). Using available content.");
-        return cheerioData; // May be partial content, but better than nothing
+        if (cheerioData) cheerioData._scrapeQuality = "degraded";
+        return cheerioData;
       }
       // Non-rate-limit error: retry once after brief pause
       if (i === 0) { await sleep(2000); continue; }
-      return cheerioData; // Fall back to partial cheerio content
+      if (cheerioData) cheerioData._scrapeQuality = "degraded";
+      return cheerioData;
     }
   }
+  if (cheerioData) cheerioData._scrapeQuality = "degraded";
   return cheerioData; // Return whatever we have, even if sparse
 }
 
