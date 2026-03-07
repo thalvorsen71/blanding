@@ -24,6 +24,14 @@ exports.handler = async (event) => {
   if (event.httpMethod === "OPTIONS") return { statusCode: 200, headers, body: "" };
   if (event.httpMethod !== "POST") return { statusCode: 405, headers, body: JSON.stringify({ error: "Method not allowed" }) };
 
+  // Security: Only accept requests from our own site (block external proxy abuse)
+  const origin = event.headers["origin"] || event.headers["referer"] || "";
+  const isLocalDev = origin.includes("localhost") || origin.includes("127.0.0.1");
+  const isOurSite = origin.includes("blandingaudit.netlify.app") || origin.includes("blandingaudit.com");
+  if (!isLocalDev && !isOurSite && origin !== "") {
+    return { statusCode: 403, headers, body: JSON.stringify({ error: "Unauthorized origin" }) };
+  }
+
   // Rate limiting
   const ip = event.headers["client-ip"] || event.headers["x-forwarded-for"] || "unknown";
   if (!checkRate(ip)) {
@@ -41,13 +49,31 @@ exports.handler = async (event) => {
       return { statusCode: 400, headers, body: JSON.stringify({ error: "messages required" }) };
     }
 
+    // Security: Only allow models we actually use (prevent proxy abuse)
+    const ALLOWED_MODELS = ["claude-sonnet-4-20250514", "claude-haiku-4-5-20251001"];
+    const model = ALLOWED_MODELS.includes(req.model) ? req.model : "claude-haiku-4-5-20251001";
+
+    // Security: Validate message structure (only single user message allowed)
+    if (req.messages.length > 2 || !req.messages[0]?.content) {
+      return { statusCode: 400, headers, body: JSON.stringify({ error: "Invalid message structure" }) };
+    }
+
+    // Security: Cap total input size to prevent token abuse
+    const totalChars = req.messages.reduce((sum, m) => sum + (typeof m.content === "string" ? m.content.length : 0), 0);
+    if (totalChars > 25000) {
+      return { statusCode: 400, headers, body: JSON.stringify({ error: "Input too large" }) };
+    }
+
+    // Security: Only allow web_search tool (prevent arbitrary tool use)
+    const tools = req.tools?.some(t => t.type === "web_search_20250305") ? [{ type: "web_search_20250305", name: "web_search" }] : undefined;
+
     const body = {
-      model: req.model || "claude-sonnet-4-20250514",
+      model,
       max_tokens: Math.min(req.max_tokens || 2000, 4000),
       temperature: 0, // Deterministic: same content → same scores between runs
       messages: req.messages,
     };
-    if (req.tools) body.tools = req.tools;
+    if (tools) body.tools = tools;
 
     // Timeout strategy (Netlify Pro tier — 26s function limit):
     // No AbortController. Let ALL calls run until Netlify's natural 26s limit.

@@ -201,7 +201,30 @@ export async function fetchSubPage(url) {
   return null; // Skip Claude for sub-pages to stay within rate limits
 }
 
+// Sanitize user-supplied text to prevent prompt injection.
+// Strips common injection patterns while preserving legitimate content.
+function sanitizeInput(str) {
+  if (!str || typeof str !== "string") return "";
+  return str
+    // Strip attempts to break out of the content block
+    .replace(/={3,}/g, "---")
+    // Strip XML/HTML-style instruction tags that could redefine context
+    .replace(/<\/?(?:system|instruction|prompt|assistant|human|user|role|rules?|override|ignore|command)[^>]*>/gi, "")
+    // Strip common injection prefixes
+    .replace(/^(ignore|disregard|forget|override|new instructions?|system prompt|you are now|act as)\b[^.]*[.:]/gim, "[REMOVED] ")
+    // Cap length: 15K chars is ~3K words, more than any homepage
+    .substring(0, 15000);
+}
+
 export async function deepAnalysis(url, text, allText, h1s = [], h2s = [], metaDesc = "", homepageH1s = [], wasBlocked = false) {
+  // Sanitize all text inputs before they enter the prompt
+  text = sanitizeInput(text);
+  allText = sanitizeInput(allText);
+  metaDesc = sanitizeInput(metaDesc);
+  h1s = (h1s || []).map(s => sanitizeInput(s));
+  h2s = (h2s || []).map(s => sanitizeInput(s));
+  homepageH1s = (homepageH1s || []).map(s => sanitizeInput(s));
+
   const combinedText = (text + " " + allText).trim();
   const wordCount = combinedText.split(/\s+/).length;
 

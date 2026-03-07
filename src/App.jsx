@@ -1071,9 +1071,10 @@ export default function App() {
 
           {mode === "text" && (
             <>
-              <textarea value={inputText} onChange={e => setInputText(e.target.value)} aria-label="Paste marketing text to analyze" placeholder="Paste your homepage copy, about page, or any marketing text..."
+              <textarea value={inputText} onChange={e => setInputText(e.target.value.slice(0, 15000))} maxLength={15000} aria-label="Paste marketing text to analyze" placeholder="Paste your homepage copy, about page, or any marketing text..."
                 style={{ width: "100%", minHeight: 170, background: T.card, border: "1px solid " + T.borderLight, borderRadius: 10, padding: "16px 20px", color: T.text, fontSize: 14, lineHeight: 1.7, fontFamily: T.sans, resize: "vertical", outline: "none" }}
                 onFocus={e => e.target.style.borderColor = T.accent} onBlur={e => e.target.style.borderColor = T.borderLight} />
+              {inputText.length > 12000 && <div style={{ fontSize: 11, fontFamily: T.mono, color: "#eab308", marginTop: 4 }}>{inputText.length.toLocaleString()} / 15,000 characters</div>}
               <button onClick={runText} disabled={analyzing || inputText.trim().length < 50}
                 style={{ marginTop: 10, width: "100%", padding: "15px", background: inputText.trim().length < 50 ? "#1a1a1a" : `linear-gradient(135deg, ${T.accent}, #b06830)`, border: "none", borderRadius: 10, color: inputText.trim().length < 50 ? "#444" : "#fff", fontSize: 14, fontWeight: 600, fontFamily: T.sans }}>
                 {analyzing ? "Analyzing..." : "Analyze Copy"}
