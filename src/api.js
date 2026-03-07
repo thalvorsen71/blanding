@@ -98,119 +98,51 @@ async function fetchPageViaCheerio(url) {
   }
 }
 
-/**
- * Secondary scraper: Claude web_search. Used ONLY when cheerio
- * returns very little content (JS-heavy pages).
- * Tightly constrained to prevent hallucination.
- */
-async function fetchPageViaClaude(url) {
-  // Claude web_search fallback for blocked sites. Netlify Pro = 26s limit.
-  // Sonnet + web_search typically completes in 9-12s.
-  const raw = await callAPI([{
-    role: "user",
-    content: `Search for and visit this EXACT URL: ${url}
-
-Extract the visible text content from this page. ONLY text that literally appears on this URL right now. Return ONLY a JSON object (no markdown, no backticks):
-{"title":"page title tag","meta_description":"meta desc or empty","h1":["H1 texts"],"h2s":["first 8 H2s"],"body_text":"all visible page text, max 3000 chars, skip nav links and footer","ctas":["CTA button texts"],"page_type":"homepage|admissions|about|academics|other","linked_pages":["up to 4 internal URLs"],"nav_items":[],"unique_claims":[]}`
-  }], true, "claude-sonnet-4-20250514"); // Must be Sonnet 4 — only model that triggers web_search. Takes ~9-12s, works fine on Netlify Pro (26s limit).
-  const result = parseJSON(raw);
-  result._source = "claude_websearch"; // tag source
-  return result;
-}
-
-const MIN_BODY_CHARS = 200; // if cheerio gets less than this, try Claude
+const MIN_BODY_CHARS = 200; // threshold for "full" vs "partial" quality tag
 
 /**
- * Fetch a page: cheerio first (reliable, no hallucinations), then Claude if needed.
+ * Fetch a page: cheerio ONLY. No AI fallback. Zero hallucination guarantee.
+ *
+ * If cheerio can reach the site, we use whatever it gets — even if sparse.
+ * If cheerio can't reach the site (403, timeout), we return null and the
+ * UI tells the user honestly that we couldn't scrape it.
+ *
+ * The old Claude websearch fallback was removed because it could fabricate
+ * H1 tags, body text, and structural elements. A transparent "couldn't
+ * scrape this" is better than a confident-sounding fabrication.
  *
  * @param {string} url
  * @param {function} onProgress - (msg) => void
  * @returns {object|null}
  */
 export async function fetchPage(url, onProgress) {
-  let cheerioData = null; // Keep cheerio result as fallback even if below threshold
-  let wasBlocked = false; // Track if server blocked automated requests (403/405)
-
-  // Step 1: Try cheerio (deterministic, fast, zero hallucination)
   try {
     const data = await fetchPageViaCheerio(url);
     const bodyLen = (data.body_text || "").trim().length;
 
     if (bodyLen >= MIN_BODY_CHARS) {
-      data._scrapeQuality = "full"; // Cheerio got solid content
-      return data;
+      data._scrapeQuality = "full";
+    } else if (bodyLen > 0) {
+      data._scrapeQuality = "partial"; // Got HTML but sparse body (JS-heavy SPA)
+      if (onProgress) onProgress("Limited text extracted — site may use heavy JavaScript rendering");
+    } else {
+      data._scrapeQuality = "empty"; // HTML returned but zero usable body text
+      if (onProgress) onProgress("Site returned HTML but no readable text content");
     }
 
-    // Cheerio got SOME content but below threshold — save as fallback
-    cheerioData = data;
-
-    // Try Claude for richer extraction
-    if (onProgress) onProgress("Page uses dynamic content, trying AI scraper...");
+    data._wasBlocked = false;
+    return data;
   } catch (err) {
-    // Detect WAF/bot blocks — HTTP errors AND connection-level failures
-    // "fetch failed" = Node.js undici when connection is refused/reset by WAF
-    // "ECONNRESET"/"ECONNREFUSED" = explicit connection rejections
     const errMsg = err.message || "";
-    wasBlocked = /403|405|406|forbidden|blocked|captcha|fetch failed|ECONNRESET|ECONNREFUSED/i.test(errMsg);
-    // Cheerio failed entirely (403, timeout, etc.) — try Claude
-    if (onProgress) onProgress(wasBlocked ? "Site blocks automated scrapers, trying AI scraper..." : "Retrying with AI scraper...");
-  }
+    const wasBlocked = /403|405|406|forbidden|blocked|captcha|fetch failed|ECONNRESET|ECONNREFUSED/i.test(errMsg);
 
-  // Step 2: Fall back to Claude web_search (max 2 attempts, rate-limit-aware)
-  for (let i = 0; i < 2; i++) {
-    try {
-      if (onProgress && i > 0) onProgress("AI scraper retry...");
-      const claudeResult = await fetchPageViaClaude(url);
-      // Claude fallback always gets less content than a full Cheerio scrape
-      claudeResult._scrapeQuality = "partial";
-      claudeResult._wasBlocked = wasBlocked; // Pass through for analysis
-
-      // HYBRID MERGE: If cheerio got SOME structural data (H1s, H2s, title, meta),
-      // prefer those over websearch because cheerio parses real HTML deterministically
-      // while websearch may hallucinate or misread structural elements.
-      if (cheerioData) {
-        const cheerioH1 = cheerioData.h1 || [];
-        const cheerioH2 = cheerioData.h2s || [];
-        // Only override websearch H1/H2 if cheerio actually found them
-        if (cheerioH1.length > 0) claudeResult.h1 = cheerioH1;
-        if (cheerioH2.length > 0) claudeResult.h2s = cheerioH2;
-        // Prefer cheerio title and meta (parsed from HTML tags, not guessed)
-        if (cheerioData.title) claudeResult.title = cheerioData.title;
-        if (cheerioData.meta_description) claudeResult.meta_description = cheerioData.meta_description;
-        // Merge linked pages (cheerio finds real hrefs, websearch guesses)
-        if ((cheerioData.linked_pages || []).length > 0) {
-          claudeResult.linked_pages = cheerioData.linked_pages;
-        }
-        // Flag that structural data came from cheerio (reliable)
-        claudeResult._structureSource = "cheerio";
-      } else {
-        // No cheerio data at all — flag H1s as unverified
-        claudeResult._structureSource = "websearch";
-      }
-
-      return claudeResult;
-    } catch (err) {
-      if (err.name === "RateLimitError") {
-        if (i === 0) {
-          // Wait out the rate limit window (default 60s) then retry once
-          const waitSec = Math.min(err.retryAfter || 60, 90);
-          if (onProgress) onProgress(`Rate limited — waiting ${waitSec}s before retry...`);
-          await sleep(waitSec * 1000);
-          continue;
-        }
-        // Already retried once after rate limit — use whatever cheerio got
-        if (onProgress) onProgress("AI scraper unavailable (rate limited). Using available content.");
-        if (cheerioData) { cheerioData._scrapeQuality = "degraded"; cheerioData._wasBlocked = wasBlocked; }
-        return cheerioData;
-      }
-      // Non-rate-limit error: retry once after brief pause
-      if (i === 0) { await sleep(2000); continue; }
-      if (cheerioData) { cheerioData._scrapeQuality = "degraded"; cheerioData._wasBlocked = wasBlocked; }
-      return cheerioData;
+    if (onProgress) {
+      onProgress(wasBlocked
+        ? "Site blocks automated scrapers — cannot audit without accessible content"
+        : "Could not reach this site: " + (errMsg.substring(0, 80)));
     }
+    return null;
   }
-  if (cheerioData) { cheerioData._scrapeQuality = "degraded"; cheerioData._wasBlocked = wasBlocked; }
-  return cheerioData; // Return whatever we have, even if sparse
 }
 
 /**
@@ -240,7 +172,7 @@ function sanitizeInput(str) {
     .substring(0, 15000);
 }
 
-export async function deepAnalysis(url, text, allText, h1s = [], h2s = [], metaDesc = "", homepageH1s = [], wasBlocked = false, structureUnverified = false) {
+export async function deepAnalysis(url, text, allText, h1s = [], h2s = [], metaDesc = "", homepageH1s = [], wasBlocked = false) {
   // Sanitize all text inputs before they enter the prompt
   text = sanitizeInput(text);
   allText = sanitizeInput(allText);
@@ -290,12 +222,11 @@ Evaluate: Does the content answer "why HERE instead of somewhere else?" with som
 
 URL: ${url}
 === HOMEPAGE H1 (the hero tagline — this is THE primary brand statement visitors see first) ===
-${homepageH1s.length > 0 ? homepageH1s.join(" | ") : "NONE FOUND — the homepage has no H1 tag, which is itself a brand problem."}${structureUnverified ? `
-WARNING: These H1 tags were extracted via AI web search, NOT from raw HTML parsing. They may be inaccurate or fabricated. Do NOT treat them as ground truth. If the H1 text does not appear elsewhere in the FULL PAGE TEXT below, it may be hallucinated — note this uncertainty in your hero_assessment.` : ""}
+${homepageH1s.length > 0 ? homepageH1s.join(" | ") : "NONE FOUND — the homepage has no H1 tag, which is itself a brand problem."}
 === ALL H1 TAGS ACROSS SITE (homepage + sub-pages) ===
-${h1s.length > 0 ? h1s.join(" | ") : "NONE FOUND"}${structureUnverified ? " (UNVERIFIED — sourced from AI, not HTML)" : ""}
+${h1s.length > 0 ? h1s.join(" | ") : "NONE FOUND"}
 === KEY HEADINGS (H2 tags — these frame the page's content sections) ===
-${h2s.length > 0 ? h2s.slice(0, 15).join(" | ") : "NONE FOUND"}${structureUnverified ? " (UNVERIFIED — sourced from AI, not HTML)" : ""}
+${h2s.length > 0 ? h2s.slice(0, 15).join(" | ") : "NONE FOUND"}
 === META DESCRIPTION (what search engines show) ===
 ${metaDesc || "NONE FOUND"}
 === FULL PAGE TEXT ===

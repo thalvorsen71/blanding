@@ -245,9 +245,9 @@ export default function App() {
 
     addProg(prefix + 'Loaded: "' + (hp.title || "Untitled") + '"');
 
-    const scrapeSource = hp._source || "unknown"; // "cheerio" or "claude_websearch"
-    const scrapeQuality = hp._scrapeQuality || "unknown"; // "full", "partial", or "degraded"
-    const wasBlocked = hp._wasBlocked || false; // true if server returned 403/405 to our scraper
+    const scrapeSource = hp._source || "cheerio"; // always cheerio now (websearch fallback removed)
+    const scrapeQuality = hp._scrapeQuality || "unknown"; // "full", "partial", or "empty"
+    const wasBlocked = hp._wasBlocked || false;
     const pages = [{ url, data: hp, type: "homepage" }];
     const linked = (hp.linked_pages || []).slice(0, 3);
 
@@ -267,13 +267,12 @@ export default function App() {
 
     const allH1 = pages.flatMap(p => p.data.h1 || []);
     const allH2 = pages.flatMap(p => p.data.h2s || []);
-    const structureUnverified = hp._structureSource === "websearch"; // H1s came from AI, not HTML parsing
 
     addProg(prefix + "Running AI brand analysis...");
     const allBody = pages.map(p => p.data.body_text || "").join(" ");
     let ai;
     try {
-      ai = await deepAnalysis(url, hp.body_text || JSON.stringify(hp), allBody, allH1, allH2, hp.meta_description || "", hp.h1 || [], wasBlocked, structureUnverified);
+      ai = await deepAnalysis(url, hp.body_text || JSON.stringify(hp), allBody, allH1, allH2, hp.meta_description || "", hp.h1 || [], wasBlocked);
     } catch (e) {
       console.warn("[Blanding] Deep analysis attempt 1 failed:", e.message);
       // Rate-limit-aware retry: wait longer for 429s, short wait for other errors
@@ -283,7 +282,7 @@ export default function App() {
         if (isRateLimit) addProg(prefix + `Rate limited — waiting ${waitSec}s before retry...`);
         else addProg(prefix + "Retrying AI analysis...");
         await new Promise(r => setTimeout(r, waitSec * 1000));
-        ai = await deepAnalysis(url, hp.body_text || JSON.stringify(hp), allBody, allH1, allH2, hp.meta_description || "", hp.h1 || [], wasBlocked, structureUnverified);
+        ai = await deepAnalysis(url, hp.body_text || JSON.stringify(hp), allBody, allH1, allH2, hp.meta_description || "", hp.h1 || [], wasBlocked);
       } catch (e2) {
         console.warn("[Blanding] Deep analysis attempt 2 failed:", e2.message);
         addProg(prefix + "AI analysis unavailable — using cliché data only", "error");
