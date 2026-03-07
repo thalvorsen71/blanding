@@ -1,8 +1,8 @@
 // Temporary function to delete a school from the leaderboard.
 // Remove this file after use.
-const { getStore } = require("@netlify/blobs");
+import { connectLambda, getStore } from "@netlify/blobs";
 
-exports.handler = async (event) => {
+export const handler = async (event) => {
   const headers = {
     "Access-Control-Allow-Origin": "*",
     "Content-Type": "application/json",
@@ -21,7 +21,8 @@ exports.handler = async (event) => {
       return { statusCode: 400, headers, body: JSON.stringify({ error: "hostname required" }) };
     }
 
-    const store = getStore({ name: "leaderboard", siteID: process.env.SITE_ID || "blandingaudit", token: process.env.NETLIFY_API_TOKEN || process.env.BLOB_TOKEN });
+    try { connectLambda(event); } catch {}
+    const store = getStore("leaderboard");
     const raw = await store.get("schools");
     const data = raw ? JSON.parse(raw) : {};
 
