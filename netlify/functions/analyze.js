@@ -49,16 +49,14 @@ exports.handler = async (event) => {
     };
     if (req.tools) body.tools = req.tools;
 
-    // Timeout: must finish BEFORE Netlify kills us.
-    // Free tier = 10s hard cap; Pro tier = 26s (configured in netlify.toml).
-    // 9s = max safe timeout on free tier (leaves ~1s for JSON response + overhead).
-    // Both search and non-search calls need 9s: Haiku deep analysis takes 8-10s
-    // due to the large prompt, and web_search takes 7-10s for tool execution.
-    const timeoutMs = 9000;
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), timeoutMs);
-
-    const resp = await fetch("https://api.anthropic.com/v1/messages", {
+    // Timeout strategy:
+    // - web_search calls (req.tools): Use AbortController at 9s to return a proper
+    //   JSON error before Netlify's 10s free-tier limit kills us with a raw 504.
+    // - Regular calls (deep analysis): NO AbortController — let them run until
+    //   Netlify's natural limit. Deep analysis with Haiku needs 5-10s for the
+    //   large prompt; a 9s abort would cause false failures on calls that would
+    //   complete at 9.5s. If Netlify kills it, the client handles the raw 504.
+    const fetchOpts = {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -66,9 +64,17 @@ exports.handler = async (event) => {
         "anthropic-version": "2023-06-01",
       },
       body: JSON.stringify(body),
-      signal: controller.signal,
-    });
-    clearTimeout(timeout);
+    };
+
+    let controller, timeout;
+    if (req.tools) {
+      controller = new AbortController();
+      timeout = setTimeout(() => controller.abort(), 9000);
+      fetchOpts.signal = controller.signal;
+    }
+
+    const resp = await fetch("https://api.anthropic.com/v1/messages", fetchOpts);
+    if (timeout) clearTimeout(timeout);
 
     const data = await resp.json();
     return { statusCode: resp.ok ? 200 : resp.status, headers, body: JSON.stringify(data) };
