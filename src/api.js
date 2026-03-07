@@ -104,15 +104,15 @@ async function fetchPageViaCheerio(url) {
  * Tightly constrained to prevent hallucination.
  */
 async function fetchPageViaClaude(url) {
-  // LEAN prompt: Netlify free tier = 10s function limit. Must finish fast.
-  // Only extract core fields needed for scoring. Skip nice-to-haves.
+  // Claude web_search fallback for blocked sites. Netlify Pro = 26s limit.
+  // Sonnet + web_search typically completes in 9-12s.
   const raw = await callAPI([{
     role: "user",
     content: `Search for and visit this EXACT URL: ${url}
 
 Extract the visible text content from this page. ONLY text that literally appears on this URL right now. Return ONLY a JSON object (no markdown, no backticks):
 {"title":"page title tag","meta_description":"meta desc or empty","h1":["H1 texts"],"h2s":["first 8 H2s"],"body_text":"all visible page text, max 3000 chars, skip nav links and footer","ctas":["CTA button texts"],"page_type":"homepage|admissions|about|academics|other","linked_pages":["up to 4 internal URLs"],"nav_items":[],"unique_claims":[]}`
-  }], true, "claude-sonnet-4-20250514"); // Must be Sonnet 4 — only model on this API key that triggers web_search. Note: takes ~9s, exceeds Netlify free tier 10s limit. Upgrade to Pro ($19/mo) to enable.
+  }], true, "claude-sonnet-4-20250514"); // Must be Sonnet 4 — only model that triggers web_search. Takes ~9-12s, works fine on Netlify Pro (26s limit).
   const result = parseJSON(raw);
   result._source = "claude_websearch"; // tag source
   return result;

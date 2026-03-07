@@ -49,13 +49,12 @@ exports.handler = async (event) => {
     };
     if (req.tools) body.tools = req.tools;
 
-    // Timeout strategy:
-    // - web_search calls (req.tools): Use AbortController at 9s to return a proper
-    //   JSON error before Netlify's 10s free-tier limit kills us with a raw 504.
-    // - Regular calls (deep analysis): NO AbortController — let them run until
-    //   Netlify's natural limit. Deep analysis with Haiku needs 5-10s for the
-    //   large prompt; a 9s abort would cause false failures on calls that would
-    //   complete at 9.5s. If Netlify kills it, the client handles the raw 504.
+    // Timeout strategy (Netlify Pro tier — 26s function limit):
+    // - web_search calls (req.tools): AbortController at 25s to return a proper
+    //   JSON error before Netlify's 26s limit kills us with a raw 502.
+    // - Regular calls (deep analysis): NO AbortController — Haiku completes in
+    //   5-10s, well within the 26s limit. If it somehow exceeds, Netlify kills
+    //   it and the client handles the raw 502.
     const fetchOpts = {
       method: "POST",
       headers: {
@@ -69,7 +68,7 @@ exports.handler = async (event) => {
     let controller, timeout;
     if (req.tools) {
       controller = new AbortController();
-      timeout = setTimeout(() => controller.abort(), 9000);
+      timeout = setTimeout(() => controller.abort(), 25000);
       fetchOpts.signal = controller.signal;
     }
 
