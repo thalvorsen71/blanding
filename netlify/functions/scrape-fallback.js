@@ -126,13 +126,13 @@ exports.handler = async (event) => {
       if (longWords.length < words.length * 0.1) return " "; // <10% long words = keyword dump
       return match;
     });
-    bodyText = bodyText.replace(/\s+/g, " ").trim().substring(0, 6000);
+    bodyText = bodyText.replace(/\s+/g, " ").trim().substring(0, 15000);
 
     // If main content area was too sparse, try the full body minus just nav/footer
     if (bodyText.length < 300) {
       const fullClone = $("body").clone();
       fullClone.find("nav, footer, [role='navigation'], [role='contentinfo'], script, style").remove();
-      const fullText = fullClone.text().replace(/\s+/g, " ").trim().substring(0, 6000);
+      const fullText = fullClone.text().replace(/\s+/g, " ").trim().substring(0, 15000);
       if (fullText.length > bodyText.length) {
         bodyText = fullText;
       }

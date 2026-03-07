@@ -168,8 +168,8 @@ function sanitizeInput(str) {
     .replace(/<\/?(?:system|instruction|prompt|assistant|human|user|role|rules?|override|ignore|command)[^>]*>/gi, "")
     // Strip common injection prefixes
     .replace(/^(ignore|disregard|forget|override|new instructions?|system prompt|you are now|act as)\b[^.]*[.:]/gim, "[REMOVED] ")
-    // Cap length: 15K chars is ~3K words, more than any homepage
-    .substring(0, 15000);
+    // Cap length: 30K chars covers full homepage + sub-pages with headroom
+    .substring(0, 30000);
 }
 
 export async function deepAnalysis(url, text, allText, h1s = [], h2s = [], metaDesc = "", homepageH1s = [], wasBlocked = false) {
@@ -230,9 +230,9 @@ ${h2s.length > 0 ? h2s.slice(0, 15).join(" | ") : "NONE FOUND"}
 === META DESCRIPTION (what search engines show) ===
 ${metaDesc || "NONE FOUND"}
 === FULL PAGE TEXT ===
-${text.substring(0, 6000)}
+${text.substring(0, 12000)}
 === END OF PAGE TEXT ===
-Other pages sampled: ${allText.substring(0, 2000)}
+Other pages sampled: ${allText.substring(0, 10000)}
 ${wasBlocked ? `
 === CRAWL ACCESSIBILITY WARNING ===
 This website BLOCKED our automated scraper (returned HTTP 403 Forbidden). The content above was captured via a secondary AI-assisted method and may be INCOMPLETE — the actual page likely contains significantly more content than what you see above.
