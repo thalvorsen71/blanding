@@ -50,11 +50,10 @@ exports.handler = async (event) => {
     if (req.tools) body.tools = req.tools;
 
     // Timeout strategy (Netlify Pro tier — 26s function limit):
-    // - web_search calls (req.tools): AbortController at 25s to return a proper
-    //   JSON error before Netlify's 26s limit kills us with a raw 502.
-    // - Regular calls (deep analysis): NO AbortController — Haiku completes in
-    //   5-10s, well within the 26s limit. If it somehow exceeds, Netlify kills
-    //   it and the client handles the raw 502.
+    // No AbortController. Let ALL calls run until Netlify's natural 26s limit.
+    // - Deep analysis (Haiku): completes in 5-10s, always fine.
+    // - web_search (Sonnet): can take 15-25s. With no AbortController, it gets
+    //   the full 26s window. If Netlify kills it, the client handles the 502.
     const fetchOpts = {
       method: "POST",
       headers: {
@@ -65,15 +64,7 @@ exports.handler = async (event) => {
       body: JSON.stringify(body),
     };
 
-    let controller, timeout;
-    if (req.tools) {
-      controller = new AbortController();
-      timeout = setTimeout(() => controller.abort(), 25000);
-      fetchOpts.signal = controller.signal;
-    }
-
     const resp = await fetch("https://api.anthropic.com/v1/messages", fetchOpts);
-    if (timeout) clearTimeout(timeout);
 
     const data = await resp.json();
     return { statusCode: resp.ok ? 200 : resp.status, headers, body: JSON.stringify(data) };
