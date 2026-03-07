@@ -52,7 +52,10 @@ exports.handler = async (event) => {
     // Timeout: must finish BEFORE Netlify kills us.
     // Free tier = 10s hard cap; Pro tier = 26s (configured in netlify.toml).
     // We must return JSON before the platform kills us with a raw 504.
-    const timeoutMs = req.tools ? 8500 : 7500;
+    // Free tier hard limit = 10s. AbortController overhead ~50ms.
+    // 9s gives web_search the maximum time to complete while still
+    // returning a proper JSON error before Netlify kills us.
+    const timeoutMs = req.tools ? 9000 : 8000;
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), timeoutMs);
 
