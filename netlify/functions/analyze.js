@@ -49,9 +49,10 @@ exports.handler = async (event) => {
     };
     if (req.tools) body.tools = req.tools;
 
-    // Timeout: must finish BEFORE Netlify kills us (10s free, 26s pro).
-    // web_search calls take longer, so give them more headroom.
-    const timeoutMs = req.tools ? 22000 : 8000;
+    // Timeout: must finish BEFORE Netlify kills us.
+    // Free tier = 10s hard cap; Pro tier = 26s (configured in netlify.toml).
+    // We must return JSON before the platform kills us with a raw 504.
+    const timeoutMs = req.tools ? 8500 : 7500;
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), timeoutMs);
 

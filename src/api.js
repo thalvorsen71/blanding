@@ -20,7 +20,7 @@ class RateLimitError extends Error {
 }
 
 async function callAPI(messages, useSearch = false, model = "claude-sonnet-4-20250514") {
-  const body = { model, max_tokens: useSearch ? 3000 : 4000, messages };
+  const body = { model, max_tokens: useSearch ? 2000 : 4000, messages };
   if (useSearch) body.tools = [{ type: "web_search_20250305", name: "web_search" }];
 
   const controller = new AbortController();
@@ -104,41 +104,13 @@ async function fetchPageViaCheerio(url) {
  * Tightly constrained to prevent hallucination.
  */
 async function fetchPageViaClaude(url) {
+  // LEAN prompt: Netlify free tier = 10s function limit. Must finish fast.
+  // Only extract core fields needed for scoring. Skip nice-to-haves.
   const raw = await callAPI([{
     role: "user",
-    content: `Search for and visit this EXACT URL: ${url}
-
-YOUR ONLY JOB: Extract ALL the literal text content visible on THIS page. You are a copy machine — be EXHAUSTIVE. Capture EVERYTHING.
-
-CRITICAL: Many university homepages have MULTIPLE content sections that load as you scroll: hero text, featured stories, news items, event highlights, research spotlights, statistics, institutional copy, diversity statements, sustainability sections, athletics, student life, and more. You MUST capture text from ALL sections — scroll to the very bottom. Do NOT stop at the first few sections.
-
-ABSOLUTE RULES:
-1. ONLY return text that literally appears on THIS specific URL right now.
-2. Do NOT include text from sub-pages or other URLs.
-3. Do NOT include information from your training data.
-4. If a field has no content on this page, return empty string or empty array.
-5. For body_text: Be MAXIMALLY EXHAUSTIVE. Include the hero/banner text, ALL section headings, ALL featured story headlines and descriptions, ALL news headlines, event names, research highlights, statistics, pull quotes, course names, program descriptions, and any institutional copy. Copy the text from EVERY section of the page top to bottom. Aim for 4000-5000 characters minimum. The MORE text you capture, the better. If you capture less than 2000 characters, you have probably missed sections — go back and get more.
-
-UNIQUE_CLAIMS RULES (read carefully):
-- Each claim MUST contain at least one: number, percentage, dollar amount, ranking, named program, named person, or specific date.
-- GOOD examples: "student-faculty ratio is 7:1", "94% of students live on campus", "free tuition for families earning under $100K", "6,000+ students across the Claremont Colleges", "class size averages 13"
-- BAD (do NOT include): taglines ("Daring scholarship, caring community"), section headers ("Majors & Minors"), marketing copy ("The Adventure is in the Opportunities"), aspirational language ("Imagine the Possibilities"), navigation labels ("Admissions & Financial Aid")
-- Maximum 15 items. If in doubt, leave it out.
-
-Return ONLY a JSON object (no markdown, no backticks, no preamble):
-{
-  "title": "exact page <title> tag",
-  "meta_description": "exact meta description content or empty string",
-  "h1": ["exact H1 texts"],
-  "h2s": ["first 12 H2 texts exactly as written — include featured story headlines"],
-  "nav_items": ["main navigation labels"],
-  "body_text": "ALL text from EVERY section of the page: hero, features, news, events, stats, research, quotes, institutional copy. Max 5000 chars. Skip only nav links and footer legal text.",
-  "ctas": ["CTA button/link texts exactly as written"],
-  "page_type": "homepage|admissions|about|academics|student-life|other",
-  "linked_pages": ["up to 6 internal section URLs found on this page"],
-  "unique_claims": ["verifiable facts with numbers/percentages/names only — see rules above"]
-}`
-  }], true); // Sonnet: only model that actually executes web_search tool
+    content: `Visit ${url} and extract its text content. Return ONLY JSON:
+{"title":"page title","meta_description":"meta desc or empty","h1":["H1 texts"],"h2s":["first 8 H2s"],"body_text":"all visible text, max 3000 chars, skip nav/footer","ctas":["CTA button texts"],"page_type":"homepage|admissions|about|academics|other","linked_pages":["up to 4 internal URLs"],"nav_items":[],"unique_claims":[]}`
+  }], true, "claude-sonnet-4-20250514"); // Sonnet: only model that executes web_search
   const result = parseJSON(raw);
   result._source = "claude_websearch"; // tag source
   return result;
