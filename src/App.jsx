@@ -661,14 +661,14 @@ export default function App() {
                   <p style={{ color: T.dim, fontSize: 13, textAlign: "center", padding: "30px 20px", fontFamily: T.serif, fontStyle: "italic" }}>No schools ranked yet. Every audit automatically adds to the leaderboard — yours could be first.</p>
                 )}
                 {(() => {
-                  // Dense ranking: tied scores share the same rank
+                  // Dense ranking: tied scores share the same rank (1,1,2,2,2,3,4...)
                   const ranks = [];
-                  let currentRank = 1;
+                  let denseRank = 1;
                   for (let j = 0; j < verified.length; j++) {
                     if (j > 0 && verified[j].overall < verified[j - 1].overall) {
-                      currentRank = j + 1;
+                      denseRank++;
                     }
-                    ranks.push(currentRank);
+                    ranks.push(denseRank);
                   }
                   return verified.map((s, i) => {
                   const rank = ranks[i];
