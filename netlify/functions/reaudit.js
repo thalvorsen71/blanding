@@ -301,14 +301,9 @@ export async function handler(event) {
 
   const clampScore = (v) => Math.max(0, Math.min(100, Math.round(v)));
 
-  // 5. Save to leaderboard
+  // 5. Save to leaderboard (retry to handle read-modify-write races)
   const store = getStore("leaderboard");
-  const raw = await store.get("schools");
-  const data = raw ? JSON.parse(raw) : {};
-  const existing = data[hostname];
-
-  data[hostname] = {
-    ...(existing || {}),
+  const newEntry = {
     name: (hp.title || hostname).substring(0, 100),
     url: hostname,
     overall: clampScore(overall),
@@ -316,7 +311,6 @@ export async function handler(event) {
     strategy: clampScore(stratScore),
     cliches: totalCliches,
     pagesAudited: pages.length,
-    runs: (existing?.runs || 0) + 1,
     lastAudited: new Date().toISOString(),
     ai,
     homepageH1: hp.h1 || [],
@@ -334,7 +328,23 @@ export async function handler(event) {
     clicheBreakdown: null,
   };
 
-  await store.set("schools", JSON.stringify(data));
+  // Write with verification: read, modify, write, then verify it stuck
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const raw = await store.get("schools");
+    const data = raw ? JSON.parse(raw) : {};
+    const existing = data[hostname];
+    data[hostname] = { ...(existing || {}), ...newEntry, runs: (existing?.runs || 0) + 1 };
+    await store.set("schools", JSON.stringify(data));
+
+    // Verify the write persisted
+    const verify = await store.get("schools");
+    const verifyData = verify ? JSON.parse(verify) : {};
+    if (verifyData[hostname]?.overall === clampScore(overall)) {
+      break; // Write confirmed
+    }
+    console.log(`[reaudit] Write verification failed for ${hostname}, attempt ${attempt + 1}`);
+    await new Promise(r => setTimeout(r, 1000)); // Wait 1s before retry
+  }
 
   console.log(`[reaudit] Done: ${hostname} → ${overall}`);
 
