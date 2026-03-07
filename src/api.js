@@ -112,7 +112,7 @@ async function fetchPageViaClaude(url) {
 
 Extract the visible text content from this page. ONLY text that literally appears on this URL right now. Return ONLY a JSON object (no markdown, no backticks):
 {"title":"page title tag","meta_description":"meta desc or empty","h1":["H1 texts"],"h2s":["first 8 H2s"],"body_text":"all visible page text, max 3000 chars, skip nav links and footer","ctas":["CTA button texts"],"page_type":"homepage|admissions|about|academics|other","linked_pages":["up to 4 internal URLs"],"nav_items":[],"unique_claims":[]}`
-  }], true, "claude-3-5-haiku-20241022"); // Haiku: fastest model with web_search support — must fit in Netlify 10s limit
+  }], true, "claude-sonnet-4-20250514"); // Must be Sonnet 4 — only model on this API key that triggers web_search. Note: takes ~9s, exceeds Netlify free tier 10s limit. Upgrade to Pro ($19/mo) to enable.
   const result = parseJSON(raw);
   result._source = "claude_websearch"; // tag source
   return result;
