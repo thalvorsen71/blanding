@@ -106,6 +106,7 @@ export default function App() {
   const methRef = useRef(null);
   const disclaimerRef = useRef(null);
   const progressRef = useRef(null);
+  const cachedPromptRef = useRef(null);
 
   // Fetch audit count on mount for social proof
   useEffect(() => {
@@ -415,6 +416,7 @@ export default function App() {
     const cached = findCachedEntry(url1);
     if (cached) {
       setCachedPrompt(cached);
+      setTimeout(() => cachedPromptRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 100);
       return; // Show cached prompt UI instead of running audit
     }
     runFreshAudit();
@@ -1026,6 +1028,56 @@ export default function App() {
               ))}
             </div>
           )}
+          {/* CACHED RESULT PROMPT — domain already audited (positioned right below input so it's visible) */}
+          {cachedPrompt && !analyzing && !result && (
+            <section ref={cachedPromptRef} style={{ marginTop: 20 }}>
+              <div style={{ background: T.card, border: `1px solid ${T.accent}40`, borderRadius: 12, padding: "22px 24px" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+                  <span style={{ fontSize: 18 }}>📋</span>
+                  <span style={{ fontSize: 14, fontFamily: T.mono, color: T.accent }}>Previously Audited</span>
+                </div>
+                <p style={{ fontSize: 14, color: T.text, lineHeight: 1.6, margin: "0 0 4px" }}>
+                  <strong style={{ color: T.text }}>{cachedPrompt.name}</strong> was already audited{cachedPrompt.lastAudited ? ` on ${new Date(cachedPrompt.lastAudited).toLocaleDateString()}` : ""}.
+                </p>
+                <div style={{ display: "flex", gap: 16, alignItems: "center", margin: "14px 0" }}>
+                  <div style={{ textAlign: "center" }}>
+                    <div style={{ fontSize: 32, fontWeight: 700, color: scoreColor(cachedPrompt.overall), fontFamily: T.mono }}>{cachedPrompt.overall}</div>
+                    <div style={{ fontSize: 11, color: T.dim, fontFamily: T.mono }}>Overall</div>
+                  </div>
+                  {cachedPrompt.language != null && (
+                    <div style={{ textAlign: "center" }}>
+                      <div style={{ fontSize: 20, fontWeight: 600, color: scoreColor(cachedPrompt.language), fontFamily: T.mono }}>{cachedPrompt.language}</div>
+                      <div style={{ fontSize: 10, color: T.dim, fontFamily: T.mono }}>Language</div>
+                    </div>
+                  )}
+                  {cachedPrompt.strategy != null && (
+                    <div style={{ textAlign: "center" }}>
+                      <div style={{ fontSize: 20, fontWeight: 600, color: scoreColor(cachedPrompt.strategy), fontFamily: T.mono }}>{cachedPrompt.strategy}</div>
+                      <div style={{ fontSize: 10, color: T.dim, fontFamily: T.mono }}>Strategy</div>
+                    </div>
+                  )}
+                  <div style={{ textAlign: "center" }}>
+                    <div style={{ fontSize: 14, fontWeight: 600, color: scoreColor(cachedPrompt.overall), fontFamily: T.mono }}>{scoreLabel(cachedPrompt.overall)}</div>
+                    <div style={{ fontSize: 10, color: T.dim, fontFamily: T.mono }}>Verdict</div>
+                  </div>
+                </div>
+                <div style={{ display: "flex", gap: 10, marginTop: 14 }}>
+                  <button onClick={runFreshAudit}
+                    style={{ padding: "10px 20px", background: `linear-gradient(135deg, ${T.accent}, #b06830)`, border: "none", borderRadius: 8, color: "#fff", fontSize: 13, fontWeight: 600, fontFamily: T.sans }}>
+                    Re-audit Fresh
+                  </button>
+                  <button onClick={() => setCachedPrompt(null)}
+                    style={{ padding: "10px 20px", background: "transparent", border: "1px solid " + T.borderLight, borderRadius: 8, color: T.dim, fontSize: 13, fontFamily: T.sans }}>
+                    Dismiss
+                  </button>
+                </div>
+                <p style={{ fontSize: 11, color: T.dim, fontFamily: T.mono, margin: "12px 0 0" }}>
+                  This is the cached score from the leaderboard. Hit "Re-audit Fresh" to run a new analysis (uses API credits).
+                </p>
+              </div>
+            </section>
+          )}
+
           {/* LANDING LEADERBOARD PREVIEW — shows before any audit */}
           {!result && !result2 && !analyzing && progress.length === 0 && leaderboard.length >= 3 && (
             <div style={{ marginTop: 32, background: T.card, border: "1px solid " + T.border, borderRadius: 12, padding: "22px 24px", overflow: "hidden" }}>
@@ -1070,55 +1122,6 @@ export default function App() {
           )}
         </section>
 
-        {/* CACHED RESULT PROMPT — domain already audited */}
-        {cachedPrompt && !analyzing && !result && (
-          <section style={{ marginTop: 28 }}>
-            <div style={{ background: T.card, border: `1px solid ${T.accent}40`, borderRadius: 12, padding: "22px 24px" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
-                <span style={{ fontSize: 18 }}>📋</span>
-                <span style={{ fontSize: 14, fontFamily: T.mono, color: T.accent }}>Previously Audited</span>
-              </div>
-              <p style={{ fontSize: 14, color: T.text, lineHeight: 1.6, margin: "0 0 4px" }}>
-                <strong style={{ color: T.text }}>{cachedPrompt.name}</strong> was already audited{cachedPrompt.lastAudited ? ` on ${new Date(cachedPrompt.lastAudited).toLocaleDateString()}` : ""}.
-              </p>
-              <div style={{ display: "flex", gap: 16, alignItems: "center", margin: "14px 0" }}>
-                <div style={{ textAlign: "center" }}>
-                  <div style={{ fontSize: 32, fontWeight: 700, color: scoreColor(cachedPrompt.overall), fontFamily: T.mono }}>{cachedPrompt.overall}</div>
-                  <div style={{ fontSize: 11, color: T.dim, fontFamily: T.mono }}>Overall</div>
-                </div>
-                {cachedPrompt.language != null && (
-                  <div style={{ textAlign: "center" }}>
-                    <div style={{ fontSize: 20, fontWeight: 600, color: scoreColor(cachedPrompt.language), fontFamily: T.mono }}>{cachedPrompt.language}</div>
-                    <div style={{ fontSize: 10, color: T.dim, fontFamily: T.mono }}>Language</div>
-                  </div>
-                )}
-                {cachedPrompt.strategy != null && (
-                  <div style={{ textAlign: "center" }}>
-                    <div style={{ fontSize: 20, fontWeight: 600, color: scoreColor(cachedPrompt.strategy), fontFamily: T.mono }}>{cachedPrompt.strategy}</div>
-                    <div style={{ fontSize: 10, color: T.dim, fontFamily: T.mono }}>Strategy</div>
-                  </div>
-                )}
-                <div style={{ textAlign: "center" }}>
-                  <div style={{ fontSize: 14, fontWeight: 600, color: scoreColor(cachedPrompt.overall), fontFamily: T.mono }}>{scoreLabel(cachedPrompt.overall)}</div>
-                  <div style={{ fontSize: 10, color: T.dim, fontFamily: T.mono }}>Verdict</div>
-                </div>
-              </div>
-              <div style={{ display: "flex", gap: 10, marginTop: 14 }}>
-                <button onClick={runFreshAudit}
-                  style={{ padding: "10px 20px", background: `linear-gradient(135deg, ${T.accent}, #b06830)`, border: "none", borderRadius: 8, color: "#fff", fontSize: 13, fontWeight: 600, fontFamily: T.sans }}>
-                  Re-audit Fresh
-                </button>
-                <button onClick={() => setCachedPrompt(null)}
-                  style={{ padding: "10px 20px", background: "transparent", border: "1px solid " + T.borderLight, borderRadius: 8, color: T.dim, fontSize: 13, fontFamily: T.sans }}>
-                  Dismiss
-                </button>
-              </div>
-              <p style={{ fontSize: 11, color: T.dim, fontFamily: T.mono, margin: "12px 0 0" }}>
-                This is the cached score from the leaderboard. Hit "Re-audit Fresh" to run a new analysis (uses API credits).
-              </p>
-            </div>
-          </section>
-        )}
 
         {/* PROGRESS */}
         {progress.length > 0 && !result && (
