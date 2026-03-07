@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { T, scoreColor, scoreLabel, scoreVerdict, countCliches, countWeightedCliches, highlightCliches, contentRichnessBonus } from './constants';
+import { calculateScores } from './scoring';
 import { fetchPage, fetchSubPage, deepAnalysis, captureLead } from './api';
 import { exportPDF } from './pdf';
 import { generateScorecard } from './scorecard';
@@ -292,93 +293,12 @@ export default function App() {
     // Prefer AI-curated unique claims (from deep analysis) over Cheerio regex guesses
     const cheerioUniq = [...new Set(pages.flatMap(p => p.data.unique_claims || []))].slice(0, 10);
     const uniq = (ai?.verified_unique_claims?.length > 0) ? ai.verified_unique_claims : cheerioUniq;
-    const cliches = countCliches(allBody + " " + allH1.join(" ") + " " + allH2.join(" "));
-    const totalC = cliches.reduce((s, c) => s + c.count, 0);
-    const wc = allBody.split(/\s+/).length;
 
-    // Weighted cliché analysis: H1 clichés hurt 3x, H2/meta 2x, body 1x
-    const weighted = countWeightedCliches(allBody, allH1, allH2, hp.meta_description || "");
+    // Score calculation: single shared module (src/scoring.js)
+    const { language: lang, strategy: strat, overall, cliches, totalCliches: totalC, weighted } = calculateScores({
+      allBody, allH1, allH2, metaDesc: hp.meta_description || "", uniqueClaims: uniq, ai,
+    });
 
-    // Content richness bonus: rewards specific, distinctive content (0-30 pts)
-    const richness = contentRichnessBonus(allBody, allH1, allH2, uniq);
-
-    // H1/H2 brand quality: reward distinctive headlines, penalize generic ones
-    const h1Cliches = weighted.h1Count;
-    const h2Cliches = weighted.h2Count;
-    const h1Total = allH1.filter(h => h.trim().length > 3).length;
-    const h2Total = allH2.filter(h => h.trim().length > 3).length;
-    // If most headlines are cliché-free, that's a brand voice signal
-    const headlineQuality = (h1Total + h2Total) > 0
-      ? Math.round(((h1Total + h2Total - h1Cliches - h2Cliches) / (h1Total + h2Total)) * 10)
-      : 0;
-
-    // Language score: penalizes cliché usage with logarithmic curve.
-    // Logarithmic penalty: first few clichés hurt a lot, diminishing pain after that.
-    // log(1+1)*14=9.7, log(5+1)*14=25.1, log(10+1)*14=33.5, log(20+1)*14=42.6, log(40+1)*14=52
-    const countPenalty = Math.min(Math.log(cliches.length + 1) * 14, 50);
-    // Density penalty: clichés per 100 words, weighted by severity + placement.
-    const densityPenalty = Math.min((weighted.weightedTotal / Math.max(wc / 100, 1)) * 4, 35);
-    // Non-additive: take the WORSE of count vs density, then add 30% of the other.
-    // This prevents double-punishing — a page shouldn't lose -45 AND -35.
-    const primaryPenalty = Math.max(countPenalty, densityPenalty);
-    const secondaryPenalty = Math.min(countPenalty, densityPenalty);
-    let lang = 100 - primaryPenalty - (secondaryPenalty * 0.3) - (uniq.length < 2 ? 8 : 0);
-    // H1 cliché penalty: using platitudes in your headline is a brand crime
-    if (weighted.h1Count > 0) lang -= Math.min(weighted.h1Count * 5, 15);
-    // "Rich content bonus": if you have strong specific content, give partial credit back.
-    // Previously this was a PENALTY for having rich content + clichés — that's backwards.
-    // Now: rich content earns back some of what clichés took away.
-    if (richness > 12) lang += Math.min(Math.round(richness * 0.4), 8);
-    // Thin content penalty: saying nothing isn't the same as being distinctive.
-    if (wc < 300) lang -= Math.round((300 - wc) / 25);
-    // AI voice score: dynamic blend based on mechanical score confidence.
-    // High mechanical scores (lots of data) = trust mechanical more.
-    // Low mechanical scores (thin data) = lean on AI more.
-    const mechWeight = 0.4 + (Math.min(lang, 80) / 100) * 0.25; // range: 0.4 to 0.6
-    if (ai?.voice_score) lang = Math.round(lang * mechWeight + ai.voice_score * 10 * (1 - mechWeight));
-    lang = Math.max(0, Math.min(100, Math.round(lang)));
-
-    // Strategy score: mechanical base from content signals, then one-step AI blend.
-    // All AI inputs are combined in a single weighted average to avoid cascading dilution.
-    // Unique claims have diminishing returns: first 3 = full value (5pts each),
-    // next 3 = half value (2.5pts each), beyond 6 = minimal (1pt each, cap 5).
-    // This prevents news-feed-heavy pages from inflating strategy through volume alone.
-    const uniqBase = Math.min(uniq.length, 3) * 5;
-    const uniqMid = Math.min(Math.max(uniq.length - 3, 0), 3) * 2.5;
-    const uniqTail = Math.min(Math.max(uniq.length - 6, 0), 5) * 1;
-    const uniqContrib = uniqBase + uniqMid + uniqTail; // max ~27.5 (was unlimited at 5 per)
-    let mechStrat = 30 + uniqContrib + Math.min(richness * 0.5, 10) + Math.min(headlineQuality, 8);
-    mechStrat = Math.max(0, Math.min(100, mechStrat));
-    let strat;
-    if (ai?.specificity_score && ai?.consistency_score) {
-      // Single-step blend: 55% mechanical, 20% specificity, 15% consistency, 10% ratio
-      const aiSpec = ai.specificity_score * 10;
-      const aiCons = ai.consistency_score * 10;
-      const aiRatio = ai.specificity_ratio != null ? Math.max(0, Math.min(100, ai.specificity_ratio)) : aiSpec;
-      strat = Math.round(mechStrat * 0.55 + aiSpec * 0.20 + aiCons * 0.15 + aiRatio * 0.10);
-    } else {
-      strat = mechStrat;
-    }
-    // Ratio ceiling: a mostly-generic page can't score above its reality
-    if (ai?.specificity_ratio != null) {
-      const ratioCeiling = Math.max(0, Math.min(100, ai.specificity_ratio)) + 20;
-      if (strat > ratioCeiling) strat = Math.round(strat * 0.6 + ratioCeiling * 0.4);
-    }
-    // Brand theatre penalty: strategy-only modifier (theatre is a positioning problem, not a language one)
-    // Kicks in at 4+, gentle curve, caps at -15. This is a supporting signal, not a primary dimension.
-    if (ai?.brand_theatre_score && ai.brand_theatre_score >= 4) {
-      const theatrePenalty = Math.min((ai.brand_theatre_score - 3) * 2.5, 15);
-      strat -= theatrePenalty;
-    }
-    // AI readiness: gentle nudge on strategy only
-    // 5 is neutral; each point away from 5 = ±2 points (range: -8 to +10)
-    if (ai?.ai_readiness_score) {
-      const aiReadinessImpact = (ai.ai_readiness_score - 5) * 2;
-      strat += Math.max(-8, Math.min(10, aiReadinessImpact));
-    }
-    strat = Math.max(0, Math.min(100, Math.round(strat)));
-
-    const overall = Math.round(lang * 0.55 + strat * 0.45);
     return {
       url, schoolName: hp.title || url, pagesAnalyzed: pages, overall,
       scores: { language: lang, strategy: strat },

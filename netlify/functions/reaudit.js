@@ -7,6 +7,7 @@
  */
 import { connectLambda, getStore } from "@netlify/blobs";
 import * as cheerio from "cheerio";
+import { calculateScores } from "../../src/scoring.js";
 
 const ADMIN_SECRET = "blanding2026";
 
@@ -196,30 +197,8 @@ Return ONLY a JSON object:
   return { ai: JSON.parse(jsonMatch[0]), wordCount };
 }
 
-// ---- Cliché counter (simplified version) ----
-const CLICHE_LIST = [
-  "world-class", "cutting-edge", "state-of-the-art", "innovative", "transformative",
-  "holistic", "dynamic", "robust", "synergy", "leverage", "empower", "foster",
-  "cultivate", "nurture", "diverse", "inclusive", "vibrant", "thriving",
-  "commitment to excellence", "rigorous", "comprehensive", "hands-on",
-  "real-world", "global perspective", "lifelong learning", "thought leader",
-  "best-in-class", "next-generation", "groundbreaking", "trailblazing",
-  "passionate", "dedicated", "engaged", "inspired", "community of scholars",
-  "tradition of excellence", "preparing leaders", "shaping the future",
-  "making a difference", "changing the world", "push the boundaries",
-  "at the forefront", "second to none", "like no other", "unlike any other",
-];
-
-function countCliches(text) {
-  const lower = text.toLowerCase();
-  const results = [];
-  for (const c of CLICHE_LIST) {
-    const regex = new RegExp(c.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "gi");
-    const matches = lower.match(regex);
-    if (matches) results.push({ phrase: c, count: matches.length });
-  }
-  return results.sort((a, b) => b.count - a.count);
-}
+// Cliché counting and scoring now use the shared module (src/scoring.js + src/constants.js)
+// to guarantee identical results between live audits and batch re-audits.
 
 export async function handler(event) {
   if (event.httpMethod === "OPTIONS") return { statusCode: 200, headers: HEADERS, body: "" };
@@ -285,19 +264,12 @@ export async function handler(event) {
     return { statusCode: 200, headers: HEADERS, body: JSON.stringify({ success: false, slug: hostname, error: "analysis_failed", detail: err.message }) };
   }
 
-  // 4. Score calculation (mirrors App.jsx logic)
-  const cliches = countCliches(allBody + " " + allH1.join(" ") + " " + allH2.join(" "));
-  const totalCliches = cliches.reduce((s, c) => s + c.count, 0);
-
-  const voiceRaw = ((ai.voice_score || 5) / 10) * 100;
-  const specRaw = ((ai.specificity_score || 5) / 10) * 100;
-  const consistRaw = ((ai.consistency_score || 5) / 10) * 100;
-  const theatreRaw = ai.brand_theatre_score ? (1 - (ai.brand_theatre_score / 10)) * 100 : 50;
-  const aiReadyRaw = ai.ai_readiness_score ? ((ai.ai_readiness_score / 10) * 100) : 50;
-
-  const langScore = Math.round(voiceRaw * 0.5 + specRaw * 0.3 + consistRaw * 0.2);
-  const stratScore = Math.round(theatreRaw * 0.35 + aiReadyRaw * 0.35 + (ai.specificity_ratio || 50) * 0.3);
-  const overall = Math.round(langScore * 0.55 + stratScore * 0.45);
+  // 4. Score calculation — uses shared module (src/scoring.js)
+  // Same cliché database, same penalties, same formula as live audits.
+  const uniqueClaims = ai.verified_unique_claims || [];
+  const { language: langScore, strategy: stratScore, overall, cliches, totalCliches } = calculateScores({
+    allBody, allH1, allH2, metaDesc: hp.meta_description || "", uniqueClaims, ai,
+  });
 
   const clampScore = (v) => Math.max(0, Math.min(100, Math.round(v)));
 
@@ -321,10 +293,11 @@ export async function handler(event) {
     scrapeSource: "cheerio",
     scrapeQuality: bodyLen >= 200 ? "full" : "partial",
     wasBlocked: false,
+    hasAI: true,
     pagesScraped: pages.map(p => p.url),
     contentHash: "",
     wordCount,
-    topCliches: cliches.slice(0, 10),
+    topCliches: cliches.slice(0, 10).map(c => ({ phrase: c.phrase, count: c.count })),
     clicheBreakdown: null,
   };
 
