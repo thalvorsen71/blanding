@@ -91,7 +91,7 @@ export async function handler(event) {
     const sorted = Object.values(data).sort((a, b) => b.overall - a.overall);
 
     // Slim response: strip AI analysis to keep leaderboard payload small
-    const schools = wantFull ? sorted : sorted.map(({ ai, homepageH1, metaDesc, uniqueClaims, scrapeSource, ...slim }) => slim);
+    const schools = wantFull ? sorted : sorted.map(({ ai, homepageH1, metaDesc, uniqueClaims, ...slim }) => slim);
 
     return {
       statusCode: 200,
