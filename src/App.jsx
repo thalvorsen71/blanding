@@ -102,6 +102,8 @@ export default function App() {
   const [showMethodology, setShowMethodology] = useState(false);
   const [showDisclaimer, setShowDisclaimer] = useState(false);
   const [cachedPrompt, setCachedPrompt] = useState(null); // { entry, url } when a domain has a cached score
+  const lastTextHash = useRef(null); // dedup paste-text submissions
+  const lastTextTime = useRef(0);    // throttle paste-text (ms)
   const resultRef = useRef(null);
   const methRef = useRef(null);
   const disclaimerRef = useRef(null);
@@ -426,6 +428,15 @@ export default function App() {
 
   const runText = async () => {
     if (inputText.trim().length < 50) return;
+    // Dedup: skip if identical text was just analyzed (hash match + 10s throttle)
+    const hash = contentHash(inputText);
+    const now = Date.now();
+    if (hash === lastTextHash.current && now - lastTextTime.current < 10000) {
+      console.warn("[Blanding] Skipping duplicate paste-text analysis (same content within 10s)");
+      return;
+    }
+    lastTextHash.current = hash;
+    lastTextTime.current = now;
     _animatedScores.clear(); setAnalyzing(true); setProgress([]); setResult(null); setResult2(null); setActiveTab("overview");
     addProg("Analyzing copy..."); const cl = countCliches(inputText); const tc = cl.reduce((s, c) => s + c.count, 0);
     addProg("Running AI analysis..."); const ai = await deepAnalysis("(pasted text)", inputText, "");
@@ -506,11 +517,13 @@ export default function App() {
           )}
         </div>
         {!compact && leaderboard.length >= 3 && (() => {
-          const below = leaderboard.filter(s => s.overall < res.overall).length;
-          const pct = Math.round((below / leaderboard.length) * 100);
+          const verified = leaderboard.filter(s => s.scrapeSource !== "claude_websearch");
+          if (verified.length < 3) return null;
+          const below = verified.filter(s => s.overall < res.overall).length;
+          const pct = Math.round((below / verified.length) * 100);
           return (
             <div style={{ marginTop: 12, position: "relative" }}>
-              <Pill color={scoreColor(res.overall)}>Better than {pct}% of {leaderboard.length} audited institutions</Pill>
+              <Pill color={scoreColor(res.overall)}>Better than {pct}% of {verified.length} verified institutions</Pill>
             </div>
           );
         })()}
@@ -700,23 +713,27 @@ export default function App() {
           )}
 
           {/* LEADERBOARD */}
-          {activeTab === "leaderboard" && (
+          {activeTab === "leaderboard" && (() => {
+            const verified = leaderboard.filter(s => s.scrapeSource !== "claude_websearch");
+            const limited = leaderboard.filter(s => s.scrapeSource === "claude_websearch");
+            return (
             <div style={{ display: "grid", gap: 12 }}>
+              {/* ZONE 1: VERIFIED AUDITS */}
               <div style={{ background: T.card, border: "1px solid " + T.border, borderRadius: 10, padding: "20px 24px" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
                   <div>
-                    <div style={{ fontSize: 12, fontFamily: T.mono, color: T.accent, textTransform: "uppercase", letterSpacing: "0.1em" }}>Live Leaderboard</div>
-                    <div style={{ fontSize: 13, color: T.dim, marginTop: 2 }}>{leaderboard.length} institutions ranked</div>
+                    <div style={{ fontSize: 12, fontFamily: T.mono, color: T.accent, textTransform: "uppercase", letterSpacing: "0.1em" }}>✓ Verified Audits</div>
+                    <div style={{ fontSize: 13, color: T.dim, marginTop: 2 }}>{verified.length} institutions ranked by full HTML analysis</div>
                   </div>
                   <button onClick={fetchLeaderboard} disabled={lbLoading}
                     style={{ padding: "6px 14px", background: T.cardAlt, border: "1px solid " + T.borderLight, borderRadius: 6, color: T.dim, fontSize: 12, fontFamily: T.mono }}>
                     {lbLoading ? "Loading..." : "Refresh"}
                   </button>
                 </div>
-                {leaderboard.length === 0 && !lbLoading && (
+                {verified.length === 0 && !lbLoading && (
                   <p style={{ color: T.dim, fontSize: 13, textAlign: "center", padding: "30px 20px", fontFamily: T.serif, fontStyle: "italic" }}>No schools ranked yet. Every audit automatically adds to the leaderboard — yours could be first.</p>
                 )}
-                {leaderboard.map((s, i) => {
+                {verified.map((s, i) => {
                   const isYou = res.url && s.url && res.url.includes(s.url);
                   return (
                     <div key={s.url} style={{
@@ -752,11 +769,64 @@ export default function App() {
                   );
                 })}
               </div>
+
+              {/* ZONE DIVIDER */}
+              {limited.length > 0 && (
+                <div style={{ background: "#1a1a00", border: "1px solid #3d3d00", borderRadius: 8, padding: "14px 20px" }}>
+                  <div style={{ fontSize: 12, fontFamily: T.mono, color: "#eab308", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6 }}>⚠ Limited Data Zone</div>
+                  <p style={{ fontSize: 13, color: "#cca700", margin: 0, lineHeight: 1.6 }}>
+                    The following {limited.length} schools blocked direct HTML scraping. Their scores are based on AI web search (avg ~162 words vs. ~1,671 for verified audits) and are not directly comparable. They are listed alphabetically, unranked, until they can be re-audited with better data.
+                  </p>
+                </div>
+              )}
+
+              {/* ZONE 2: LIMITED DATA (unranked) */}
+              {limited.length > 0 && (
+                <div style={{ background: T.card, border: "1px solid #3d3d00", borderRadius: 10, padding: "20px 24px" }}>
+                  {[...limited].sort((a, b) => (a.name || "").localeCompare(b.name || "")).map((s) => {
+                    const isYou = res.url && s.url && res.url.includes(s.url);
+                    return (
+                      <div key={s.url} style={{
+                        display: "grid", gridTemplateColumns: "32px 1fr 60px 60px 60px", gap: 8, alignItems: "center",
+                        padding: "10px 12px", borderRadius: 8, marginBottom: 2,
+                        background: isYou ? T.accent + "12" : "transparent",
+                        border: isYou ? "1px solid " + T.accent + "40" : "1px solid transparent",
+                        opacity: 0.7,
+                      }}>
+                        <span style={{ fontSize: 12, fontFamily: T.mono, color: "#eab308", textAlign: "center" }}>⚠</span>
+                        <div style={{ minWidth: 0 }}>
+                          <div style={{ fontSize: 13, color: isYou ? T.accent : T.text, fontWeight: isYou ? 600 : 400, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                            {s.name}{isYou && <span style={{ fontSize: 12, marginLeft: 6, color: T.accent, fontFamily: T.mono }}>← YOU</span>}
+                          </div>
+                          <div style={{ fontSize: 11, fontFamily: T.mono, color: T.dim }}>{s.url}</div>
+                        </div>
+                        <div style={{ textAlign: "center" }}>
+                          <div style={{ fontSize: 16, fontFamily: T.serif, color: "#eab308" }}>{s.overall}<span style={{ fontSize: 10, verticalAlign: "super" }}>*</span></div>
+                          <div style={{ fontSize: 9, fontFamily: T.mono, color: "#eab308", textTransform: "uppercase" }}>Limited</div>
+                        </div>
+                        <div style={{ textAlign: "center" }}>
+                          <div style={{ fontSize: 14, fontFamily: T.serif, color: "#eab308" }}>{s.language ?? "–"}<span style={{ fontSize: 10, verticalAlign: "super" }}>*</span></div>
+                          <div style={{ fontSize: 9, fontFamily: T.mono, color: T.dim, textTransform: "uppercase" }}>Lang</div>
+                        </div>
+                        <div style={{ textAlign: "center" }}>
+                          <div style={{ fontSize: 14, fontFamily: T.serif, color: "#eab308" }}>{s.strategy ?? "–"}<span style={{ fontSize: 10, verticalAlign: "super" }}>*</span></div>
+                          <div style={{ fontSize: 9, fontFamily: T.mono, color: T.dim, textTransform: "uppercase" }}>Strat</div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                  <div style={{ textAlign: "center", marginTop: 8 }}>
+                    <span style={{ fontSize: 11, fontFamily: T.mono, color: "#eab308" }}>* Scores based on limited AI web search data, not direct HTML analysis</span>
+                  </div>
+                </div>
+              )}
+
               <div style={{ background: T.cardAlt, border: "1px solid " + T.border, borderRadius: 8, padding: "14px 20px", textAlign: "center" }}>
                 <p style={{ fontSize: 13, color: T.dim, margin: 0, fontFamily: T.mono }}>Scores update automatically as institutions are audited. Challenge a rival with Head-to-Head mode.</p>
               </div>
             </div>
-          )}
+            );
+          })()}
 
           {/* PRESCRIPTIONS */}
           {activeTab === "prescriptions" && res.ai && (
@@ -1078,16 +1148,18 @@ export default function App() {
             </section>
           )}
 
-          {/* LANDING LEADERBOARD PREVIEW — shows before any audit */}
-          {!result && !result2 && !analyzing && progress.length === 0 && leaderboard.length >= 3 && (
+          {/* LANDING LEADERBOARD PREVIEW — shows before any audit (verified only) */}
+          {!result && !result2 && !analyzing && progress.length === 0 && (() => {
+            const verifiedLb = leaderboard.filter(s => s.scrapeSource !== "claude_websearch");
+            return verifiedLb.length >= 3 ? (
             <div style={{ marginTop: 32, background: T.card, border: "1px solid " + T.border, borderRadius: 12, padding: "22px 24px", overflow: "hidden" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
                 <div>
                   <div style={{ fontSize: 12, fontFamily: T.mono, color: T.accent, textTransform: "uppercase", letterSpacing: "0.1em" }}>Leaderboard</div>
-                  <div style={{ fontSize: 13, color: T.dim, marginTop: 2 }}>{leaderboard.length} institutions ranked — where does yours land?</div>
+                  <div style={{ fontSize: 13, color: T.dim, marginTop: 2 }}>{verifiedLb.length} verified institutions ranked — where does yours land?</div>
                 </div>
               </div>
-              {leaderboard.slice(0, 8).map((s, i) => (
+              {verifiedLb.slice(0, 8).map((s, i) => (
                 <div key={s.url} style={{
                   display: "grid", gridTemplateColumns: "28px 1fr 55px 55px 55px", gap: 6, alignItems: "center",
                   padding: "8px 10px", borderRadius: 6, marginBottom: 1,
@@ -1113,13 +1185,14 @@ export default function App() {
                   </div>
                 </div>
               ))}
-              {leaderboard.length > 8 && (
+              {verifiedLb.length > 8 && (
                 <div style={{ textAlign: "center", marginTop: 8 }}>
-                  <span style={{ fontSize: 12, fontFamily: T.mono, color: T.dim }}>+ {leaderboard.length - 8} more — audit a site to see the full list</span>
+                  <span style={{ fontSize: 12, fontFamily: T.mono, color: T.dim }}>+ {verifiedLb.length - 8} more — audit a site to see the full list</span>
                 </div>
               )}
             </div>
-          )}
+            ) : null;
+          })()}
         </section>
 
 
