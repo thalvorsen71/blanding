@@ -1100,35 +1100,43 @@ export default function App() {
             </div>
           )}
           {/* CACHED RESULT PROMPT — domain already audited (positioned right below input so it's visible) */}
-          {cachedPrompt && !analyzing && !result && (
+          {cachedPrompt && !analyzing && !result && (() => {
+            const isLimited = cachedPrompt.scrapeSource === "claude_websearch";
+            return (
             <section ref={cachedPromptRef} style={{ marginTop: 20 }}>
-              <div style={{ background: T.card, border: `1px solid ${T.accent}40`, borderRadius: 12, padding: "22px 24px" }}>
+              <div style={{ background: T.card, border: `1px solid ${isLimited ? "#eab30840" : T.accent + "40"}`, borderRadius: 12, padding: "22px 24px" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
-                  <span style={{ fontSize: 18 }}>📋</span>
-                  <span style={{ fontSize: 14, fontFamily: T.mono, color: T.accent }}>Previously Audited</span>
+                  <span style={{ fontSize: 18 }}>{isLimited ? "⚠️" : "📋"}</span>
+                  <span style={{ fontSize: 14, fontFamily: T.mono, color: isLimited ? "#eab308" : T.accent }}>{isLimited ? "Limited Data Audit" : "Previously Audited"}</span>
                 </div>
-                <p style={{ fontSize: 14, color: T.text, lineHeight: 1.6, margin: "0 0 4px" }}>
-                  <strong style={{ color: T.text }}>{cachedPrompt.name}</strong> was already audited{cachedPrompt.lastAudited ? ` on ${new Date(cachedPrompt.lastAudited).toLocaleDateString()}` : ""}.
-                </p>
+                {isLimited ? (
+                  <p style={{ fontSize: 14, color: "#cca700", lineHeight: 1.6, margin: "0 0 4px" }}>
+                    <strong style={{ color: T.text }}>{cachedPrompt.name}</strong> was audited with limited data. This site blocks direct HTML scraping, so the score below is based on AI web search (~162 words avg vs. ~1,671 for a full audit). The real score may be significantly different.
+                  </p>
+                ) : (
+                  <p style={{ fontSize: 14, color: T.text, lineHeight: 1.6, margin: "0 0 4px" }}>
+                    <strong style={{ color: T.text }}>{cachedPrompt.name}</strong> was already audited{cachedPrompt.lastAudited ? ` on ${new Date(cachedPrompt.lastAudited).toLocaleDateString()}` : ""}.
+                  </p>
+                )}
                 <div style={{ display: "flex", gap: 16, alignItems: "center", margin: "14px 0" }}>
                   <div style={{ textAlign: "center" }}>
-                    <div style={{ fontSize: 32, fontWeight: 700, color: scoreColor(cachedPrompt.overall), fontFamily: T.mono }}>{cachedPrompt.overall}</div>
-                    <div style={{ fontSize: 11, color: T.dim, fontFamily: T.mono }}>Overall</div>
+                    <div style={{ fontSize: 32, fontWeight: 700, color: isLimited ? "#eab308" : scoreColor(cachedPrompt.overall), fontFamily: T.mono }}>{cachedPrompt.overall}{isLimited && <span style={{ fontSize: 14, verticalAlign: "super" }}>*</span>}</div>
+                    <div style={{ fontSize: 11, color: T.dim, fontFamily: T.mono }}>{isLimited ? "Limited" : "Overall"}</div>
                   </div>
                   {cachedPrompt.language != null && (
                     <div style={{ textAlign: "center" }}>
-                      <div style={{ fontSize: 20, fontWeight: 600, color: scoreColor(cachedPrompt.language), fontFamily: T.mono }}>{cachedPrompt.language}</div>
+                      <div style={{ fontSize: 20, fontWeight: 600, color: isLimited ? "#eab308" : scoreColor(cachedPrompt.language), fontFamily: T.mono }}>{cachedPrompt.language}</div>
                       <div style={{ fontSize: 10, color: T.dim, fontFamily: T.mono }}>Language</div>
                     </div>
                   )}
                   {cachedPrompt.strategy != null && (
                     <div style={{ textAlign: "center" }}>
-                      <div style={{ fontSize: 20, fontWeight: 600, color: scoreColor(cachedPrompt.strategy), fontFamily: T.mono }}>{cachedPrompt.strategy}</div>
+                      <div style={{ fontSize: 20, fontWeight: 600, color: isLimited ? "#eab308" : scoreColor(cachedPrompt.strategy), fontFamily: T.mono }}>{cachedPrompt.strategy}</div>
                       <div style={{ fontSize: 10, color: T.dim, fontFamily: T.mono }}>Strategy</div>
                     </div>
                   )}
                   <div style={{ textAlign: "center" }}>
-                    <div style={{ fontSize: 14, fontWeight: 600, color: scoreColor(cachedPrompt.overall), fontFamily: T.mono }}>{scoreLabel(cachedPrompt.overall)}</div>
+                    <div style={{ fontSize: 14, fontWeight: 600, color: isLimited ? "#eab308" : scoreColor(cachedPrompt.overall), fontFamily: T.mono }}>{isLimited ? "Unverified" : scoreLabel(cachedPrompt.overall)}</div>
                     <div style={{ fontSize: 10, color: T.dim, fontFamily: T.mono }}>Verdict</div>
                   </div>
                 </div>
@@ -1142,12 +1150,19 @@ export default function App() {
                     Dismiss
                   </button>
                 </div>
-                <p style={{ fontSize: 11, color: T.dim, fontFamily: T.mono, margin: "12px 0 0" }}>
-                  This is the cached score from the leaderboard. Hit "Re-audit Fresh" to run a new analysis (uses API credits).
-                </p>
+                {isLimited ? (
+                  <p style={{ fontSize: 11, color: "#eab308", fontFamily: T.mono, margin: "12px 0 0" }}>
+                    This score is not included in the verified leaderboard rankings. Re-audit to try for a full scrape, or use Paste Text to analyze the homepage copy directly.
+                  </p>
+                ) : (
+                  <p style={{ fontSize: 11, color: T.dim, fontFamily: T.mono, margin: "12px 0 0" }}>
+                    This is the cached score from the leaderboard. Hit "Re-audit Fresh" to run a new analysis (uses API credits).
+                  </p>
+                )}
               </div>
             </section>
-          )}
+            );
+          })()}
 
           {/* LANDING LEADERBOARD PREVIEW — shows before any audit (verified only) */}
           {!result && !result2 && !analyzing && progress.length === 0 && (() => {
