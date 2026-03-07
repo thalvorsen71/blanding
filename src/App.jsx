@@ -190,6 +190,7 @@ export default function App() {
           uniqueClaims: res.uniqueClaims,
           scrapeSource: res.scrapeSource,
           scrapeQuality: res.scrapeQuality,
+          wasBlocked: res.wasBlocked || false,
           pagesScraped: res.pagesScraped || [],
           contentHash: res.contentHash || "",
           wordCount: res.bodyText ? res.bodyText.split(/\s+/).length : 0,
@@ -243,6 +244,7 @@ export default function App() {
 
     const scrapeSource = hp._source || "unknown"; // "cheerio" or "claude_websearch"
     const scrapeQuality = hp._scrapeQuality || "unknown"; // "full", "partial", or "degraded"
+    const wasBlocked = hp._wasBlocked || false; // true if server returned 403/405 to our scraper
     const pages = [{ url, data: hp, type: "homepage" }];
     const linked = (hp.linked_pages || []).slice(0, 3);
 
@@ -267,7 +269,7 @@ export default function App() {
     const allBody = pages.map(p => p.data.body_text || "").join(" ");
     let ai;
     try {
-      ai = await deepAnalysis(url, hp.body_text || JSON.stringify(hp), allBody, allH1, allH2, hp.meta_description || "", hp.h1 || []);
+      ai = await deepAnalysis(url, hp.body_text || JSON.stringify(hp), allBody, allH1, allH2, hp.meta_description || "", hp.h1 || [], wasBlocked);
     } catch (e) {
       console.warn("[Blanding] Deep analysis attempt 1 failed:", e.message);
       // Rate-limit-aware retry: wait longer for 429s, short wait for other errors
@@ -277,7 +279,7 @@ export default function App() {
         if (isRateLimit) addProg(prefix + `Rate limited — waiting ${waitSec}s before retry...`);
         else addProg(prefix + "Retrying AI analysis...");
         await new Promise(r => setTimeout(r, waitSec * 1000));
-        ai = await deepAnalysis(url, hp.body_text || JSON.stringify(hp), allBody, allH1, allH2, hp.meta_description || "", hp.h1 || []);
+        ai = await deepAnalysis(url, hp.body_text || JSON.stringify(hp), allBody, allH1, allH2, hp.meta_description || "", hp.h1 || [], wasBlocked);
       } catch (e2) {
         console.warn("[Blanding] Deep analysis attempt 2 failed:", e2.message);
         addProg(prefix + "AI analysis unavailable — using cliché data only", "error");
@@ -380,7 +382,7 @@ export default function App() {
       cliches, totalCliches: totalC,
       uniqueClaims: uniq,
       homepageH1: hp.h1 || [], allH1, allH2, metaDesc: hp.meta_description || "", bodyText: allBody, ai,
-      scrapeSource, scrapeQuality, weighted,
+      scrapeSource, scrapeQuality, wasBlocked, weighted,
       pagesScraped: pages.map(p => p.url), // actual URLs scraped for transparency
       contentHash: contentHash(allBody),   // fingerprint for change detection
     };
@@ -586,6 +588,20 @@ export default function App() {
                   )}
                 </div>
               )}
+              {/* BOT-BLOCKING ALERT */}
+              {res.wasBlocked && (
+                <div style={{ background: "linear-gradient(135deg, #1a0f00 0%, #1a1000 100%)", border: "1px solid #b45309", borderRadius: 10, padding: 16 }}>
+                  <div style={{ fontSize: 12, fontFamily: T.mono, color: "#f59e0b", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 8, display: "flex", alignItems: "center", gap: 6 }}>
+                    <span style={{ fontSize: 16 }}>🚫</span> Bot-Blocking Detected
+                  </div>
+                  <p style={{ fontSize: 14, color: "#fbbf24", lineHeight: 1.6, margin: "0 0 8px 0" }}>
+                    This website actively blocks automated crawlers. Our scraper received an HTTP 403 (Forbidden) response, which means AI search engines like ChatGPT, Perplexity, and Google AI Overviews likely cannot access this content either.
+                  </p>
+                  <p style={{ fontSize: 13, color: "#d4a259", lineHeight: 1.55, margin: 0 }}>
+                    <strong style={{ color: "#fbbf24" }}>Why this matters:</strong> A growing share of prospective students use AI tools to research colleges. If your site blocks bots, AI cannot recommend you — no matter how good your content is. This score is based on limited data we could access; the actual page may contain stronger content than what we were able to evaluate.
+                  </p>
+                </div>
+              )}
               {res.ai.weak_sentence && res.ai.rewrite && res.ai.weak_sentence !== "NO_CONTENT" && !res.ai.weak_sentence.toLowerCase().includes("no clear example") && !res.ai.rewrite.toLowerCase().includes("cannot rewrite") && !res.ai.rewrite.includes("NO_CONTENT") && (
                 <div style={{ background: T.cardAlt, borderRadius: 10, overflow: "hidden", border: "1px solid " + T.border }}>
                   <div style={{ padding: "8px 16px", borderBottom: "1px solid " + T.border, fontSize: 12, fontFamily: T.mono, color: T.accent, textTransform: "uppercase" }}>What If You Actually Said Something?</div>
@@ -713,7 +729,8 @@ export default function App() {
                       <div style={{ minWidth: 0 }}>
                         <div style={{ fontSize: 13, color: isYou ? T.accent : T.text, fontWeight: isYou ? 600 : 400, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                           {s.name}{isYou && <span style={{ fontSize: 12, marginLeft: 6, color: T.accent, fontFamily: T.mono }}>← YOU</span>}
-                          {s.scrapeQuality && s.scrapeQuality !== "full" && <span title="This site blocked our scraper — score is based on limited data and may be lower than actual" style={{ fontSize: 10, marginLeft: 6, color: "#e6a817", fontFamily: T.mono, cursor: "help" }}>⚠ partial data</span>}
+                          {s.wasBlocked && <span title="This site blocks automated crawlers (AI search engines likely can't access it either)" style={{ fontSize: 10, marginLeft: 6, color: "#f59e0b", fontFamily: T.mono, cursor: "help" }}>🚫 blocks bots</span>}
+                          {!s.wasBlocked && s.scrapeQuality && s.scrapeQuality !== "full" && s.scrapeQuality !== "unknown" && <span title="Score is based on limited data and may be lower than actual" style={{ fontSize: 10, marginLeft: 6, color: "#e6a817", fontFamily: T.mono, cursor: "help" }}>⚠ partial data</span>}
                         </div>
                         <div style={{ fontSize: 11, fontFamily: T.mono, color: T.dim }}>{s.url}</div>
                       </div>

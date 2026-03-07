@@ -155,6 +155,7 @@ const MIN_BODY_CHARS = 200; // if cheerio gets less than this, try Claude
  */
 export async function fetchPage(url, onProgress) {
   let cheerioData = null; // Keep cheerio result as fallback even if below threshold
+  let wasBlocked = false; // Track if server blocked automated requests (403/405)
 
   // Step 1: Try cheerio (deterministic, fast, zero hallucination)
   try {
@@ -172,8 +173,11 @@ export async function fetchPage(url, onProgress) {
     // Try Claude for richer extraction
     if (onProgress) onProgress("Page uses dynamic content, trying AI scraper...");
   } catch (err) {
+    // Detect WAF/bot blocks specifically — these mean the server rejects automated requests
+    const errMsg = err.message || "";
+    wasBlocked = /403|405|406|forbidden|blocked|captcha/i.test(errMsg);
     // Cheerio failed entirely (403, timeout, etc.) — try Claude
-    if (onProgress) onProgress("Retrying with AI scraper...");
+    if (onProgress) onProgress(wasBlocked ? "Site blocks automated scrapers, trying AI scraper..." : "Retrying with AI scraper...");
   }
 
   // Step 2: Fall back to Claude web_search (max 2 attempts, rate-limit-aware)
@@ -183,6 +187,7 @@ export async function fetchPage(url, onProgress) {
       const claudeResult = await fetchPageViaClaude(url);
       // Claude fallback always gets less content than a full Cheerio scrape
       claudeResult._scrapeQuality = "partial";
+      claudeResult._wasBlocked = wasBlocked; // Pass through for analysis
       return claudeResult;
     } catch (err) {
       if (err.name === "RateLimitError") {
@@ -195,16 +200,16 @@ export async function fetchPage(url, onProgress) {
         }
         // Already retried once after rate limit — use whatever cheerio got
         if (onProgress) onProgress("AI scraper unavailable (rate limited). Using available content.");
-        if (cheerioData) cheerioData._scrapeQuality = "degraded";
+        if (cheerioData) { cheerioData._scrapeQuality = "degraded"; cheerioData._wasBlocked = wasBlocked; }
         return cheerioData;
       }
       // Non-rate-limit error: retry once after brief pause
       if (i === 0) { await sleep(2000); continue; }
-      if (cheerioData) cheerioData._scrapeQuality = "degraded";
+      if (cheerioData) { cheerioData._scrapeQuality = "degraded"; cheerioData._wasBlocked = wasBlocked; }
       return cheerioData;
     }
   }
-  if (cheerioData) cheerioData._scrapeQuality = "degraded";
+  if (cheerioData) { cheerioData._scrapeQuality = "degraded"; cheerioData._wasBlocked = wasBlocked; }
   return cheerioData; // Return whatever we have, even if sparse
 }
 
@@ -220,7 +225,7 @@ export async function fetchSubPage(url) {
   return null; // Skip Claude for sub-pages to stay within rate limits
 }
 
-export async function deepAnalysis(url, text, allText, h1s = [], h2s = [], metaDesc = "", homepageH1s = []) {
+export async function deepAnalysis(url, text, allText, h1s = [], h2s = [], metaDesc = "", homepageH1s = [], wasBlocked = false) {
   const combinedText = (text + " " + allText).trim();
   const wordCount = combinedText.split(/\s+/).length;
 
@@ -273,7 +278,14 @@ ${metaDesc || "NONE FOUND"}
 ${text.substring(0, 6000)}
 === END OF PAGE TEXT ===
 Other pages sampled: ${allText.substring(0, 2000)}
+${wasBlocked ? `
+=== CRAWL ACCESSIBILITY WARNING ===
+This website BLOCKED our automated scraper (returned HTTP 403 Forbidden). The content above was captured via a secondary AI-assisted method and may be INCOMPLETE — the actual page likely contains significantly more content than what you see above.
 
+This is a CRITICAL strategic finding: if this site blocks automated crawlers, it is likely also blocking or degrading access for AI search engines (ChatGPT, Perplexity, Gemini, Google AI Overviews). This means prospective students using AI tools to research colleges may receive incomplete or outdated information about this institution. Factor this into your ai_readiness_score and ai_readiness_diagnosis — a school that blocks bots is invisible to the fastest-growing discovery channel in higher ed.
+
+NOTE: Because the scraped text above may be incomplete, be generous in your content quality assessment — acknowledge that you may be seeing a fraction of what the page actually contains. But be HARSH on the crawl-blocking itself, because that is a strategic choice with real consequences.
+` : ""}
 CRITICAL GROUNDING RULES — READ CAREFULLY:
 1. You may ONLY reference text that literally appears in the SCRAPED TEXT above. If a phrase isn't in the text above, you CANNOT mention it.
 2. Do NOT bring in any outside knowledge about this institution. You know NOTHING about this school except what is in the text above.
