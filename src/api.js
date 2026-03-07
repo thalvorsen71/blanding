@@ -20,7 +20,7 @@ class RateLimitError extends Error {
 }
 
 async function callAPI(messages, useSearch = false, model = "claude-sonnet-4-20250514") {
-  const body = { model, max_tokens: useSearch ? 2000 : 4000, messages };
+  const body = { model, max_tokens: useSearch ? 1500 : 4000, messages };
   if (useSearch) body.tools = [{ type: "web_search_20250305", name: "web_search" }];
 
   const controller = new AbortController();
@@ -112,7 +112,7 @@ async function fetchPageViaClaude(url) {
 
 Extract the visible text content from this page. ONLY text that literally appears on this URL right now. Return ONLY a JSON object (no markdown, no backticks):
 {"title":"page title tag","meta_description":"meta desc or empty","h1":["H1 texts"],"h2s":["first 8 H2s"],"body_text":"all visible page text, max 3000 chars, skip nav links and footer","ctas":["CTA button texts"],"page_type":"homepage|admissions|about|academics|other","linked_pages":["up to 4 internal URLs"],"nav_items":[],"unique_claims":[]}`
-  }], true, "claude-sonnet-4-20250514"); // Sonnet: only model that executes web_search
+  }], true, "claude-3-5-haiku-20241022"); // Haiku: fastest model with web_search support — must fit in Netlify 10s limit
   const result = parseJSON(raw);
   result._source = "claude_websearch"; // tag source
   return result;
