@@ -164,6 +164,30 @@ export async function fetchPage(url, onProgress) {
       // Claude fallback always gets less content than a full Cheerio scrape
       claudeResult._scrapeQuality = "partial";
       claudeResult._wasBlocked = wasBlocked; // Pass through for analysis
+
+      // HYBRID MERGE: If cheerio got SOME structural data (H1s, H2s, title, meta),
+      // prefer those over websearch because cheerio parses real HTML deterministically
+      // while websearch may hallucinate or misread structural elements.
+      if (cheerioData) {
+        const cheerioH1 = cheerioData.h1 || [];
+        const cheerioH2 = cheerioData.h2s || [];
+        // Only override websearch H1/H2 if cheerio actually found them
+        if (cheerioH1.length > 0) claudeResult.h1 = cheerioH1;
+        if (cheerioH2.length > 0) claudeResult.h2s = cheerioH2;
+        // Prefer cheerio title and meta (parsed from HTML tags, not guessed)
+        if (cheerioData.title) claudeResult.title = cheerioData.title;
+        if (cheerioData.meta_description) claudeResult.meta_description = cheerioData.meta_description;
+        // Merge linked pages (cheerio finds real hrefs, websearch guesses)
+        if ((cheerioData.linked_pages || []).length > 0) {
+          claudeResult.linked_pages = cheerioData.linked_pages;
+        }
+        // Flag that structural data came from cheerio (reliable)
+        claudeResult._structureSource = "cheerio";
+      } else {
+        // No cheerio data at all — flag H1s as unverified
+        claudeResult._structureSource = "websearch";
+      }
+
       return claudeResult;
     } catch (err) {
       if (err.name === "RateLimitError") {
@@ -216,7 +240,7 @@ function sanitizeInput(str) {
     .substring(0, 15000);
 }
 
-export async function deepAnalysis(url, text, allText, h1s = [], h2s = [], metaDesc = "", homepageH1s = [], wasBlocked = false) {
+export async function deepAnalysis(url, text, allText, h1s = [], h2s = [], metaDesc = "", homepageH1s = [], wasBlocked = false, structureUnverified = false) {
   // Sanitize all text inputs before they enter the prompt
   text = sanitizeInput(text);
   allText = sanitizeInput(allText);
@@ -266,11 +290,12 @@ Evaluate: Does the content answer "why HERE instead of somewhere else?" with som
 
 URL: ${url}
 === HOMEPAGE H1 (the hero tagline — this is THE primary brand statement visitors see first) ===
-${homepageH1s.length > 0 ? homepageH1s.join(" | ") : "NONE FOUND — the homepage has no H1 tag, which is itself a brand problem."}
+${homepageH1s.length > 0 ? homepageH1s.join(" | ") : "NONE FOUND — the homepage has no H1 tag, which is itself a brand problem."}${structureUnverified ? `
+WARNING: These H1 tags were extracted via AI web search, NOT from raw HTML parsing. They may be inaccurate or fabricated. Do NOT treat them as ground truth. If the H1 text does not appear elsewhere in the FULL PAGE TEXT below, it may be hallucinated — note this uncertainty in your hero_assessment.` : ""}
 === ALL H1 TAGS ACROSS SITE (homepage + sub-pages) ===
-${h1s.length > 0 ? h1s.join(" | ") : "NONE FOUND"}
+${h1s.length > 0 ? h1s.join(" | ") : "NONE FOUND"}${structureUnverified ? " (UNVERIFIED — sourced from AI, not HTML)" : ""}
 === KEY HEADINGS (H2 tags — these frame the page's content sections) ===
-${h2s.length > 0 ? h2s.slice(0, 15).join(" | ") : "NONE FOUND"}
+${h2s.length > 0 ? h2s.slice(0, 15).join(" | ") : "NONE FOUND"}${structureUnverified ? " (UNVERIFIED — sourced from AI, not HTML)" : ""}
 === META DESCRIPTION (what search engines show) ===
 ${metaDesc || "NONE FOUND"}
 === FULL PAGE TEXT ===

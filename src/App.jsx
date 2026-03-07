@@ -267,12 +267,13 @@ export default function App() {
 
     const allH1 = pages.flatMap(p => p.data.h1 || []);
     const allH2 = pages.flatMap(p => p.data.h2s || []);
+    const structureUnverified = hp._structureSource === "websearch"; // H1s came from AI, not HTML parsing
 
     addProg(prefix + "Running AI brand analysis...");
     const allBody = pages.map(p => p.data.body_text || "").join(" ");
     let ai;
     try {
-      ai = await deepAnalysis(url, hp.body_text || JSON.stringify(hp), allBody, allH1, allH2, hp.meta_description || "", hp.h1 || [], wasBlocked);
+      ai = await deepAnalysis(url, hp.body_text || JSON.stringify(hp), allBody, allH1, allH2, hp.meta_description || "", hp.h1 || [], wasBlocked, structureUnverified);
     } catch (e) {
       console.warn("[Blanding] Deep analysis attempt 1 failed:", e.message);
       // Rate-limit-aware retry: wait longer for 429s, short wait for other errors
@@ -282,7 +283,7 @@ export default function App() {
         if (isRateLimit) addProg(prefix + `Rate limited — waiting ${waitSec}s before retry...`);
         else addProg(prefix + "Retrying AI analysis...");
         await new Promise(r => setTimeout(r, waitSec * 1000));
-        ai = await deepAnalysis(url, hp.body_text || JSON.stringify(hp), allBody, allH1, allH2, hp.meta_description || "", hp.h1 || [], wasBlocked);
+        ai = await deepAnalysis(url, hp.body_text || JSON.stringify(hp), allBody, allH1, allH2, hp.meta_description || "", hp.h1 || [], wasBlocked, structureUnverified);
       } catch (e2) {
         console.warn("[Blanding] Deep analysis attempt 2 failed:", e2.message);
         addProg(prefix + "AI analysis unavailable — using cliché data only", "error");
