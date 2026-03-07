@@ -329,10 +329,12 @@ export async function handler(event) {
   };
 
   // Write with verification: read, modify, write, then verify it stuck
+  let oldScore = null;
   for (let attempt = 0; attempt < 3; attempt++) {
     const raw = await store.get("schools");
     const data = raw ? JSON.parse(raw) : {};
     const existing = data[hostname];
+    if (attempt === 0) oldScore = existing?.overall || null;
     data[hostname] = { ...(existing || {}), ...newEntry, runs: (existing?.runs || 0) + 1 };
     await store.set("schools", JSON.stringify(data));
 
@@ -359,7 +361,7 @@ export async function handler(event) {
       strategy: stratScore,
       wordCount,
       pagesAudited: pages.length,
-      oldScore: existing?.overall || null,
+      oldScore,
     }),
   };
 }
