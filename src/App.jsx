@@ -740,7 +740,18 @@ export default function App() {
                 {verified.length === 0 && !lbLoading && (
                   <p style={{ color: T.dim, fontSize: 13, textAlign: "center", padding: "30px 20px", fontFamily: T.serif, fontStyle: "italic" }}>No schools ranked yet. Every audit automatically adds to the leaderboard — yours could be first.</p>
                 )}
-                {verified.map((s, i) => {
+                {(() => {
+                  // Dense ranking: tied scores share the same rank
+                  const ranks = [];
+                  let currentRank = 1;
+                  for (let j = 0; j < verified.length; j++) {
+                    if (j > 0 && verified[j].overall < verified[j - 1].overall) {
+                      currentRank = j + 1;
+                    }
+                    ranks.push(currentRank);
+                  }
+                  return verified.map((s, i) => {
+                  const rank = ranks[i];
                   const isYou = res.url && s.url && res.url.includes(s.url);
                   return (
                     <div key={s.url} style={{
@@ -749,8 +760,8 @@ export default function App() {
                       background: isYou ? T.accent + "12" : (i % 2 === 0 ? "transparent" : T.cardAlt),
                       border: isYou ? "1px solid " + T.accent + "40" : "1px solid transparent",
                     }}>
-                      <span style={{ fontSize: 14, fontFamily: T.mono, color: i < 3 ? T.accent : T.dim, fontWeight: i < 3 ? 700 : 400, textAlign: "center" }}>
-                        {i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : `#${i + 1}`}
+                      <span style={{ fontSize: 14, fontFamily: T.mono, color: rank <= 3 ? T.accent : T.dim, fontWeight: rank <= 3 ? 700 : 400, textAlign: "center" }}>
+                        {rank === 1 ? "🥇" : rank === 2 ? "🥈" : rank === 3 ? "🥉" : `#${rank}`}
                       </span>
                       <div style={{ minWidth: 0 }}>
                         <div style={{ fontSize: 13, color: isYou ? T.accent : T.text, fontWeight: isYou ? 600 : 400, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
@@ -774,7 +785,8 @@ export default function App() {
                       </div>
                     </div>
                   );
-                })}
+                });
+                })()}
               </div>
 
               {/* ZONE DIVIDER */}
