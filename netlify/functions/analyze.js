@@ -49,6 +49,12 @@ exports.handler = async (event) => {
     };
     if (req.tools) body.tools = req.tools;
 
+    // Timeout: must finish BEFORE Netlify kills us (10s free, 26s pro).
+    // web_search calls take longer, so give them more headroom.
+    const timeoutMs = req.tools ? 22000 : 8000;
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), timeoutMs);
+
     const resp = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
@@ -57,11 +63,15 @@ exports.handler = async (event) => {
         "anthropic-version": "2023-06-01",
       },
       body: JSON.stringify(body),
+      signal: controller.signal,
     });
+    clearTimeout(timeout);
 
     const data = await resp.json();
     return { statusCode: resp.ok ? 200 : resp.status, headers, body: JSON.stringify(data) };
   } catch (err) {
-    return { statusCode: 500, headers, body: JSON.stringify({ error: err.message }) };
+    const isTimeout = err.name === "AbortError";
+    const msg = isTimeout ? "API request timed out — try again" : err.message;
+    return { statusCode: isTimeout ? 504 : 500, headers, body: JSON.stringify({ error: msg }) };
   }
 };

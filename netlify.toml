@@ -6,6 +6,15 @@
 [functions]
   node_bundler = "esbuild"
 
+# analyze.js needs extra time for Claude web_search (Anthropic API + tool use)
+# Free tier max = 10s (default), Pro tier max = 26s
+# Set to 26 so upgrading to Pro automatically unlocks longer timeouts
+[functions.analyze]
+  timeout = 26
+
+[functions.scrape-fallback]
+  timeout = 20
+
 [[headers]]
   for = "/*"
   [headers.values]

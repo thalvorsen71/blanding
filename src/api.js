@@ -173,9 +173,11 @@ export async function fetchPage(url, onProgress) {
     // Try Claude for richer extraction
     if (onProgress) onProgress("Page uses dynamic content, trying AI scraper...");
   } catch (err) {
-    // Detect WAF/bot blocks specifically — these mean the server rejects automated requests
+    // Detect WAF/bot blocks — HTTP errors AND connection-level failures
+    // "fetch failed" = Node.js undici when connection is refused/reset by WAF
+    // "ECONNRESET"/"ECONNREFUSED" = explicit connection rejections
     const errMsg = err.message || "";
-    wasBlocked = /403|405|406|forbidden|blocked|captcha/i.test(errMsg);
+    wasBlocked = /403|405|406|forbidden|blocked|captcha|fetch failed|ECONNRESET|ECONNREFUSED/i.test(errMsg);
     // Cheerio failed entirely (403, timeout, etc.) — try Claude
     if (onProgress) onProgress(wasBlocked ? "Site blocks automated scrapers, trying AI scraper..." : "Retrying with AI scraper...");
   }
