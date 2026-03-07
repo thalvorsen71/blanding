@@ -517,7 +517,7 @@ export default function App() {
           )}
         </div>
         {!compact && leaderboard.length >= 3 && (() => {
-          const verified = leaderboard.filter(s => s.scrapeSource !== "claude_websearch");
+          const verified = leaderboard.filter(s => (s.hasAI || s.ai) && (s.wordCount >= 100 || s.scrapeSource === "cheerio"));
           if (verified.length < 3) return null;
           const below = verified.filter(s => s.overall < res.overall).length;
           const pct = Math.round((below / verified.length) * 100);
@@ -714,8 +714,15 @@ export default function App() {
 
           {/* LEADERBOARD */}
           {activeTab === "leaderboard" && (() => {
-            const verified = leaderboard.filter(s => s.scrapeSource !== "claude_websearch");
-            const limited = leaderboard.filter(s => s.scrapeSource === "claude_websearch");
+            // Zone split: use data quality, not scrape method.
+            // A school is "verified" if it has real AI analysis + meaningful content,
+            // regardless of whether cheerio or claude_websearch obtained the text.
+            // Zone split: use data quality, not scrape method.
+            // A school is "verified" if it has real AI analysis + meaningful content,
+            // regardless of whether cheerio or claude_websearch obtained the text.
+            const isVerified = (s) => (s.hasAI || s.ai) && (s.wordCount >= 100 || s.scrapeSource === "cheerio");
+            const verified = leaderboard.filter(isVerified);
+            const limited = leaderboard.filter(s => !isVerified(s));
             return (
             <div style={{ display: "grid", gap: 12 }}>
               {/* ZONE 1: VERIFIED AUDITS */}
@@ -1101,7 +1108,7 @@ export default function App() {
           )}
           {/* CACHED RESULT PROMPT — domain already audited (positioned right below input so it's visible) */}
           {cachedPrompt && !analyzing && !result && (() => {
-            const isLimited = cachedPrompt.scrapeSource === "claude_websearch";
+            const isLimited = !(cachedPrompt.hasAI || cachedPrompt.ai) || (!(cachedPrompt.wordCount >= 100) && cachedPrompt.scrapeSource !== "cheerio");
             return (
             <section ref={cachedPromptRef} style={{ marginTop: 20 }}>
               <div style={{ background: T.card, border: `1px solid ${isLimited ? "#eab30840" : T.accent + "40"}`, borderRadius: 12, padding: "22px 24px" }}>
@@ -1166,7 +1173,7 @@ export default function App() {
 
           {/* LANDING LEADERBOARD PREVIEW — shows before any audit (verified only) */}
           {!result && !result2 && !analyzing && progress.length === 0 && (() => {
-            const verifiedLb = leaderboard.filter(s => s.scrapeSource !== "claude_websearch");
+            const verifiedLb = leaderboard.filter(s => (s.hasAI || s.ai) && (s.wordCount >= 100 || s.scrapeSource === "cheerio"));
             return verifiedLb.length >= 3 ? (
             <div style={{ marginTop: 32, background: T.card, border: "1px solid " + T.border, borderRadius: 12, padding: "22px 24px", overflow: "hidden" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
