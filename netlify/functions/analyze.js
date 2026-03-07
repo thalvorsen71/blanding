@@ -59,8 +59,9 @@ exports.handler = async (event) => {
     }
 
     // Security: Cap total input size to prevent token abuse
+    // 50K covers expanded content caps (12K homepage + 10K sub-pages + prompt)
     const totalChars = req.messages.reduce((sum, m) => sum + (typeof m.content === "string" ? m.content.length : 0), 0);
-    if (totalChars > 25000) {
+    if (totalChars > 50000) {
       return { statusCode: 400, headers, body: JSON.stringify({ error: "Input too large" }) };
     }
 

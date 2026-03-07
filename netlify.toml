@@ -15,6 +15,10 @@
 [functions.scrape-fallback]
   timeout = 20
 
+# reaudit does scrape + sub-pages + analysis in one call — needs full 26s
+[functions.reaudit]
+  timeout = 26
+
 [[headers]]
   for = "/*"
   [headers.values]
