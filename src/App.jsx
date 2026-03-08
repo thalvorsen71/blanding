@@ -347,7 +347,14 @@ export default function App() {
     const cached = findCachedEntry(url1);
     if (cached) {
       _animatedScores.clear();
-      const mapped = leaderboardEntryToResult(cached);
+      // Fetch full school data (includes AI analysis stripped from slim leaderboard)
+      let fullEntry = cached;
+      try {
+        const fullRes = await fetch(`/.netlify/functions/leaderboard?school=${encodeURIComponent(cached.url)}`);
+        const fullData = await fullRes.json();
+        if (fullData.school) fullEntry = fullData.school;
+      } catch { /* fall back to slim entry */ }
+      const mapped = leaderboardEntryToResult(fullEntry);
       setResult(mapped);
       setActiveTab("overview");
       scrollToResult();
