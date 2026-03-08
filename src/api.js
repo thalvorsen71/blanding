@@ -310,7 +310,7 @@ Return JSON only:
   "verified_unique_claims": ["ONLY institutional facts that differentiate THIS school from peers. Each must be a short factual statement (under 120 chars) containing a number, percentage, named program/center/initiative, or concrete outcome. Examples: 'Student-faculty ratio is 7:1', '94% of students live on campus all four years', '3-2 engineering program with Caltech', 'Center for Civic Engagement pairs every student with a community partner', 'Students work with professors on over 300 research projects annually', 'The Reed Commitment guarantees mentored research by junior year'. Look for NAMED programs, centers, guarantees, and commitments unique to this school — not just stats. Do NOT include: news headlines, fundraising campaigns, event listings, press mentions, taglines, slogans, or marketing copy. Max 10 items. If fewer than 3 real differentiators exist on the page, return fewer."]
 }`;
 
-  const raw = await callAPI([{ role: "user", content: prompt }], false, "claude-haiku-4-5-20251001");
+  const raw = await callAPI([{ role: "user", content: prompt }], false, "claude-sonnet-4-20250514");
   try {
     return parseJSON(raw);
   } catch (e) {
