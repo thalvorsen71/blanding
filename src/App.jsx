@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { T, scoreColor, scoreLabel, scoreVerdict, countCliches, countWeightedCliches, highlightCliches, contentRichnessBonus } from './constants';
+import { T, scoreColor, scoreLabel, scoreVerdict, highlightCliches } from './constants';
 import { calculateScores } from './scoring';
 import { fetchPage, fetchSubPage, deepAnalysis, captureLead } from './api';
 import { exportPDF } from './pdf';
@@ -78,21 +78,16 @@ function downloadCanvas(canvas, filename) {
 
 /* ═══ MAIN APP ═══ */
 export default function App() {
-  const [mode, setMode] = useState("single");
   const [url1, setUrl1] = useState("");
-  const [url2, setUrl2] = useState("");
-  const [inputText, setInputText] = useState("");
   const [analyzing, setAnalyzing] = useState(false);
   const [progress, setProgress] = useState([]);
   const [result, setResult] = useState(null);
-  const [result2, setResult2] = useState(null);
   const [activeTab, setActiveTab] = useState("overview");
   const [copyFB, setCopyFB] = useState(false);
   const [emailModal, setEmailModal] = useState(false);
   const [shareModal, setShareModal] = useState(false);
   const [email, setEmail] = useState("");
   const [emailSent, setEmailSent] = useState(false);
-  const [challengeUrl, setChallengeUrl] = useState("");
   const [stayName, setStayName] = useState("");
   const [stayEmail, setStayEmail] = useState("");
   const [stayTitle, setStayTitle] = useState("");
@@ -102,14 +97,10 @@ export default function App() {
   const [auditCount, setAuditCount] = useState(0);
   const [showMethodology, setShowMethodology] = useState(false);
   const [showDisclaimer, setShowDisclaimer] = useState(false);
-  const [cachedPrompt, setCachedPrompt] = useState(null); // { entry, url } when a domain has a cached score
-  const lastTextHash = useRef(null); // dedup paste-text submissions
-  const lastTextTime = useRef(0);    // throttle paste-text (ms)
   const resultRef = useRef(null);
   const methRef = useRef(null);
   const disclaimerRef = useRef(null);
   const progressRef = useRef(null);
-  const cachedPromptRef = useRef(null);
 
   // Fetch audit count on mount for social proof
   useEffect(() => {
@@ -321,50 +312,54 @@ export default function App() {
     } catch { return null; }
   };
 
-  const runFreshAudit = async () => {
-    setCachedPrompt(null);
-    _animatedScores.clear(); setAnalyzing(true); setProgress([]); setResult(null); setResult2(null); setActiveTab("overview");
+  // Map a leaderboard entry (flat shape) to the result shape expected by ResultBlock/TabContent
+  function leaderboardEntryToResult(entry) {
+    return {
+      url: entry.url,
+      schoolName: entry.name,
+      overall: entry.overall,
+      scores: { language: entry.language, strategy: entry.strategy },
+      totalCliches: entry.cliches || 0,
+      pagesAnalyzed: entry.pagesScraped || Array(entry.pagesAudited || 1).fill(""),
+      ai: entry.ai || null,
+      homepageH1: entry.homepageH1 || [],
+      allH1: entry.allH1 || [],
+      allH2: entry.allH2 || [],
+      metaDesc: entry.metaDesc || "",
+      uniqueClaims: entry.uniqueClaims || [],
+      scrapeSource: entry.scrapeSource || "cheerio",
+      wasBlocked: entry.wasBlocked || false,
+      contentHash: entry.contentHash || "",
+      bodyText: "",  // not stored in leaderboard
+      cliches: (entry.topCliches || []).map(c => ({ ...c, severity: c.severity || "medium" })),
+      weighted: entry.clicheBreakdown || null,
+      wordCount: entry.wordCount || 0,
+      pagesScraped: entry.pagesScraped || [],
+      _fromCache: true,
+      _lastAudited: entry.lastAudited,
+    };
+  }
+
+  const runSingle = async () => {
+    // Clear previous results so UI resets
+    setResult(null); setProgress([]);
+    // Check for cached leaderboard entry before burning API calls
+    const cached = findCachedEntry(url1);
+    if (cached) {
+      _animatedScores.clear();
+      const mapped = leaderboardEntryToResult(cached);
+      setResult(mapped);
+      setActiveTab("overview");
+      scrollToResult();
+      return;
+    }
+    // Fresh audit for uncached URLs
+    _animatedScores.clear(); setAnalyzing(true); setProgress([]); setResult(null); setActiveTab("overview");
     const r = await runAudit(url1);
     if (r) { setResult(r); submitToLeaderboard(r); }
     setProgress(p => p.map(i => i.status === "error" ? i : { ...i, status: "done" }));
     setAnalyzing(false);
     if (r) scrollToResult(); else setTimeout(() => progressRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 300);
-  };
-
-  const runSingle = async () => {
-    // Clear previous results so UI resets
-    setResult(null); setResult2(null); setProgress([]);
-    // Check for cached leaderboard entry before burning API calls
-    const cached = findCachedEntry(url1);
-    if (cached) {
-      setCachedPrompt(cached);
-      setTimeout(() => cachedPromptRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 100);
-      return; // Show cached prompt UI instead of running audit
-    }
-    runFreshAudit();
-  };
-
-  const runCompare = async () => { _animatedScores.clear(); setAnalyzing(true); setProgress([]); setResult(null); setResult2(null); setActiveTab("overview"); addProg("Starting head-to-head audit..."); const r1 = await runAudit(url1, "A → "); const r2 = await runAudit(url2, "B → "); if (r1) { setResult(r1); submitToLeaderboard(r1); } if (r2) { setResult2(r2); submitToLeaderboard(r2); } setProgress(p => p.map(i => i.status === "error" ? i : { ...i, status: "done" })); setAnalyzing(false); if (r1 || r2) scrollToResult(); else setTimeout(() => progressRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 300); };
-
-  const runText = async () => {
-    if (inputText.trim().length < 50) return;
-    // Dedup: skip if identical text was just analyzed (hash match + 10s throttle)
-    const hash = contentHash(inputText);
-    const now = Date.now();
-    if (hash === lastTextHash.current && now - lastTextTime.current < 10000) {
-      console.warn("[Blanding] Skipping duplicate paste-text analysis (same content within 10s)");
-      return;
-    }
-    lastTextHash.current = hash;
-    lastTextTime.current = now;
-    _animatedScores.clear(); setAnalyzing(true); setProgress([]); setResult(null); setResult2(null); setActiveTab("overview");
-    addProg("Analyzing copy..."); const cl = countCliches(inputText); const tc = cl.reduce((s, c) => s + c.count, 0);
-    addProg("Running AI analysis..."); const ai = await deepAnalysis("(pasted text)", inputText, "");
-    let lang = 100 - Math.min(cl.length * 3, 50) - Math.min((tc / Math.max(inputText.split(/\s+/).length / 100, 1)) * 7, 30);
-    if (ai?.voice_score) lang = Math.round(lang * 0.6 + ai.voice_score * 10 * 0.4);
-    lang = Math.max(0, Math.min(100, lang));
-    setResult({ url: null, schoolName: "Your Copy", pagesAnalyzed: [{ type: "text" }], overall: lang, scores: { language: lang, strategy: null }, cliches: cl, totalCliches: tc, uniqueClaims: [], allH1: [], allH2: [], metaDesc: "", bodyText: inputText, ai });
-    setProgress(p => p.map(i => i.status === "error" ? i : { ...i, status: "done" })); setAnalyzing(false); scrollToResult();
   };
 
   const handleStayInTouch = async () => {
@@ -402,15 +397,6 @@ export default function App() {
     downloadCanvas(canvas, `bingo-${result.schoolName.replace(/\s+/g, "-").toLowerCase()}.png`);
   };
 
-  const handleChallenge = () => {
-    if (!challengeUrl.trim() || !result) return;
-    setMode("compare");
-    setUrl1(result.url || "");
-    setUrl2(challengeUrl);
-    setResult(null); setResult2(null); setProgress([]);
-    setTimeout(() => runCompare(), 100);
-  };
-
   /* ═══ RESULT BLOCK ═══ */
   function ResultBlock({ res, compact }) {
     if (!res) return null;
@@ -420,7 +406,9 @@ export default function App() {
         <div className="result-card" style={{ background: T.card, border: "1px solid " + T.border, borderRadius: 14, padding: compact ? "24px 16px" : "36px 28px", textAlign: "center", position: "relative", overflow: "hidden" }}>
           <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%,-50%)", width: 280, height: 280, background: `radial-gradient(circle, ${scoreColor(res.overall)}11 0%, transparent 70%)`, pointerEvents: "none" }} />
           {res.url && <div style={{ fontSize: 13, fontFamily: T.mono, color: T.dim, marginBottom: 4, position: "relative", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{res.url}</div>}
-          <div style={{ fontSize: 12, fontFamily: T.mono, color: T.muted, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 14, position: "relative" }}>{res.pagesAnalyzed.length} page{res.pagesAnalyzed.length > 1 ? "s" : ""} audited</div>
+          <div style={{ fontSize: 12, fontFamily: T.mono, color: T.muted, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 14, position: "relative" }}>
+            {res._fromCache && res._lastAudited ? `Audited ${new Date(res._lastAudited).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })} · ` : ""}{res.pagesAnalyzed.length} page{res.pagesAnalyzed.length > 1 ? "s" : ""} audited
+          </div>
           <div style={{ position: "relative", display: "inline-block" }}>
             <Ring score={res.overall} size={compact ? 110 : 140} />
             <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
@@ -761,7 +749,7 @@ export default function App() {
               )}
 
               <div style={{ background: T.cardAlt, border: "1px solid " + T.border, borderRadius: 8, padding: "14px 20px", textAlign: "center" }}>
-                <p style={{ fontSize: 13, color: T.dim, margin: 0, fontFamily: T.mono }}>Scores update automatically as institutions are audited. Challenge a rival with Head-to-Head mode.</p>
+                <p style={{ fontSize: 13, color: T.dim, margin: 0, fontFamily: T.mono }}>Scores update automatically as institutions are audited.</p>
               </div>
             </div>
             );
@@ -964,147 +952,33 @@ export default function App() {
 
         {/* INPUT */}
         <section style={{ marginTop: 32 }}>
-          <div style={{ display: "flex", gap: 2, marginBottom: 16, background: T.card, borderRadius: 8, padding: 3, width: "fit-content" }}>
-            {[{ l: "Single Audit", v: "single" }, { l: "Head-to-Head", v: "compare" }, { l: "Paste Text", v: "text" }].map(m => (
-              <button key={m.v} onClick={() => { setMode(m.v); setResult(null); setResult2(null); setProgress([]); setCachedPrompt(null); }}
-                style={{ padding: "7px 16px", borderRadius: 6, border: "none", background: mode === m.v ? T.accent : "transparent", color: mode === m.v ? "#fff" : T.dim, fontSize: 13, fontFamily: T.mono, fontWeight: 500 }}>{m.l}</button>
+          <div className="audit-input-row" style={{ display: "flex", gap: 10 }}>
+            <input value={url1} onChange={e => setUrl1(e.target.value)} placeholder="e.g. bowdoin.edu" onKeyDown={e => e.key === "Enter" && url1.trim() && isEdu(url1) && runSingle()}
+              aria-label="School website URL" aria-invalid={url1.trim() && !isEdu(url1) ? "true" : undefined} aria-describedby={url1.trim() && !isEdu(url1) ? "edu-error" : undefined}
+              style={{ flex: 1, background: T.card, border: "1px solid " + (url1.trim() && !isEdu(url1) ? "#ef4444" : T.borderLight), borderRadius: 10, padding: "15px 18px", color: T.text, fontSize: 14, fontFamily: T.sans, outline: "none" }}
+              onFocus={e => e.target.style.borderColor = url1.trim() && !isEdu(url1) ? "#ef4444" : T.accent} onBlur={e => e.target.style.borderColor = url1.trim() && !isEdu(url1) ? "#ef4444" : T.borderLight} />
+            <button onClick={runSingle} disabled={analyzing || !url1.trim() || !isEdu(url1)} aria-label="Audit this site"
+              style={{ padding: "15px 26px", background: (!url1.trim() || !isEdu(url1)) ? "#1a1a1a" : `linear-gradient(135deg, ${T.accent}, #b06830)`, border: "none", borderRadius: 10, color: (!url1.trim() || !isEdu(url1)) ? "#444" : "#fff", fontSize: 14, fontWeight: 600, fontFamily: T.sans, whiteSpace: "nowrap" }}>
+              {analyzing ? <span style={{ display: "flex", alignItems: "center", gap: 8 }}><Spinner />Auditing...</span> : "Audit Site"}
+            </button>
+          </div>
+          {url1.trim() && !isEdu(url1) && <p id="edu-error" role="alert" style={{ margin: "8px 0 0", fontSize: 12, fontFamily: T.mono, color: "#ef4444" }}>Only .edu and .ca domains — this tool is built for higher education sites.</p>}
+
+          {/* Sample URLs */}
+          <div style={{ display: "flex", gap: 6, marginTop: 8, flexWrap: "wrap", alignItems: "center" }}>
+            <span style={{ fontSize: 10, color: T.dim, fontFamily: T.mono }}>Try:</span>
+            {[{ l: "bowdoin.edu" }, { l: "asu.edu" }, { l: "snhu.edu" }, { l: "liberty.edu" }].map((s, i) => (
+              <button key={i} onClick={() => setUrl1(s.l)}
+                style={{ background: "#141414", border: "1px solid " + T.borderLight, borderRadius: 5, padding: "3px 10px", color: T.dim, fontSize: 10, fontFamily: T.mono }}
+                onMouseEnter={e => { e.target.style.borderColor = T.accent; e.target.style.color = T.accent; }}
+                onMouseLeave={e => { e.target.style.borderColor = T.borderLight; e.target.style.color = T.dim; }}>
+                {s.l}
+              </button>
             ))}
           </div>
 
-          {mode === "single" && (
-            <div>
-              <div className="audit-input-row" style={{ display: "flex", gap: 10 }}>
-                <input value={url1} onChange={e => setUrl1(e.target.value)} placeholder="e.g. bowdoin.edu" onKeyDown={e => e.key === "Enter" && url1.trim() && isEdu(url1) && runSingle()}
-                  aria-label="School website URL" aria-invalid={url1.trim() && !isEdu(url1) ? "true" : undefined} aria-describedby={url1.trim() && !isEdu(url1) ? "edu-error" : undefined}
-                  style={{ flex: 1, background: T.card, border: "1px solid " + (url1.trim() && !isEdu(url1) ? "#ef4444" : T.borderLight), borderRadius: 10, padding: "15px 18px", color: T.text, fontSize: 14, fontFamily: T.sans, outline: "none" }}
-                  onFocus={e => e.target.style.borderColor = url1.trim() && !isEdu(url1) ? "#ef4444" : T.accent} onBlur={e => e.target.style.borderColor = url1.trim() && !isEdu(url1) ? "#ef4444" : T.borderLight} />
-                <button onClick={runSingle} disabled={analyzing || !url1.trim() || !isEdu(url1)} aria-label="Audit this site"
-                  style={{ padding: "15px 26px", background: (!url1.trim() || !isEdu(url1)) ? "#1a1a1a" : `linear-gradient(135deg, ${T.accent}, #b06830)`, border: "none", borderRadius: 10, color: (!url1.trim() || !isEdu(url1)) ? "#444" : "#fff", fontSize: 14, fontWeight: 600, fontFamily: T.sans, whiteSpace: "nowrap" }}>
-                  {analyzing ? <span style={{ display: "flex", alignItems: "center", gap: 8 }}><Spinner />Auditing...</span> : "Audit Site"}
-                </button>
-              </div>
-              {url1.trim() && !isEdu(url1) && <p id="edu-error" role="alert" style={{ margin: "8px 0 0", fontSize: 12, fontFamily: T.mono, color: "#ef4444" }}>Only .edu and .ca domains — this tool is built for higher education sites.</p>}
-            </div>
-          )}
-
-          {mode === "compare" && (
-            <div style={{ display: "grid", gap: 10 }}>
-              <div className="compare-grid" style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", gap: 10, alignItems: "center" }}>
-                <input value={url1} onChange={e => setUrl1(e.target.value)} placeholder="School A — e.g. williams.edu"
-                  aria-label="School A website URL" aria-invalid={url1.trim() && !isEdu(url1) ? "true" : undefined}
-                  style={{ background: T.card, border: "1px solid " + (url1.trim() && !isEdu(url1) ? "#ef4444" : T.borderLight), borderRadius: 10, padding: "15px 18px", color: T.text, fontSize: 14, fontFamily: T.sans, outline: "none" }}
-                  onFocus={e => e.target.style.borderColor = T.accent} onBlur={e => e.target.style.borderColor = T.borderLight} />
-                <span className="compare-vs" style={{ fontSize: 14, fontFamily: T.serif, fontStyle: "italic", color: T.dim }}>vs</span>
-                <input value={url2} onChange={e => setUrl2(e.target.value)} placeholder="School B — e.g. amherst.edu"
-                  aria-label="School B website URL" aria-invalid={url2.trim() && !isEdu(url2) ? "true" : undefined}
-                  style={{ background: T.card, border: "1px solid " + (url2.trim() && !isEdu(url2) ? "#ef4444" : T.borderLight), borderRadius: 10, padding: "15px 18px", color: T.text, fontSize: 14, fontFamily: T.sans, outline: "none" }}
-                  onFocus={e => e.target.style.borderColor = T.accent} onBlur={e => e.target.style.borderColor = T.borderLight} />
-              </div>
-              {((url1.trim() && !isEdu(url1)) || (url2.trim() && !isEdu(url2))) && <p style={{ margin: 0, fontSize: 12, fontFamily: T.mono, color: "#ef4444" }}>Only .edu and .ca domains — this tool is built for higher education sites.</p>}
-              <button onClick={runCompare} disabled={analyzing || !url1.trim() || !url2.trim() || !isEdu(url1) || !isEdu(url2)}
-                style={{ padding: "15px", background: (!url1.trim() || !url2.trim()) ? "#1a1a1a" : `linear-gradient(135deg, ${T.accent}, #b06830)`, border: "none", borderRadius: 10, color: (!url1.trim() || !url2.trim()) ? "#444" : "#fff", fontSize: 14, fontWeight: 600, fontFamily: T.sans }}>
-                {analyzing ? "Running Head-to-Head..." : "Compare These Schools"}
-              </button>
-            </div>
-          )}
-
-          {mode === "text" && (
-            <>
-              <textarea value={inputText} onChange={e => setInputText(e.target.value.slice(0, 15000))} maxLength={15000} aria-label="Paste marketing text to analyze" placeholder="Paste your homepage copy, about page, or any marketing text..."
-                style={{ width: "100%", minHeight: 170, background: T.card, border: "1px solid " + T.borderLight, borderRadius: 10, padding: "16px 20px", color: T.text, fontSize: 14, lineHeight: 1.7, fontFamily: T.sans, resize: "vertical", outline: "none" }}
-                onFocus={e => e.target.style.borderColor = T.accent} onBlur={e => e.target.style.borderColor = T.borderLight} />
-              {inputText.length > 12000 && <div style={{ fontSize: 11, fontFamily: T.mono, color: "#eab308", marginTop: 4 }}>{inputText.length.toLocaleString()} / 15,000 characters</div>}
-              <button onClick={runText} disabled={analyzing || inputText.trim().length < 50}
-                style={{ marginTop: 10, width: "100%", padding: "15px", background: inputText.trim().length < 50 ? "#1a1a1a" : `linear-gradient(135deg, ${T.accent}, #b06830)`, border: "none", borderRadius: 10, color: inputText.trim().length < 50 ? "#444" : "#fff", fontSize: 14, fontWeight: 600, fontFamily: T.sans }}>
-                {analyzing ? "Analyzing..." : "Analyze Copy"}
-              </button>
-            </>
-          )}
-
-          {/* Samples */}
-          {mode !== "text" && (
-            <div style={{ display: "flex", gap: 6, marginTop: 8, flexWrap: "wrap", alignItems: "center" }}>
-              <span style={{ fontSize: 10, color: T.dim, fontFamily: T.mono }}>Try:</span>
-              {(mode === "compare"
-                ? [{ l: "Williams vs Amherst", a: "williams.edu", b: "amherst.edu" }, { l: "Harvard vs MIT", a: "harvard.edu", b: "mit.edu" }]
-                : [{ l: "bowdoin.edu" }, { l: "asu.edu" }, { l: "snhu.edu" }, { l: "liberty.edu" }]
-              ).map((s, i) => (
-                <button key={i} onClick={() => { if (mode === "compare") { setUrl1(s.a); setUrl2(s.b); } else setUrl1(s.l); }}
-                  style={{ background: "#141414", border: "1px solid " + T.borderLight, borderRadius: 5, padding: "3px 10px", color: T.dim, fontSize: 10, fontFamily: T.mono }}
-                  onMouseEnter={e => { e.target.style.borderColor = T.accent; e.target.style.color = T.accent; }}
-                  onMouseLeave={e => { e.target.style.borderColor = T.borderLight; e.target.style.color = T.dim; }}>
-                  {s.l || `${s.a} vs ${s.b}`}
-                </button>
-              ))}
-            </div>
-          )}
-          {/* CACHED RESULT PROMPT — domain already audited (positioned right below input so it's visible) */}
-          {cachedPrompt && !analyzing && !result && (() => {
-            const isLimited = !(cachedPrompt.hasAI || cachedPrompt.ai) || (!(cachedPrompt.wordCount >= 100) && cachedPrompt.scrapeSource !== "cheerio");
-            return (
-            <section ref={cachedPromptRef} style={{ marginTop: 20 }}>
-              <div style={{ background: T.card, border: `1px solid ${isLimited ? "#eab30840" : T.accent + "40"}`, borderRadius: 12, padding: "22px 24px" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
-                  <span style={{ fontSize: 18 }}>{isLimited ? "⚠️" : "📋"}</span>
-                  <span style={{ fontSize: 14, fontFamily: T.mono, color: isLimited ? "#eab308" : T.accent }}>{isLimited ? "Limited Data Audit" : "Previously Audited"}</span>
-                </div>
-                {isLimited ? (
-                  <p style={{ fontSize: 14, color: "#cca700", lineHeight: 1.6, margin: "0 0 4px" }}>
-                    <strong style={{ color: T.text }}>{cachedPrompt.name}</strong> was audited with limited data. This site blocks direct HTML scraping, so the score below is based on AI web search (~162 words avg vs. ~1,671 for a full audit). The real score may be significantly different.
-                  </p>
-                ) : (
-                  <p style={{ fontSize: 14, color: T.text, lineHeight: 1.6, margin: "0 0 4px" }}>
-                    <strong style={{ color: T.text }}>{cachedPrompt.name}</strong> was already audited{cachedPrompt.lastAudited ? ` on ${new Date(cachedPrompt.lastAudited).toLocaleDateString()}` : ""}.
-                  </p>
-                )}
-                <div style={{ display: "flex", gap: 16, alignItems: "center", margin: "14px 0" }}>
-                  <div style={{ textAlign: "center" }}>
-                    <div style={{ fontSize: 32, fontWeight: 700, color: isLimited ? "#eab308" : scoreColor(cachedPrompt.overall), fontFamily: T.mono }}>{cachedPrompt.overall}{isLimited && <span style={{ fontSize: 14, verticalAlign: "super" }}>*</span>}</div>
-                    <div style={{ fontSize: 11, color: T.dim, fontFamily: T.mono }}>{isLimited ? "Limited" : "Overall"}</div>
-                  </div>
-                  {cachedPrompt.language != null && (
-                    <div style={{ textAlign: "center" }}>
-                      <div style={{ fontSize: 20, fontWeight: 600, color: isLimited ? "#eab308" : scoreColor(cachedPrompt.language), fontFamily: T.mono }}>{cachedPrompt.language}</div>
-                      <div style={{ fontSize: 10, color: T.dim, fontFamily: T.mono }}>Language</div>
-                    </div>
-                  )}
-                  {cachedPrompt.strategy != null && (
-                    <div style={{ textAlign: "center" }}>
-                      <div style={{ fontSize: 20, fontWeight: 600, color: isLimited ? "#eab308" : scoreColor(cachedPrompt.strategy), fontFamily: T.mono }}>{cachedPrompt.strategy}</div>
-                      <div style={{ fontSize: 10, color: T.dim, fontFamily: T.mono }}>Strategy</div>
-                    </div>
-                  )}
-                  <div style={{ textAlign: "center" }}>
-                    <div style={{ fontSize: 14, fontWeight: 600, color: isLimited ? "#eab308" : scoreColor(cachedPrompt.overall), fontFamily: T.mono }}>{isLimited ? "Unverified" : scoreLabel(cachedPrompt.overall)}</div>
-                    <div style={{ fontSize: 10, color: T.dim, fontFamily: T.mono }}>Verdict</div>
-                  </div>
-                </div>
-                <div style={{ display: "flex", gap: 10, marginTop: 14 }}>
-                  <button onClick={runFreshAudit}
-                    style={{ padding: "10px 20px", background: `linear-gradient(135deg, ${T.accent}, #b06830)`, border: "none", borderRadius: 8, color: "#fff", fontSize: 13, fontWeight: 600, fontFamily: T.sans }}>
-                    Re-audit Fresh
-                  </button>
-                  <button onClick={() => setCachedPrompt(null)}
-                    style={{ padding: "10px 20px", background: "transparent", border: "1px solid " + T.borderLight, borderRadius: 8, color: T.dim, fontSize: 13, fontFamily: T.sans }}>
-                    Dismiss
-                  </button>
-                </div>
-                {isLimited ? (
-                  <p style={{ fontSize: 11, color: "#eab308", fontFamily: T.mono, margin: "12px 0 0" }}>
-                    This score is not included in the verified leaderboard rankings. Re-audit to try for a full scrape, or use Paste Text to analyze the homepage copy directly.
-                  </p>
-                ) : (
-                  <p style={{ fontSize: 11, color: T.dim, fontFamily: T.mono, margin: "12px 0 0" }}>
-                    This is the cached score from the leaderboard. Hit "Re-audit Fresh" to run a new analysis (uses API credits).
-                  </p>
-                )}
-              </div>
-            </section>
-            );
-          })()}
-
           {/* LANDING LEADERBOARD PREVIEW — shows before any audit (verified only) */}
-          {!result && !result2 && !analyzing && progress.length === 0 && (() => {
+          {!result && !analyzing && progress.length === 0 && (() => {
             const verifiedLb = leaderboard.filter(s => (s.hasAI || s.ai) && (s.wordCount >= 100 || s.scrapeSource === "cheerio"));
             return verifiedLb.length >= 3 ? (
             <div style={{ marginTop: 32, background: T.card, border: "1px solid " + T.border, borderRadius: 12, padding: "22px 24px", overflow: "hidden" }}>
@@ -1191,14 +1065,6 @@ export default function App() {
                     This is a server configuration issue, not a content issue. It's fixable — the web team can whitelist AI crawlers or adjust bot-detection rules without compromising security. <a href="https://web.dev/articles/rendering-on-the-web" target="_blank" rel="noopener noreferrer" style={{ color: "#cca700", textDecoration: "underline" }}>Learn more →</a>
                   </p>
                 </div>
-                {/* Paste text fallback */}
-                <div style={{ background: T.cardAlt, border: "1px solid " + T.border, borderRadius: 8, padding: "14px 18px", textAlign: "center" }}>
-                  <p style={{ fontSize: 13, color: T.muted, margin: "0 0 8px" }}>Want a Language & Voice score anyway? Copy your homepage text and paste it below.</p>
-                  <button onClick={() => { setMode("text"); setProgress([]); }}
-                    style={{ padding: "8px 18px", background: T.accent + "20", border: "1px solid " + T.accent + "40", borderRadius: 6, color: T.accent, fontSize: 12, fontFamily: T.mono, cursor: "pointer" }}>
-                    Switch to Paste Text
-                  </button>
-                </div>
               </div>
             )}
           </section>
@@ -1208,47 +1074,8 @@ export default function App() {
         {result && (
           <section ref={resultRef} style={{ marginTop: 40, paddingBottom: 80 }}>
 
-            {/* COMPARE */}
-            {mode === "compare" && result2 ? (
-              <>
-                <div className="compare-results" style={{ display: "flex", gap: 16, alignItems: "flex-start" }}>
-                  <ResultBlock res={result} compact />
-                  <div className="compare-vs" style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "60px 0", flexShrink: 0 }}>
-                    <span style={{ fontSize: 20, fontFamily: T.serif, fontStyle: "italic", color: T.dim }}>vs</span>
-                  </div>
-                  <ResultBlock res={result2} compact />
-                </div>
-                <div style={{ marginTop: 16, background: T.card, border: "1px solid " + T.border, borderRadius: 12, padding: 24, textAlign: "center" }}>
-                  {result.overall === result2.overall ? <p style={{ fontSize: 16, fontFamily: T.serif, color: T.muted, margin: 0 }}>Dead heat. Both equally... <span style={{ fontStyle: "italic", color: T.accent }}>institutional</span>.</p> : (
-                    <>
-                      <div style={{ fontSize: 12, fontFamily: T.mono, color: T.dim, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 8 }}>More Differentiated</div>
-                      <div style={{ fontSize: 24, fontFamily: T.serif, color: scoreColor(Math.max(result.overall, result2.overall)) }}>{result.overall > result2.overall ? result.schoolName : result2.schoolName}</div>
-                      <p style={{ fontSize: 13, color: T.muted, marginTop: 8, marginBottom: 0 }}>Leading by {Math.abs(result.overall - result2.overall)} points</p>
-                    </>
-                  )}
-                </div>
-                <div style={{ marginTop: 14, display: "grid", gap: 6 }}>
-                  {[{ key: "language", label: "Language & Voice" }, { key: "strategy", label: "Content Strategy" }].map(d => {
-                    const s1 = result.scores[d.key], s2 = result2.scores[d.key];
-                    if (s1 == null || s2 == null) return null;
-                    return (
-                      <div key={d.key} className="compare-bar-row" style={{ background: T.card, border: "1px solid " + T.border, borderRadius: 8, padding: "12px 16px", display: "grid", gridTemplateColumns: "70px 1fr auto 1fr 70px", alignItems: "center", gap: 10 }}>
-                        <span style={{ fontSize: 20, fontFamily: T.serif, color: scoreColor(s1), textAlign: "right" }}>{s1}</span>
-                        <div style={{ height: 6, borderRadius: 3, background: T.border, overflow: "hidden", direction: "rtl" }}><div style={{ height: "100%", width: `${s1}%`, background: scoreColor(s1), borderRadius: 3, transition: "width 1s ease" }} /></div>
-                        <span className="compare-bar-label" style={{ fontSize: 9, fontFamily: T.mono, color: T.dim, textTransform: "uppercase", textAlign: "center", minWidth: 55 }}>{d.label}</span>
-                        <div style={{ height: 6, borderRadius: 3, background: T.border, overflow: "hidden" }}><div style={{ height: "100%", width: `${s2}%`, background: scoreColor(s2), borderRadius: 3, transition: "width 1s ease" }} /></div>
-                        <span style={{ fontSize: 20, fontFamily: T.serif, color: scoreColor(s2) }}>{s2}</span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </>
-            ) : (
-              <>
-                <ResultBlock res={result} />
-                <TabContent res={result} />
-              </>
-            )}
+            <ResultBlock res={result} />
+            <TabContent res={result} />
 
             {/* SHARE + ACTIONS */}
             <div className="action-grid" style={{ marginTop: 24, display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 8 }}>
@@ -1277,28 +1104,6 @@ export default function App() {
                 Feedback
               </a>
             </div>
-
-            {/* CHALLENGE MODE */}
-            {result && !result2 && result.url && (
-              <div style={{ marginTop: 16, background: T.card, border: "1px solid " + T.border, borderRadius: 10, padding: "20px 24px" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
-                  <span style={{ fontSize: 10, fontFamily: T.mono, color: T.accent, textTransform: "uppercase", letterSpacing: "0.1em" }}>Challenge Mode</span>
-                  <span style={{ fontSize: 12, color: T.dim }}>Think a rival school can beat this score?</span>
-                </div>
-                <div className="audit-input-row" style={{ display: "flex", gap: 8 }}>
-                  <input value={challengeUrl} onChange={e => setChallengeUrl(e.target.value)}
-                    placeholder="Enter rival school URL..." onKeyDown={e => e.key === "Enter" && challengeUrl.trim() && isEdu(challengeUrl) && handleChallenge()}
-                    aria-label="Rival school URL" aria-invalid={challengeUrl.trim() && !isEdu(challengeUrl) ? "true" : undefined}
-                    style={{ flex: 1, background: T.bg, border: "1px solid " + (challengeUrl.trim() && !isEdu(challengeUrl) ? "#ef4444" : T.borderLight), borderRadius: 8, padding: "10px 14px", color: T.text, fontSize: 13, fontFamily: T.sans, outline: "none" }}
-                    onFocus={e => e.target.style.borderColor = challengeUrl.trim() && !isEdu(challengeUrl) ? "#ef4444" : T.accent} onBlur={e => e.target.style.borderColor = challengeUrl.trim() && !isEdu(challengeUrl) ? "#ef4444" : T.borderLight} />
-                  <button onClick={handleChallenge} disabled={!challengeUrl.trim() || !isEdu(challengeUrl)}
-                    style={{ padding: "10px 18px", background: (challengeUrl.trim() && isEdu(challengeUrl)) ? T.accent : "#1a1a1a", border: "none", borderRadius: 8, color: (challengeUrl.trim() && isEdu(challengeUrl)) ? "#fff" : "#444", fontSize: 12, fontWeight: 600, fontFamily: T.mono, whiteSpace: "nowrap" }}>
-                    Head-to-Head →
-                  </button>
-                </div>
-                {challengeUrl.trim() && !isEdu(challengeUrl) && <p role="alert" style={{ margin: "6px 0 0", fontSize: 11, fontFamily: T.mono, color: "#ef4444" }}>Only .edu and .ca domains supported.</p>}
-              </div>
-            )}
 
             <div style={{ marginTop: 32, padding: "28px 24px", background: T.cardAlt, borderRadius: 10, border: "1px solid #161616", textAlign: "center" }}>
               <p style={{ fontSize: 13, color: T.muted, lineHeight: 1.65, margin: 0, maxWidth: 540, marginLeft: "auto", marginRight: "auto" }}>
