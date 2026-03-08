@@ -1114,14 +1114,24 @@ export default function App() {
                   <div style={{ fontSize: 13, color: T.dim, marginTop: 2 }}>{verifiedLb.length} verified institutions ranked — where does yours land?</div>
                 </div>
               </div>
-              {verifiedLb.slice(0, 8).map((s, i) => (
+              {(() => {
+                const lbSlice = verifiedLb.slice(0, 8);
+                const lbRanks = [];
+                let lbTier = 1;
+                for (let j = 0; j < lbSlice.length; j++) {
+                  if (j > 0 && lbSlice[j].overall < lbSlice[j - 1].overall) lbTier++;
+                  lbRanks.push(lbTier);
+                }
+                return lbSlice.map((s, i) => {
+                const rank = lbRanks[i];
+                return (
                 <div key={s.url} style={{
                   display: "grid", gridTemplateColumns: "28px 1fr 55px 55px 55px", gap: 6, alignItems: "center",
                   padding: "8px 10px", borderRadius: 6, marginBottom: 1,
                   background: i % 2 === 0 ? "transparent" : T.cardAlt,
                 }}>
-                  <span style={{ fontSize: 13, fontFamily: T.mono, color: i < 3 ? T.accent : T.dim, fontWeight: i < 3 ? 700 : 400, textAlign: "center" }}>
-                    {i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : `#${i + 1}`}
+                  <span style={{ fontSize: 13, fontFamily: T.mono, color: rank <= 3 ? T.accent : T.dim, fontWeight: rank <= 3 ? 700 : 400, textAlign: "center" }}>
+                    {rank === 1 ? "🥇" : rank === 2 ? "🥈" : rank === 3 ? "🥉" : `#${rank}`}
                   </span>
                   <div style={{ minWidth: 0 }}>
                     <div style={{ fontSize: 13, color: T.text, fontWeight: 400, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.name}</div>
@@ -1139,7 +1149,7 @@ export default function App() {
                     <div style={{ fontSize: 9, fontFamily: T.mono, color: T.dim, textTransform: "uppercase" }}>Strat</div>
                   </div>
                 </div>
-              ))}
+              );})})()}
               {verifiedLb.length > 8 && (
                 <div style={{ textAlign: "center", marginTop: 8 }}>
                   <span style={{ fontSize: 12, fontFamily: T.mono, color: T.dim }}>+ {verifiedLb.length - 8} more — audit a site to see the full list</span>
