@@ -15,7 +15,7 @@ function checkPostRate(ip) {
 const headers = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "Content-Type",
-  "Access-Control-Allow-Methods": "GET, POST, DELETE, OPTIONS",
+  "Access-Control-Allow-Methods": "GET, POST, PATCH, DELETE, OPTIONS",
   "Content-Type": "application/json",
 };
 
@@ -192,6 +192,29 @@ export async function handler(event) {
     } catch (err) {
       console.error("POST error:", err);
       return { statusCode: 500, headers, body: JSON.stringify({ error: "Failed to save score" }) };
+    }
+  }
+
+  // PATCH — remove a single school (admin only)
+  if (event.httpMethod === "PATCH") {
+    try {
+      const { secret, removeUrl } = JSON.parse(event.body || "{}");
+      if (secret !== "blanding2026") {
+        return { statusCode: 403, headers, body: JSON.stringify({ error: "Unauthorized" }) };
+      }
+      if (!removeUrl) {
+        return { statusCode: 400, headers, body: JSON.stringify({ error: "removeUrl required" }) };
+      }
+      const hostname = removeUrl.replace(/^(https?:\/\/)?(www\.)?/, "").replace(/\/.*$/, "");
+      const { data } = await readData(store);
+      if (!data || !data[hostname]) {
+        return { statusCode: 404, headers, body: JSON.stringify({ error: "School not found", hostname }) };
+      }
+      delete data[hostname];
+      await writeData(store, data);
+      return { statusCode: 200, headers, body: JSON.stringify({ removed: hostname, count: Object.keys(data).length }) };
+    } catch (err) {
+      return { statusCode: 500, headers, body: JSON.stringify({ error: err.message }) };
     }
   }
 
