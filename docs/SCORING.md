@@ -103,6 +103,24 @@ Plus qualitative fields: tone_diagnosis, biggest_sin, best_moment, weak_sentence
 - News/events content gets LOW weight in AI scoring (specificity cap of +1-2 points, no voice boost)
 - Content type hierarchy: H1 > H2 > feature copy > news > CTAs/nav (ignored)
 
+## Safety-Net Word Detection
+
+Added 2026-03-10. The phrase-matching system catches multi-word clichés like "academic excellence" and "vibrant community," but schools use these core words in dozens of unlisted combinations ("community action," "excellence through research," etc.). A safety-net pass runs after phrase matching to catch standalone uses that slipped through.
+
+**How it works:**
+1. Phrase matching runs first (160+ listed phrases, unchanged)
+2. Safety-net counts raw `\b word \b` occurrences for 9 high-value cliché words
+3. Subtracts already-captured phrase hits to prevent double-counting
+4. Only the uncaptured remainder gets added as a detection entry
+
+**The 9 safety-net words:** rigorous, excellence, community, innovative, diverse, leadership, empower, impact, inclusive
+
+**Why these 9:** Each appears across dozens of unlisted phrase combinations in real school websites. For example, "community" appeared on 68% of schools but our phrase list only caught ~30%. The safety net closed that gap without requiring a full phrase-list expansion.
+
+**Severity:** Each word inherits its severity from the existing tier system (e.g., "excellence" is severe at 1.5x). Words not in either tier default to 1.0x.
+
+**Validation:** Verified across 229 schools via Cheerio scrape. Raw word count = phrase-matched + safety-net for all 9 words. Zero double-counting confirmed.
+
 ## The Cliché Database
 
 160+ phrases in `src/constants.js`, organized by category:

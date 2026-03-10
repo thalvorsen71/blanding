@@ -1,7 +1,7 @@
 # Blanding Leaderboard Data & Insights
 
 **Last updated:** 2026-03-10
-**Schools analyzed:** 205
+**Schools analyzed:** 229
 
 ## Score Distribution
 
@@ -58,3 +58,28 @@ For LinkedIn posts, conference talks, and marketing:
 - "'Interdisciplinary' appears 241 times across 205 schools. Students hear: 'we have more than one department.'"
 - "The average language score is 54. The average strategy score is 48. Schools write better than they think."
 - "The school with the fewest clichés? MIT, with 2. The school with the most? 150."
+
+## Safety-Net Word Frequency (Full 229-School Scan)
+
+Cheerio scrape of all 229 leaderboard schools, counting standalone word occurrences. These are the raw numbers behind the safety-net detection system added 2026-03-10.
+
+| Word | Schools | % of 229 | Total Uses | Avg When Present |
+|------|---------|----------|------------|-----------------|
+| community | 155 | 68% | 577 | 3.7 |
+| impact | 97 | 42% | 185 | 1.9 |
+| excellence | 64 | 28% | 96 | 1.5 |
+| leadership | 62 | 27% | 147 | 2.4 |
+| innovative | 40 | 17% | 66 | 1.7 |
+| diverse | 33 | 14% | 58 | 1.8 |
+| inclusive | 23 | 10% | 33 | 1.4 |
+| empower | 18 | 8% | 24 | 1.3 |
+| rigorous | 17 | 7% | 24 | 1.4 |
+
+**Key takeaway:** "Community" is the single most pervasive cliché word in higher ed. More than 2 in 3 schools use it, averaging nearly 4 times each. Before the safety net, phrase matching only caught ~30% of schools. The gap was enormous.
+
+**"Rigorous" reality check:** Despite being a word people associate with higher ed marketing, only 7% of schools actually use it on their websites. It's genuinely rare, not a detection gap.
+
+**LinkedIn-shareable version (the three people asked about):**
+- "Community" appears on 68% of university websites (155 out of 229 schools)
+- "Excellence" appears on 28% (64 schools)
+- "Rigorous" appears on just 7% (17 schools). Despite what you'd expect, most schools don't actually use this word.
