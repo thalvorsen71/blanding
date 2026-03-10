@@ -177,6 +177,16 @@ export function clicheSeverity(phrase) {
   return 1.0;
 }
 
+/* ═══ STANDALONE SAFETY-NET WORDS ═══ */
+// These common cliché words appear in many phrases we don't explicitly list.
+// The safety net catches standalone uses that slip past phrase matching,
+// without double-counting uses already captured by a longer phrase.
+const SAFETY_NET_WORDS = [
+  "rigorous", "excellence", "community",
+  "innovative", "diverse", "leadership",
+  "empower", "impact", "inclusive",
+];
+
 /* ═══ TEXT ANALYSIS ═══ */
 export function countCliches(text) {
   const lower = text.toLowerCase();
@@ -186,6 +196,28 @@ export function countCliches(text) {
     const matches = lower.match(regex);
     if (matches) found.push({ phrase, count: matches.length, severity: clicheSeverity(phrase) });
   }
+
+  // Safety-net pass: count standalone word occurrences minus already-matched phrase hits
+  for (const word of SAFETY_NET_WORDS) {
+    const wordRegex = new RegExp("\\b" + word + "\\b", "gi");
+    const totalMatches = lower.match(wordRegex);
+    if (!totalMatches) continue;
+    const totalCount = totalMatches.length;
+
+    // Sum how many times this word was already captured by phrase matches
+    let alreadyCaptured = 0;
+    for (const f of found) {
+      if (f.phrase.toLowerCase().includes(word)) {
+        alreadyCaptured += f.count;
+      }
+    }
+
+    const uncaptured = totalCount - alreadyCaptured;
+    if (uncaptured > 0) {
+      found.push({ phrase: word, count: uncaptured, severity: clicheSeverity(word) });
+    }
+  }
+
   return found.sort((a, b) => (b.count * b.severity) - (a.count * a.severity));
 }
 
